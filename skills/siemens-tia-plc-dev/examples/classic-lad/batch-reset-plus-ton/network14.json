@@ -1,0 +1,28 @@
+{
+  "title": "Alarm reset fanout",
+  "comment": "Validated batch reset-fanout example on a real FC1 block.",
+  "conditions": [
+    {
+      "kind": "NO",
+      "symbol": "设备复位"
+    },
+    {
+      "kind": "NO",
+      "symbol": "复位"
+    }
+  ],
+  "actions": [
+    {
+      "kind": "RESET",
+      "symbol": "DB1_报警数据块.输送带卡料报警"
+    },
+    {
+      "kind": "RESET",
+      "symbol": "DB1_报警数据块.真空报警"
+    },
+    {
+      "kind": "SET",
+      "symbol": "DB_2步进数据块.复位"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "title": "Conveyor jam timeout alarm",
+  "comment": "Validated batch TON example on a real FC1 block.",
+  "conditions": [
+    {
+      "kind": "NO",
+      "symbol": "自动中"
+    },
+    {
+      "kind": "NC",
+      "symbol": "单步模式"
+    },
+    {
+      "kind": "NC",
+      "symbol": "到料检测位"
+    }
+  ],
+  "actions": [
+    {
+      "kind": "TON",
+      "instance": "IEC_Timer_0_DB_4",
+      "pt": "T#2s"
+    },
+    {
+      "kind": "SET",
+      "symbol": "DB1_报警数据块.输送带卡料报警"
+    }
+  ]
+}

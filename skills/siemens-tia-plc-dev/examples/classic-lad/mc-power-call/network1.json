@@ -1,0 +1,56 @@
+{
+  "title": "Axis power enable",
+  "comment": "free-write CALL validation for MC_Power on FC_2 step block",
+  "conditions": [
+    {
+      "kind": "NC",
+      "symbol": "DB_2\u6b65\u8fdb\u6570\u636e\u5757.\u4f7f\u80fd"
+    }
+  ],
+  "actions": [
+    {
+      "kind": "CALL",
+      "partName": "MC_Power",
+      "version": "8.0",
+      "instance": "MC_Power_DB",
+      "powerRail": true,
+      "signalTarget": "Enable",
+      "inputs": [
+        {
+          "name": "Axis",
+          "symbol": "\u8f74_1"
+        },
+        {
+          "name": "StartMode",
+          "open": true
+        },
+        {
+          "name": "StopMode",
+          "open": true
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Status",
+          "open": true
+        },
+        {
+          "name": "Busy",
+          "open": true
+        },
+        {
+          "name": "Error",
+          "open": true
+        },
+        {
+          "name": "ErrorID",
+          "open": true
+        },
+        {
+          "name": "ErrorInfo",
+          "open": true
+        }
+      ]
+    }
+  ]
+}

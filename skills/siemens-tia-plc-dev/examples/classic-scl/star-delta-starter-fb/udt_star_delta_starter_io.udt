@@ -1,0 +1,14 @@
+TYPE "UDT_StarDeltaStarterIO"
+VERSION : 0.1
+STRUCT
+    StartCmd    : Bool;
+    StopCmd     : Bool;
+    OverloadOK  : Bool := TRUE;
+    RunFeedback : Bool;
+    MainCmd     : Bool;
+    StarCmd     : Bool;
+    DeltaCmd    : Bool;
+    Running     : Bool;
+    Fault       : Bool;
+END_STRUCT;
+END_TYPE

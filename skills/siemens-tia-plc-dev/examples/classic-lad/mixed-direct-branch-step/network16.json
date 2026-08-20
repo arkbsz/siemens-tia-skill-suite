@@ -1,0 +1,77 @@
+{
+  "title": "Auto step 10 move to discharge position",
+  "comment": "mixed direct coil plus branch coil and branch move",
+  "conditions": [
+    {
+      "kind": "EQ",
+      "sourceType": "Word",
+      "left": {
+        "symbol": "AutoStep"
+      },
+      "right": {
+        "scope": "LiteralConstant",
+        "constantType": "Word",
+        "value": "10"
+      }
+    },
+    {
+      "kind": "NO",
+      "symbol": "AutoRun"
+    }
+  ],
+  "actions": [
+    {
+      "kind": "COIL",
+      "symbol": "DriveStartCmd"
+    }
+  ],
+  "branches": [
+    {
+      "conditions": [
+        {
+          "kind": "NE",
+          "sourceType": "Real",
+          "left": {
+            "symbol": "AxisActualPosition"
+          },
+          "right": {
+            "symbol": "UnloadTargetPosition"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "kind": "COIL",
+          "symbol": "MoveToUnloadPos"
+        }
+      ]
+    },
+    {
+      "conditions": [
+        {
+          "kind": "EQ",
+          "sourceType": "Real",
+          "left": {
+            "symbol": "AxisActualPosition"
+          },
+          "right": {
+            "symbol": "UnloadTargetPosition"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "kind": "MOVE",
+          "source": {
+            "scope": "LiteralConstant",
+            "constantType": "Word",
+            "value": "11"
+          },
+          "target": {
+            "symbol": "AutoStep"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "steps": [
+    {
+      "networkIndex": 16,
+      "specPath": "D:\\path\\to\\sequence-branch-ton-batch\\network16.json"
+    },
+    {
+      "networkIndex": 27,
+      "specPath": "D:\\path\\to\\sequence-branch-ton-batch\\network27.json"
+    },
+    {
+      "networkIndex": 36,
+      "specPath": "D:\\path\\to\\sequence-branch-ton-batch\\network36.json"
+    }
+  ]
+}

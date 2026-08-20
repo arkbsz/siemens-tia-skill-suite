@@ -1,0 +1,124 @@
+FUNCTION_BLOCK "FB_MaterialHandlingCell"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+VAR_IN_OUT
+    CellIO : "UDT_MaterialHandlingCellIO";
+END_VAR
+VAR
+    ModeManager       : "FB_OperatingModeManager";
+    StationSupervisor : "FB_StationSupervisor";
+    StarterCell       : "FB_DualStarterCell";
+    JamAlarm          : "FB_AlarmLatch";
+    JamTimer          : TON;
+    SupervisorIO      : "UDT_StationSupervisorIO";
+    PreviousComplete  : Bool;
+END_VAR
+BEGIN
+    #CellIO.Mode.Inputs.SafetyOk := #CellIO.Inputs.SafetyOk;
+    #CellIO.Mode.Inputs.PermissiveOk := #CellIO.Inputs.PermissiveOk AND #CellIO.Inputs.AirOk AND #CellIO.Inputs.CellHealthy;
+    #CellIO.Mode.Inputs.LocalEnabled := TRUE;
+
+    #ModeManager(
+        IO := #CellIO.Mode
+    );
+
+    #CellIO.State.ManualMode := #CellIO.Mode.State.ManualSelected;
+    #CellIO.State.AutoMode := #CellIO.Mode.State.AutoSelected;
+    #CellIO.State.MotionEnabled := #CellIO.Mode.State.MotionEnable;
+    #CellIO.State.Ready := #CellIO.Mode.State.Ready;
+
+    #SupervisorIO.Commands.AutoStart := #CellIO.State.AutoMode AND #CellIO.State.MotionEnabled AND #CellIO.Commands.AutoCycleRequest;
+    #SupervisorIO.Commands.StopCmd := #CellIO.Mode.Commands.StopCmd OR NOT #CellIO.State.Ready;
+    #SupervisorIO.Commands.ResetCmd := #CellIO.Mode.Commands.ResetCmd OR #CellIO.Commands.ResetSequence;
+    #SupervisorIO.Commands.AckCmd := #CellIO.Mode.Commands.AckCmd;
+
+    #SupervisorIO.Faults.MotorFault := #CellIO.State.LeftStarterFault OR #CellIO.State.RightStarterFault;
+    #SupervisorIO.Faults.ConveyorFault := #CellIO.State.JamAlarmActive;
+    #SupervisorIO.Faults.CylinderFault := NOT #CellIO.Inputs.CellHealthy;
+    #SupervisorIO.Faults.SafetyFault := NOT #CellIO.Inputs.SafetyOk OR NOT #CellIO.Inputs.AirOk OR NOT #CellIO.Inputs.PermissiveOk;
+
+    #SupervisorIO.Inputs.PartPresent := #CellIO.Inputs.PartPresent;
+    #SupervisorIO.Inputs.ClampClosed := #CellIO.Inputs.ClampClosed;
+    #SupervisorIO.Inputs.PickDone := #CellIO.Inputs.PickDone;
+    #SupervisorIO.Inputs.ReleaseDone := #CellIO.Inputs.ReleaseDone;
+    #SupervisorIO.Inputs.PermissiveOK := #CellIO.State.Ready;
+
+    #StationSupervisor(
+        StationIO := #SupervisorIO
+    );
+
+    IF #CellIO.State.ManualMode THEN
+        #CellIO.Outputs.ConveyorRun := #CellIO.State.MotionEnabled AND #CellIO.Commands.ManualConveyor;
+        #CellIO.Outputs.ClampSolenoid := #CellIO.State.MotionEnabled AND #CellIO.Commands.ManualClamp;
+        #CellIO.Outputs.PickActuator := #CellIO.State.MotionEnabled AND #CellIO.Commands.ManualPick;
+        #CellIO.Outputs.ReleaseActuator := #CellIO.State.MotionEnabled AND #CellIO.Commands.ManualRelease;
+    ELSE
+        #CellIO.Outputs.ConveyorRun := #CellIO.State.MotionEnabled AND #SupervisorIO.State.ConveyorRunCmd AND NOT #CellIO.State.JamAlarmActive;
+        #CellIO.Outputs.ClampSolenoid := #CellIO.State.MotionEnabled AND #SupervisorIO.State.ClampCmd;
+        #CellIO.Outputs.PickActuator := #CellIO.State.MotionEnabled AND #SupervisorIO.State.PickCmd;
+        #CellIO.Outputs.ReleaseActuator := #CellIO.State.MotionEnabled AND #SupervisorIO.State.ReleaseCmd;
+    END_IF;
+
+    #CellIO.Starters.Left.StartCmd :=
+        (#CellIO.State.ManualMode AND #CellIO.State.MotionEnabled AND #CellIO.Commands.LeftStarterStart)
+        OR
+        (#CellIO.State.AutoMode AND #CellIO.Outputs.ConveyorRun);
+    #CellIO.Starters.Left.StopCmd := #CellIO.Mode.Commands.StopCmd OR NOT #CellIO.State.MotionEnabled;
+    #CellIO.Starters.Left.OverloadOK := #CellIO.Inputs.LeftOverloadOK;
+    #CellIO.Starters.Left.RunFeedback := #CellIO.Inputs.LeftRunFeedback;
+
+    #CellIO.Starters.Right.StartCmd :=
+        (#CellIO.State.ManualMode AND #CellIO.State.MotionEnabled AND #CellIO.Commands.RightStarterStart)
+        OR
+        (#CellIO.State.AutoMode AND (#CellIO.Outputs.PickActuator OR #CellIO.Outputs.ReleaseActuator));
+    #CellIO.Starters.Right.StopCmd := #CellIO.Mode.Commands.StopCmd OR NOT #CellIO.State.MotionEnabled;
+    #CellIO.Starters.Right.OverloadOK := #CellIO.Inputs.RightOverloadOK;
+    #CellIO.Starters.Right.RunFeedback := #CellIO.Inputs.RightRunFeedback;
+
+    #StarterCell(
+        LeftIO := #CellIO.Starters.Left,
+        RightIO := #CellIO.Starters.Right
+    );
+
+    #CellIO.Outputs.LeftMainCmd := #CellIO.Starters.Left.MainCmd;
+    #CellIO.Outputs.LeftStarCmd := #CellIO.Starters.Left.StarCmd;
+    #CellIO.Outputs.LeftDeltaCmd := #CellIO.Starters.Left.DeltaCmd;
+    #CellIO.Outputs.RightMainCmd := #CellIO.Starters.Right.MainCmd;
+    #CellIO.Outputs.RightStarCmd := #CellIO.Starters.Right.StarCmd;
+    #CellIO.Outputs.RightDeltaCmd := #CellIO.Starters.Right.DeltaCmd;
+
+    #JamTimer(
+        IN := #CellIO.State.AutoMode AND #CellIO.Outputs.ConveyorRun AND NOT #CellIO.Inputs.TransferClear,
+        PT := T#4s
+    );
+
+    #JamAlarm(
+        FaultCondition := #JamTimer.Q,
+        Ack := #CellIO.Mode.Commands.AckCmd,
+        HealthyCondition := NOT (#CellIO.State.AutoMode AND #CellIO.Outputs.ConveyorRun AND NOT #CellIO.Inputs.TransferClear),
+        AlarmActive => #CellIO.State.JamAlarmActive
+    );
+
+    #CellIO.State.LeftStarterFault := #CellIO.Starters.Left.Fault;
+    #CellIO.State.RightStarterFault := #CellIO.Starters.Right.Fault;
+    #CellIO.State.StationAlarmActive := #SupervisorIO.State.StationAlarmActive;
+    #CellIO.State.CycleComplete := #SupervisorIO.State.Complete;
+    #CellIO.State.AnyFault :=
+        #CellIO.State.JamAlarmActive
+        OR #CellIO.State.LeftStarterFault
+        OR #CellIO.State.RightStarterFault
+        OR #CellIO.State.StationAlarmActive;
+    #CellIO.State.Running :=
+        #CellIO.Outputs.ConveyorRun
+        OR #CellIO.Outputs.ClampSolenoid
+        OR #CellIO.Outputs.PickActuator
+        OR #CellIO.Outputs.ReleaseActuator
+        OR #CellIO.Starters.Left.Running
+        OR #CellIO.Starters.Right.Running;
+
+    IF #CellIO.State.CycleComplete AND NOT #PreviousComplete THEN
+        #CellIO.State.CycleCounter := #CellIO.State.CycleCounter + 1;
+    END_IF;
+
+    #PreviousComplete := #CellIO.State.CycleComplete;
+END_FUNCTION_BLOCK

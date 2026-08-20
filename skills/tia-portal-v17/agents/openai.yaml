@@ -1,0 +1,4 @@
+interface:
+  display_name: "TIA Portal V17"
+  short_description: "Read and write Siemens PLC code, including LAD via Openness XML/document workflows"
+  default_prompt: "Use $tia-portal-v17 to safely read, edit, and write Siemens TIA Portal V17 PLC code, including LAD ladder blocks."

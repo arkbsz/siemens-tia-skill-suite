@@ -1,0 +1,20 @@
+{
+  "title": "Step 0 to 1",
+  "comment": "Compare the current step and move the next step value",
+  "conditions": [
+    {
+      "kind": "EQ",
+      "sourceType": "Word",
+      "left": { "symbol": "AutoStep" },
+      "right": { "scope": "LiteralConstant", "constantType": "Word", "value": "0" }
+    },
+    { "kind": "NO", "symbol": "AutoRunning" }
+  ],
+  "actions": [
+    {
+      "kind": "MOVE",
+      "source": { "scope": "LiteralConstant", "constantType": "Word", "value": "1" },
+      "target": { "symbol": "AutoStep" }
+    }
+  ]
+}

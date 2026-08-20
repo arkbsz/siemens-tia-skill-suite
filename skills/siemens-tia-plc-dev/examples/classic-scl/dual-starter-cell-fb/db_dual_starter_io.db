@@ -1,0 +1,11 @@
+DATA_BLOCK "DB_DualStarterIO"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+NON_RETAIN
+VAR
+    Left  : "UDT_StarDeltaStarterIO";
+    Right : "UDT_StarDeltaStarterIO";
+END_VAR
+
+BEGIN
+END_DATA_BLOCK

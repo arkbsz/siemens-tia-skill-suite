@@ -1,0 +1,34 @@
+{
+  "title": "Axis halt",
+  "comment": "batch free-write motion call validation for MC_Halt",
+  "conditions": [
+    {
+      "kind": "NO",
+      "symbol": "AxisPauseCmd"
+    }
+  ],
+  "actions": [
+    {
+      "kind": "CALL",
+      "partName": "MC_Halt",
+      "version": "8.0",
+      "instance": "MC_Halt_DB",
+      "powerRail": true,
+      "signalTarget": "Execute",
+      "inputs": [
+        {
+          "name": "Axis",
+          "symbol": "Axis_1"
+        }
+      ],
+      "outputs": [
+        { "name": "Done", "open": true },
+        { "name": "Busy", "open": true },
+        { "name": "CommandAborted", "open": true },
+        { "name": "Error", "open": true },
+        { "name": "ErrorID", "open": true },
+        { "name": "ErrorInfo", "open": true }
+      ]
+    }
+  ]
+}

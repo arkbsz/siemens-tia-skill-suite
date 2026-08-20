@@ -1,0 +1,80 @@
+FUNCTION_BLOCK "FB_StationSupervisor"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+VAR_IN_OUT
+    StationIO : "UDT_StationSupervisorIO";
+END_VAR
+VAR
+    MotorFaultAlarm     : "FB_AlarmLatch";
+    ConveyorFaultAlarm  : "FB_AlarmLatch";
+    CylinderFaultAlarm  : "FB_AlarmLatch";
+    SafetyFaultAlarm    : "FB_AlarmLatch";
+    StationFaultAlarm   : "FB_AlarmLatch";
+    AutoSequence        : "FB_SequenceStation";
+END_VAR
+BEGIN
+    // Build the station fault summary first.
+    #StationIO.State.AnyFault :=
+        #StationIO.Faults.MotorFault
+        OR #StationIO.Faults.ConveyorFault
+        OR #StationIO.Faults.CylinderFault
+        OR #StationIO.Faults.SafetyFault;
+
+    // Latch each fault class separately so the HMI can show the source.
+    #MotorFaultAlarm(
+        FaultCondition := #StationIO.Faults.MotorFault,
+        Ack := #StationIO.Commands.AckCmd,
+        HealthyCondition := NOT #StationIO.Faults.MotorFault,
+        AlarmActive => #StationIO.State.MotorAlarmActive
+    );
+
+    #ConveyorFaultAlarm(
+        FaultCondition := #StationIO.Faults.ConveyorFault,
+        Ack := #StationIO.Commands.AckCmd,
+        HealthyCondition := NOT #StationIO.Faults.ConveyorFault,
+        AlarmActive => #StationIO.State.ConveyorAlarmActive
+    );
+
+    #CylinderFaultAlarm(
+        FaultCondition := #StationIO.Faults.CylinderFault,
+        Ack := #StationIO.Commands.AckCmd,
+        HealthyCondition := NOT #StationIO.Faults.CylinderFault,
+        AlarmActive => #StationIO.State.CylinderAlarmActive
+    );
+
+    #SafetyFaultAlarm(
+        FaultCondition := #StationIO.Faults.SafetyFault,
+        Ack := #StationIO.Commands.AckCmd,
+        HealthyCondition := NOT #StationIO.Faults.SafetyFault,
+        AlarmActive => #StationIO.State.SafetyAlarmActive
+    );
+
+    // Aggregate fault alarm drives the station ready state.
+    #StationFaultAlarm(
+        FaultCondition := #StationIO.State.AnyFault,
+        Ack := #StationIO.Commands.AckCmd,
+        HealthyCondition := NOT #StationIO.State.AnyFault,
+        AlarmActive => #StationIO.State.StationAlarmActive
+    );
+
+    #StationIO.State.Ready := #StationIO.Inputs.PermissiveOK AND NOT #StationIO.State.StationAlarmActive;
+
+    // Keep the automatic sequence inside the parent block.
+    #AutoSequence(
+        AutoStart := #StationIO.Commands.AutoStart AND #StationIO.State.Ready,
+        StopCmd := #StationIO.Commands.StopCmd OR NOT #StationIO.State.Ready,
+        ResetCmd := #StationIO.Commands.ResetCmd,
+        PartPresent := #StationIO.Inputs.PartPresent,
+        ClampClosed := #StationIO.Inputs.ClampClosed,
+        PickDone := #StationIO.Inputs.PickDone,
+        ReleaseDone := #StationIO.Inputs.ReleaseDone,
+        ConveyorRun => #StationIO.State.ConveyorRunCmd,
+        ClampCmd => #StationIO.State.ClampCmd,
+        PickCmd => #StationIO.State.PickCmd,
+        ReleaseCmd => #StationIO.State.ReleaseCmd,
+        Busy => #StationIO.State.Busy,
+        Complete => #StationIO.State.Complete
+    );
+
+    #StationIO.State.Running := #StationIO.State.Busy;
+END_FUNCTION_BLOCK

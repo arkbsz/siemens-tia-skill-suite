@@ -1,0 +1,52 @@
+@baseUrl = http://127.0.0.1:8765
+@projectPath = {{$dotenv WORKSPACE_FOLDER}}
+
+### Health
+GET {{baseUrl}}/health
+
+### Route Info
+GET {{baseUrl}}/route-info
+
+### Open Warm Session
+POST {{baseUrl}}/api/v1/sessions/open
+Content-Type: application/json
+
+{
+  "projectPath": "{{projectPath}}",
+  "ui": false
+}
+
+### List PLCs
+POST {{baseUrl}}/api/v1/tia/list-plcs
+Content-Type: application/json
+
+{
+  "projectPath": "{{projectPath}}"
+}
+
+### List Blocks Through Warm Session
+POST {{baseUrl}}/api/v1/tia/list-blocks
+Content-Type: application/json
+
+{
+  "projectPath": "{{projectPath}}",
+  "plc": "PLC_1",
+  "useSession": true
+}
+
+### Prepare GUI Download
+POST {{baseUrl}}/api/v1/download/prepare
+Content-Type: application/json
+
+{
+  "projectPath": "{{projectPath}}",
+  "plcName": "PLC_1"
+}
+
+### Close Warm Session
+POST {{baseUrl}}/api/v1/sessions/close
+Content-Type: application/json
+
+{
+  "projectPath": "{{projectPath}}"
+}

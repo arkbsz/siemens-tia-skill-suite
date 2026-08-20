@@ -1,0 +1,29 @@
+FUNCTION "FC_CylinderTimeout" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+BEGIN
+    IF "DB_CylinderCtrl".ExtendCmd AND NOT "DB_CylinderCtrl".RetractCmd THEN
+        "DB_CylinderCtrl".Q_Extend := TRUE;
+        "DB_CylinderCtrl".Q_Retract := FALSE;
+    ELSIF "DB_CylinderCtrl".RetractCmd AND NOT "DB_CylinderCtrl".ExtendCmd THEN
+        "DB_CylinderCtrl".Q_Extend := FALSE;
+        "DB_CylinderCtrl".Q_Retract := TRUE;
+    ELSE
+        "DB_CylinderCtrl".Q_Extend := FALSE;
+        "DB_CylinderCtrl".Q_Retract := FALSE;
+    END_IF;
+
+    "IEC_Timer_CylExtend".TON(
+        IN := "DB_CylinderCtrl".AutoEnable AND "DB_CylinderCtrl".ExtendCmd AND NOT "DB_CylinderCtrl".ExtendedLS,
+        PT := T#3s,
+        Q => "DB_CylinderCtrl".ExtendTimeoutAlarm,
+        ET => "DB_CylinderCtrl".ExtendET
+    );
+
+    "IEC_Timer_CylRetract".TON(
+        IN := "DB_CylinderCtrl".AutoEnable AND "DB_CylinderCtrl".RetractCmd AND NOT "DB_CylinderCtrl".RetractedLS,
+        PT := T#3s,
+        Q => "DB_CylinderCtrl".RetractTimeoutAlarm,
+        ET => "DB_CylinderCtrl".RetractET
+    );
+END_FUNCTION

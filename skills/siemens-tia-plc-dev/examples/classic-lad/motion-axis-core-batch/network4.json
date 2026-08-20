@@ -1,0 +1,34 @@
+{
+  "title": "Axis home",
+  "comment": "batch free-write motion call validation for MC_Home",
+  "conditions": [
+    {
+      "kind": "NO",
+      "symbol": "AxisHomeCmd"
+    }
+  ],
+  "actions": [
+    {
+      "kind": "CALL",
+      "partName": "MC_Home",
+      "version": "8.0",
+      "instance": "MC_Home_DB",
+      "powerRail": true,
+      "signalTarget": "Execute",
+      "inputs": [
+        { "name": "Axis", "symbol": "Axis_1" },
+        { "name": "Position", "open": true },
+        { "name": "Mode", "symbol": "AxisHomeMode" }
+      ],
+      "outputs": [
+        { "name": "Done", "open": true },
+        { "name": "Busy", "open": true },
+        { "name": "CommandAborted", "open": true },
+        { "name": "Error", "open": true },
+        { "name": "ErrorID", "open": true },
+        { "name": "ErrorInfo", "open": true },
+        { "name": "ReferenceMarkPosition", "open": true }
+      ]
+    }
+  ]
+}

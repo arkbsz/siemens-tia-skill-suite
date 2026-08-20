@@ -1,0 +1,67 @@
+{
+    "packageName":  "siemens-tia-skill-suite_v1.0.0_20260810",
+    "version":  "1.0.0",
+    "releaseDate":  "2026-08-10",
+    "builtAt":  "2026-08-10T17:42:51",
+    "installTarget":  "%USERPROFILE%\\.codex\\skills",
+    "packagedSkills":  [
+                           {
+                               "name":  "siemens-tia-plc-dev",
+                               "role":  "generic-wrapper",
+                               "dependsOn":  [
+                                                 "tia-portal-v17"
+                                             ],
+                               "relativePath":  "skills\\siemens-tia-plc-dev"
+                           },
+                           {
+                               "name":  "tia-portal-v17",
+                               "role":  "local-v17-bridge",
+                               "dependsOn":  [
+
+                                             ],
+                               "relativePath":  "skills\\tia-portal-v17"
+                           },
+                           {
+                               "name":  "codex-tia-client",
+                               "role":  "codex-entrypoint",
+                               "dependsOn":  [
+                                                 "siemens-tia-plc-dev"
+                                             ],
+                               "relativePath":  "skills\\codex-tia-client"
+                           }
+                       ],
+    "excludedDirectories":  [
+                                "__pycache__",
+                                ".session-cache"
+                            ],
+    "excludedFiles":  [
+                          "Siemens.Engineering.dll",
+                          "Siemens.Engineering.Hmi.dll",
+                          "TiaPlcTool.exe"
+                      ],
+    "validation":  [
+                       {
+                           "Skill":  "siemens-tia-plc-dev",
+                           "Status":  "passed",
+                           "Output":  "Skill is valid!"
+                       },
+                       {
+                           "Skill":  "tia-portal-v17",
+                           "Status":  "passed",
+                           "Output":  "Skill is valid!"
+                       },
+                       {
+                           "Skill":  "codex-tia-client",
+                           "Status":  "passed",
+                           "Output":  "Skill is valid!"
+                       }
+                   ],
+    "residualLocalPathHits":  [
+
+                              ],
+    "notes":  [
+                  "Siemens runtime binaries are intentionally excluded from the distributable package.",
+                  "TIA V17 bridge binaries are compiled locally on first use from packaged source.",
+                  "codex-tia-client packaged scripts were patched to resolve sibling skills before falling back to the default user profile path."
+              ]
+}

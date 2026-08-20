@@ -1,0 +1,71 @@
+{
+  "title": "Home step 2 split branch",
+  "comment": "shared-prefix branch example with one coil path and one step-reset move path",
+  "conditions": [
+    {
+      "kind": "NC",
+      "symbol": "ManualAuto"
+    },
+    {
+      "kind": "EQ",
+      "sourceType": "UInt",
+      "left": {
+        "symbol": "HomeStep"
+      },
+      "right": {
+        "scope": "LiteralConstant",
+        "constantType": "UInt",
+        "value": "2"
+      }
+    }
+  ],
+  "branches": [
+    {
+      "conditions": [
+        {
+          "kind": "NE",
+          "sourceType": "Real",
+          "left": {
+            "symbol": "AxisActualPosition"
+          },
+          "right": {
+            "symbol": "HomeTargetPosition"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "kind": "COIL",
+          "symbol": "HomeJogCmd"
+        }
+      ]
+    },
+    {
+      "conditions": [
+        {
+          "kind": "EQ",
+          "sourceType": "Real",
+          "left": {
+            "symbol": "AxisActualPosition"
+          },
+          "right": {
+            "symbol": "HomeTargetPosition"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "kind": "MOVE",
+          "source": {
+            "scope": "LiteralConstant",
+            "constantType": "UInt",
+            "value": "0"
+          },
+          "target": {
+            "symbol": "HomeStep"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "title": "Step 10 conveyor jam alarm",
+  "comment": "Compare step value, start timer, and latch alarm",
+  "conditions": [
+    {
+      "kind": "EQ",
+      "sourceType": "Word",
+      "left": { "symbol": "AutoStep" },
+      "right": { "scope": "LiteralConstant", "constantType": "Word", "value": "10" }
+    },
+    { "kind": "NO", "symbol": "AutoRunning" },
+    { "kind": "NC", "symbol": "SingleStepMode" },
+    { "kind": "NC", "symbol": "FeedSensorPresent" }
+  ],
+  "actions": [
+    { "kind": "TON", "instance": "StepJamTimerDb", "pt": "T#1s" },
+    { "kind": "SET", "symbol": "AlarmDb.ConveyorJamAlarm" }
+  ]
+}

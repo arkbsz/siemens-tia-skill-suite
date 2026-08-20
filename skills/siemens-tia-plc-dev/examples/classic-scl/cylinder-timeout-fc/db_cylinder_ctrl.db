@@ -1,0 +1,22 @@
+DATA_BLOCK "DB_CylinderCtrl"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+NON_RETAIN
+VAR
+    AutoEnable          : Bool := TRUE;
+    ExtendCmd           : Bool;
+    RetractCmd          : Bool;
+    ExtendedLS          : Bool;
+    RetractedLS         : Bool := TRUE;
+    ResetAlarm          : Bool;
+    Q_Extend            : Bool;
+    Q_Retract           : Bool;
+    ExtendTimeoutAlarm  : Bool;
+    RetractTimeoutAlarm : Bool;
+    CylinderFault       : Bool;
+    ExtendET            : Time;
+    RetractET           : Time;
+END_VAR
+
+BEGIN
+END_DATA_BLOCK

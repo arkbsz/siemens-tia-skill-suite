@@ -1,0 +1,50 @@
+{
+  "title": "Axis move absolute",
+  "comment": "batch free-write motion call validation for MC_MoveAbsolute",
+  "conditionGroups": [
+    {
+      "conditions": [
+        { "kind": "NO", "symbol": "Pos1Cmd" }
+      ]
+    },
+    {
+      "conditions": [
+        { "kind": "NO", "symbol": "Pos2Cmd" }
+      ]
+    },
+    {
+      "conditions": [
+        { "kind": "NO", "symbol": "Pos3Cmd" }
+      ]
+    },
+    {
+      "conditions": [
+        { "kind": "NO", "symbol": "Pos4Cmd" }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "kind": "CALL",
+      "partName": "MC_MoveAbsolute",
+      "version": "8.0",
+      "instance": "MC_MoveAbsolute_DB",
+      "powerRail": true,
+      "signalTarget": "Execute",
+      "inputs": [
+        { "name": "Axis", "symbol": "Axis_1" },
+        { "name": "Position", "open": true },
+        { "name": "Velocity", "open": true },
+        { "name": "Direction", "open": true }
+      ],
+      "outputs": [
+        { "name": "Done", "open": true },
+        { "name": "Busy", "open": true },
+        { "name": "CommandAborted", "open": true },
+        { "name": "Error", "open": true },
+        { "name": "ErrorID", "open": true },
+        { "name": "ErrorInfo", "open": true }
+      ]
+    }
+  ]
+}

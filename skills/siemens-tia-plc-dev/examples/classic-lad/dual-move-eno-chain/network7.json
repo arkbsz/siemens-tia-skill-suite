@@ -1,0 +1,29 @@
+{
+  "title": "Axis status copy",
+  "comment": "free-write dual MOVE validation with eno chaining on FC2 status network",
+  "actions": [
+    {
+      "kind": "MOVE",
+      "powerRail": true,
+      "source": {
+        "symbol": "Axis_1.ActualPosition"
+      },
+      "target": {
+        "symbol": "AxisActualPosition"
+      }
+    },
+    {
+      "kind": "MOVE",
+      "signalSource": {
+        "actionIndex": 1,
+        "name": "eno"
+      },
+      "source": {
+        "symbol": "Axis_1.ActualVelocity"
+      },
+      "target": {
+        "symbol": "AxisActualVelocity"
+      }
+    }
+  ]
+}

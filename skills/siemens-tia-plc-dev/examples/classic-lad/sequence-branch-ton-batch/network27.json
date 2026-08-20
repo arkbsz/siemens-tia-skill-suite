@@ -1,0 +1,40 @@
+{
+  "title": "Auto step 21 dwell",
+  "comment": "timer-driven step change",
+  "conditions": [
+    {
+      "kind": "EQ",
+      "sourceType": "Word",
+      "left": {
+        "symbol": "AutoStep"
+      },
+      "right": {
+        "scope": "LiteralConstant",
+        "constantType": "Word",
+        "value": "21"
+      }
+    },
+    {
+      "kind": "NO",
+      "symbol": "AutoRun"
+    }
+  ],
+  "actions": [
+    {
+      "kind": "TON",
+      "instance": "IEC_Timer_0_DB",
+      "pt": "T#2s"
+    },
+    {
+      "kind": "MOVE",
+      "source": {
+        "scope": "LiteralConstant",
+        "constantType": "Word",
+        "value": "22"
+      },
+      "target": {
+        "symbol": "AutoStep"
+      }
+    }
+  ]
+}

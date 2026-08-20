@@ -1,0 +1,228 @@
+---
+name: siemens-tia-plc-dev
+description: "Use for general Siemens TIA Portal PLC engineering across projects: backing up projects, probing Openness readiness, building PLC-as-code workspaces, reading and writing SCL/LAD/FBD via exported artifacts, generating reusable ladder templates, previewing imports, compiling on backup projects, and routing between Openness, exported XML, PLCopen XML, MCP, or GUI fallback."
+---
+
+# Siemens TIA PLC Dev
+
+Use this skill when Codex should act like a practical Siemens PLC development partner rather than a generic coding assistant.
+
+This skill is project-agnostic. It is designed for:
+
+- new or existing TIA Portal projects
+- S7-1200 and S7-1500 program work
+- SCL and LAD/FBD engineering
+- exported XML review and generation
+- reusable template-library building
+- backup-first import and compile loops
+- release-package preparation and controlled project application
+- local REST bridge patterns for editor-to-TIA communication
+- VS Code client scaffolding for the local REST bridge
+
+## Core workflow
+
+Treat PLC work like software work:
+
+1. Back up the project.
+2. Probe the local TIA/Openness environment.
+3. Initialize a `PLC_Code` workspace next to the project.
+4. Export blocks to text/XML.
+5. Review or edit exported artifacts.
+6. Build summaries, catalogs, and reusable templates.
+7. Preview imports before applying.
+8. Compile on a backup project.
+9. Re-export and compare.
+
+For the generic workflow, read `references/workflow.md`.
+
+## Local bridge
+
+This machine has a validated V17 implementation under the sibling skill `tia-portal-v17`.
+
+Use the wrapper scripts in this skill to stay generic:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\bootstrap-siemens-plc-dev.ps1" -ProjectPath "D:\path\to\project"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\refresh-plc-libraries.ps1" -ProjectPath "D:\path\to\project"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" list-blocks --project "D:\path\to\project"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" clone-project -ProjectPath "D:\path\to\project"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" verify-lad-change -ProjectPath "D:\path\to\project" -InputXml "D:\path\to\generated.xml" -PlcName "PLC_1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" prepare-release -ProjectPath "D:\path\to\project" -InputXml "D:\path\to\generated.xml" -ReleaseName "my-change"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" apply-release -ProjectPath "D:\path\to\project" -InputXml "D:\path\to\release.xml" -PlcName "PLC_1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" prepare-write-session -ProjectPath "D:\path\to\project"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\start-tia-rest-bridge.ps1" -Background
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\scaffold-vscode-rest-client.ps1" -ProjectPath "D:\path\to\project"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\scaffold-openness-console.ps1" -TargetDirectory "D:\path\to\OpennessConsole" -ProjectName "MyTiaTool"
+```
+
+For how the generic skill maps to the local V17 implementation, read `references/version-routing.md`.
+
+## Read and write paths
+
+Choose the narrowest path that fits the task:
+
+- exported XML and SCL for code-like review
+- Openness for block traversal, export, import, and compile
+- template manifests for reusable network patterns
+- PLCopen XML for interchange and offline transformations
+- MCP when available
+- GUI only when automation cannot reach the target
+
+## REST bridge
+
+Use the local REST bridge when an editor, agent, or custom tool should talk to TIA through HTTP instead of loading TIA APIs directly.
+
+For details, warm-session behavior, and request examples, read `references/rest-bridge.md`.
+For a ready-to-copy VS Code starter, read `references/vscode-client-template.md`.
+For GUI-assisted PLC download preparation, read `references/gui-download-bridge.md`.
+
+## Direct Openness tooling
+
+Use a direct C# Openness helper when you want a native engineering tool instead of routing through REST.
+
+Scaffold a minimal console project that references `Siemens.Engineering.dll`:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\scaffold-openness-console.ps1" -TargetDirectory "D:\path\to\OpennessConsole" -ProjectName "MyTiaTool"
+```
+
+For the official-source baseline behind this route, read `references/official-openness-sources.md`.
+
+## LAD strategy
+
+Use LAD exports as structured XML, not as casual free text.
+
+For ladder-specific reading, summaries, template generation, and import preview, read `references/lad-and-templates.md`.
+For naming and comment style, read `references/naming-and-comments.md`.
+For training notes and the latest ladder-writing lessons, read `references/lad-training-notes.md`.
+
+For a code-like edit loop around one ladder change, scaffold a working set:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" scaffold-lad-change -ProjectPath "D:\path\to\project" -SourceXml "D:\path\to\block.xml" -ChangeName "cylinder-3-timeout-cleanup"
+```
+
+Then use a one-command safe verification loop on a cloned project:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" verify-lad-change -ProjectPath "D:\path\to\project" -InputXml "D:\path\to\project\PLC_Code\changes\my-change\outputs\my-change.generated.xml" -PlcName "PLC_1"
+```
+
+When you want to reuse one exported network instead of editing a whole block shell, patch only `NetworkSource` / `FlgNet`:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" patch-lad-network -TargetXml "D:\path\to\target.xml" -DonorXml "D:\path\to\donor.xml" -OutputXml "D:\path\to\patched.xml" -TargetNetworkIndex 1 -DonorNetworkIndex 1 -CopyTitle -CopyComment
+```
+
+When you want a first free-write path for simple ladder logic, write a JSON spec and compile it into one network:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" scaffold-lad-network-json -OutputPath "D:\path\to\network.json" -Title "Alarm rung"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" write-lad-network -TargetXml "D:\path\to\block.xml" -SpecPath "D:\path\to\network.json" -OutputXml "D:\path\to\generated.xml" -NetworkIndex 3
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" write-lad-batch -TargetXml "D:\path\to\block.xml" -ManifestPath "D:\path\to\batch-manifest.json" -OutputXml "D:\path\to\generated.xml"
+```
+
+Current supported free-write subset:
+
+- series `NO` / `NC` contacts
+- edge conditions `P_EDGE` and `N_EDGE`
+- compare conditions `EQ`, `NE`, `GE`, `GT`, `LE`, `LT` with symbol or constant operands
+- `conditionGroups` for parallel OR branches that merge through one `O` part
+- shared-prefix `branches` where one upstream signal fans out into several downstream condition chains with per-branch actions
+- one signal path with optional `TON`
+- `TON.pt` as either a time string such as `T#1s` or a symbol/components operand that resolves to a `TIME` variable
+- one or more output actions per network
+- `COIL`, `SET`, `RESET`, `TON`, `MOVE`, `CTU`, and generic `CALL`
+- named `CALL` inputs and outputs with optional `open` connections
+- `powerRail` on `CALL` and `MOVE`, and `signalTarget` on `CALL`
+- `signalSource` on `MOVE` for action-to-action chaining such as `eno -> en`
+- action-only `CALL` networks such as `MB_COMM_LOAD`
+- `constantName` support for `GlobalConstant`
+- `components` paths for array-style or nested variable access
+- network title and comment
+- `scope` support for `GlobalVariable` and `LocalVariable`
+
+Current validated edge:
+
+- `TON` works when the referenced timer instance DB already exists in the project
+- writing a `TON` that points to a new missing instance name will import, but compile can fail with `Missing instance DB`
+- `verify-lad-change` can now auto-import a sibling `supporting-sources` folder before the XML block import, which makes timer-backed changes with new `IEC_TIMER` instance DB sources verifiable on a clone
+- `write-lad-network` now reports `TonInstancesSeenInTargetXml` and `TonInstancesMissingFromTargetXml` as a preflight hint
+- real-project validation now also covers `CTU` with one `P_EDGE` count path and one separate reset-branch path on the FC5 automatic block
+- real-project validation now also covers `MC_Power` on the FC2 step block
+- real-project validation now also covers action-only `MB_COMM_LOAD` on the FC3 drive block
+- real-project validation now also covers `MB_MASTER + MOVE` with array-style `DATA_PTR` access on the FC3 drive block
+- real-project validation now also covers dual `MOVE` chaining through `signalSource` on the FC2 status network
+- real-project validation now also covers shared-prefix branch LAD on the FC2 homing step 2 network
+- real-project validation now also covers a full FC2 step-block batch rewrite across networks 1 through 16
+- real-project validation now also covers mixed direct-action plus shared-branch LAD on the FC5 automatic block
+- real-project validation now also covers `TON + MOVE` step transitions on the FC5 automatic block
+- real-project validation now also covers a small FC5 sequence batch that mixes branch-driven motion logic and timer-driven step changes
+- real-project validation now also covers a full FC5 automatic-sequence block rewrite across networks 1 through 36
+- real-project validation now also covers `TON.PT` bound to a `GlobalDB` `TIME` member on the FC6 station-supervisor block
+
+When authoring LAD, keep names human-readable and network titles short and explicit. For maintenance-facing logic, LAD is the preferred surface; for heavier algorithms, keep the logic in SCL and only expose the readable control layer in ladder.
+
+## Classic project patterns
+
+When the user asks for practical PLC programs or wants Codex to improve its own authoring quality, ground the next program in classic device patterns instead of improvising from scratch.
+
+Read `references/classic-control-patterns.md` before writing:
+
+- motor reversing starter
+- manual/auto conveyor
+- cylinder timeout logic
+- alarm latch and ack/reset
+
+The skill now includes small reusable source examples under:
+
+- `examples/classic-scl/motor-fwd-rev`
+- `examples/classic-scl/conveyor-auto-manual`
+- `examples/classic-scl/cylinder-timeout-fc`
+- `examples/classic-scl/alarm-latch-fb`
+- `examples/classic-scl/sequence-station-fb`
+- `examples/classic-scl/star-delta-starter-fb`
+- `examples/classic-scl/dual-starter-cell-fb`
+- `examples/classic-scl/station-supervisor-fb`
+- `examples/classic-scl/material-handling-cell`
+- `examples/classic-lad/start-stop-single-coil`
+- `examples/classic-lad/ton-set-alarm`
+- `examples/classic-lad/reset-fanout`
+- `examples/classic-lad/batch-reset-plus-ton`
+- `examples/classic-lad/or-branch-coil`
+- `examples/classic-lad/eq-ton-set`
+- `examples/classic-lad/eq-move-step`
+- `examples/classic-lad/set-move-step`
+- `examples/classic-lad/ctu-reset-step`
+- `examples/classic-lad/mc-power-call`
+- `examples/classic-lad/mb-comm-load-call`
+- `examples/classic-lad/mb-master-readfreq`
+- `examples/classic-lad/motion-axis-core-batch`
+- `examples/classic-lad/dual-move-eno-chain`
+- `examples/classic-lad/shared-prefix-homing-branch`
+- `examples/classic-lad/mixed-direct-branch-step`
+- `examples/classic-lad/sequence-branch-ton-batch`
+
+## Guardrails
+
+- Prefer backup projects for first imports.
+- Do not modify internal TIA binary storage directly.
+- Do not wait indefinitely on stalled downloads, websites, or blocked sessions; switch route.
+- Do not run multiple TIA project-open actions in parallel.
+- Save after compile when the workflow depends on consistency state being persisted.
+- On Windows PowerShell, REST requests with non-ASCII project paths can be fragile. Use `prepare-write-session` and then reuse the returned `BridgeProjectPath` for REST calls when needed.
+
+## References
+
+- Generic workflow: `references/workflow.md`
+- Project onboarding: `references/project-onboarding.md`
+- Release workflow: `references/release-workflow.md`
+- Version and routing: `references/version-routing.md`
+- LAD and template library: `references/lad-and-templates.md`
+- Classic control patterns: `references/classic-control-patterns.md`
+- Ecosystem and next routes: `references/ecosystem-and-next-routes.md`
+- Official Openness sources: `references/official-openness-sources.md`
+- Community Openness notes: `references/community-openness-notes-cnblogs-aifen.md`
+- REST bridge: `references/rest-bridge.md`
+- VS Code client template: `references/vscode-client-template.md`
+- GUI download bridge: `references/gui-download-bridge.md`

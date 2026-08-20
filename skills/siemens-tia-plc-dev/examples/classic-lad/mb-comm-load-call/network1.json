@@ -1,0 +1,70 @@
+{
+  "title": "Configure Modbus port",
+  "comment": "free-write CALL validation for MB_COMM_LOAD on FC_3 drive block",
+  "actions": [
+    {
+      "kind": "CALL",
+      "partName": "MB_COMM_LOAD",
+      "version": "2.1",
+      "instance": "MB_COMM_LOAD_DB",
+      "powerRail": true,
+      "inputs": [
+        {
+          "name": "REQ",
+          "symbol": "FirstScan"
+        },
+        {
+          "name": "PORT",
+          "scope": "GlobalConstant",
+          "constantName": "Local~CB_1241_(RS485)"
+        },
+        {
+          "name": "BAUD",
+          "scope": "LiteralConstant",
+          "constantType": "UDInt",
+          "value": "38400"
+        },
+        {
+          "name": "PARITY",
+          "scope": "LiteralConstant",
+          "constantType": "UInt",
+          "value": "2"
+        },
+        {
+          "name": "FLOW_CTRL",
+          "open": true
+        },
+        {
+          "name": "RTS_ON_DLY",
+          "open": true
+        },
+        {
+          "name": "RTS_OFF_DLY",
+          "open": true
+        },
+        {
+          "name": "RESP_TO",
+          "open": true
+        },
+        {
+          "name": "MB_DB",
+          "symbol": "MB_MASTER_DB"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "DONE",
+          "symbol": "DB_3\u53d8\u9891\u5668\u6570\u636e\u5757.\u521d\u59cb\u5316\u5b8c\u6210\u4fe1\u53f7"
+        },
+        {
+          "name": "ERROR",
+          "open": true
+        },
+        {
+          "name": "STATUS",
+          "open": true
+        }
+      ]
+    }
+  ]
+}

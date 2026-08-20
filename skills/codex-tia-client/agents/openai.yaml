@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex TIA Client"
+  short_description: "Use Codex as the main Siemens PLC client instead of a separate helper app"
+  default_prompt: "Use $codex-tia-client to handle Siemens TIA Portal PLC work directly in Codex, including backup-first reads, SCL and LAD exports, LAD JSON to XML generation, imports, compile loops, and local REST bridge workflows."

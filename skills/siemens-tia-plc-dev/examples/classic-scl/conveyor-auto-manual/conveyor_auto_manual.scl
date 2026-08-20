@@ -1,0 +1,38 @@
+FUNCTION "FC_ConveyorAutoManual" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+BEGIN
+    IF NOT "DB_ConveyorCtrl".OverloadOK THEN
+        "DB_ConveyorCtrl".FaultLatched := TRUE;
+        "DB_ConveyorCtrl".ManualLatch := FALSE;
+    END_IF;
+
+    IF "DB_ConveyorCtrl".ResetFault AND "DB_ConveyorCtrl".OverloadOK THEN
+        "DB_ConveyorCtrl".FaultLatched := FALSE;
+    END_IF;
+
+    IF "DB_ConveyorCtrl".StopPB THEN
+        "DB_ConveyorCtrl".ManualLatch := FALSE;
+    END_IF;
+
+    IF NOT "DB_ConveyorCtrl".ManualMode THEN
+        "DB_ConveyorCtrl".ManualLatch := FALSE;
+    END_IF;
+
+    IF "DB_ConveyorCtrl".ManualMode
+       AND "DB_ConveyorCtrl".StartPB
+       AND NOT "DB_ConveyorCtrl".FaultLatched
+       AND "DB_ConveyorCtrl".OverloadOK THEN
+        "DB_ConveyorCtrl".ManualLatch := TRUE;
+    END_IF;
+
+    "DB_ConveyorCtrl".Q_Run :=
+        NOT "DB_ConveyorCtrl".FaultLatched
+        AND "DB_ConveyorCtrl".OverloadOK
+        AND NOT "DB_ConveyorCtrl".ExitSensorBlocked
+        AND (
+            ("DB_ConveyorCtrl".ManualMode AND "DB_ConveyorCtrl".ManualLatch)
+            OR
+            ((NOT "DB_ConveyorCtrl".ManualMode) AND "DB_ConveyorCtrl".AutoMode AND "DB_ConveyorCtrl".AutoRequest)
+        );
+END_FUNCTION

@@ -1,0 +1,20 @@
+DATA_BLOCK "DB_ConveyorCtrl"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+NON_RETAIN
+VAR
+    ManualMode        : Bool := TRUE;
+    AutoMode          : Bool;
+    StartPB           : Bool;
+    StopPB            : Bool;
+    AutoRequest       : Bool;
+    ExitSensorBlocked : Bool;
+    OverloadOK        : Bool := TRUE;
+    ResetFault        : Bool;
+    FaultLatched      : Bool;
+    ManualLatch       : Bool;
+    Q_Run             : Bool;
+END_VAR
+
+BEGIN
+END_DATA_BLOCK

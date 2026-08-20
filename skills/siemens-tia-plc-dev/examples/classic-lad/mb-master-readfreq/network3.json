@@ -1,0 +1,112 @@
+{
+  "title": "Read drive frequency",
+  "comment": "free-write CALL plus MOVE validation for MB_MASTER frequency read",
+  "conditions": [
+    {
+      "kind": "EQ",
+      "sourceType": "UInt",
+      "left": {
+        "symbol": "DB_3\u53d8\u9891\u5668\u6570\u636e\u5757.\u8f6e\u8be2\u6b65"
+      },
+      "right": {
+        "scope": "LiteralConstant",
+        "constantType": "UInt",
+        "value": "1"
+      }
+    }
+  ],
+  "actions": [
+    {
+      "kind": "CALL",
+      "partName": "MB_MASTER",
+      "version": "2.2",
+      "instance": "MB_MASTER_DB",
+      "powerRail": true,
+      "signalTarget": "REQ",
+      "inputs": [
+        {
+          "name": "MB_ADDR",
+          "scope": "LiteralConstant",
+          "constantType": "UInt",
+          "value": "1"
+        },
+        {
+          "name": "MODE",
+          "scope": "LiteralConstant",
+          "constantType": "USInt",
+          "value": "0"
+        },
+        {
+          "name": "DATA_ADDR",
+          "scope": "LiteralConstant",
+          "constantType": "UDInt",
+          "value": "48193"
+        },
+        {
+          "name": "DATA_LEN",
+          "scope": "LiteralConstant",
+          "constantType": "UInt",
+          "value": "1"
+        },
+        {
+          "name": "DATA_PTR",
+          "components": [
+            {
+              "name": "DB_3\u53d8\u9891\u5668\u6570\u636e\u5757"
+            },
+            {
+              "name": "\u8bfb\u53d6\u9891\u7387\u6570\u636e",
+              "accessModifier": "Array",
+              "access": {
+                "scope": "LiteralConstant",
+                "constantType": "DInt",
+                "value": "0"
+              }
+            }
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "DONE",
+          "symbol": "DB_3\u53d8\u9891\u5668\u6570\u636e\u5757.\u8bfb\u53d6\u9891\u7387\u5b8c\u6210"
+        },
+        {
+          "name": "BUSY",
+          "symbol": "DB_3\u53d8\u9891\u5668\u6570\u636e\u5757.\u8bfb\u53d6\u9891\u7387\u72b6\u6001"
+        },
+        {
+          "name": "ERROR",
+          "symbol": "DB_3\u53d8\u9891\u5668\u6570\u636e\u5757.\u8bfb\u53d6\u9891\u7387\u51fa\u9519"
+        },
+        {
+          "name": "STATUS",
+          "symbol": "DB_3\u53d8\u9891\u5668\u6570\u636e\u5757.\u8bfb\u53d6\u9891\u7387\u901a\u4fe1\u72b6\u6001"
+        }
+      ]
+    },
+    {
+      "kind": "MOVE",
+      "powerRail": true,
+      "source": {
+        "components": [
+          {
+            "name": "DB_3\u53d8\u9891\u5668\u6570\u636e\u5757"
+          },
+          {
+            "name": "\u8bfb\u53d6\u9891\u7387\u6570\u636e",
+            "accessModifier": "Array",
+            "access": {
+              "scope": "LiteralConstant",
+              "constantType": "DInt",
+              "value": "0"
+            }
+          }
+        ]
+      },
+      "target": {
+        "symbol": "DB_3\u53d8\u9891\u5668\u6570\u636e\u5757.\u8bfb\u53d6\u9891\u7387\u503c"
+      }
+    }
+  ]
+}

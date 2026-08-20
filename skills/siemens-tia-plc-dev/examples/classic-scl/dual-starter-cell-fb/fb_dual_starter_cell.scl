@@ -1,0 +1,20 @@
+FUNCTION_BLOCK "FB_DualStarterCell"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+VAR_IN_OUT
+    LeftIO  : "UDT_StarDeltaStarterIO";
+    RightIO : "UDT_StarDeltaStarterIO";
+END_VAR
+VAR
+    LeftStarter  : "FB_StarDeltaStarter";
+    RightStarter : "FB_StarDeltaStarter";
+END_VAR
+BEGIN
+    #LeftStarter(
+        IO := #LeftIO
+    );
+
+    #RightStarter(
+        IO := #RightIO
+    );
+END_FUNCTION_BLOCK

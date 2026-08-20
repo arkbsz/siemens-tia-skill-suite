@@ -1,0 +1,21 @@
+{
+  "title": "Manual auto merge run coil",
+  "comment": "Parallel manual and auto branches merged into one coil",
+  "conditionGroups": [
+    {
+      "conditions": [
+        { "kind": "NC", "symbol": "ManualMode" },
+        { "kind": "NO", "symbol": "ManualStartCmd" }
+      ]
+    },
+    {
+      "conditions": [
+        { "kind": "NO", "symbol": "ManualMode" },
+        { "kind": "NO", "symbol": "AutoRunRequest" }
+      ]
+    }
+  ],
+  "actions": [
+    { "kind": "COIL", "symbol": "RunCmd" }
+  ]
+}

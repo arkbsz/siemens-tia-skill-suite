@@ -1,0 +1,33 @@
+{
+  "title": "Alarm reset fanout",
+  "comment": "Validated multi-action reset fanout free-write example on a real FC1 block.",
+  "conditions": [
+    {
+      "kind": "NO",
+      "symbol": "设备复位"
+    },
+    {
+      "kind": "NO",
+      "symbol": "复位"
+    }
+  ],
+  "actions": [
+    {
+      "kind": "RESET",
+      "symbol": "DB1_报警数据块.输送带卡料报警"
+    },
+    {
+      "kind": "RESET",
+      "symbol": "DB1_报警数据块.真空报警"
+    },
+    {
+      "kind": "SET",
+      "symbol": "DB_2步进数据块.复位"
+    }
+  ],
+  "notes": [
+    "Use readable grouped reset actions rather than hiding them in a larger patched network.",
+    "Validate on a cloned project before applying to the main project.",
+    "Fanout stays on one visible signal path in the current writer subset."
+  ]
+}

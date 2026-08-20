@@ -1,0 +1,7 @@
+DATA_BLOCK "DB_StarDeltaStarter"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+NON_RETAIN
+"FB_StarDeltaStarter"
+BEGIN
+END_DATA_BLOCK

@@ -1,0 +1,47 @@
+{
+  "title": "Single-step counter",
+  "comment": "Count one pulse and reset from OR-ed reset branches",
+  "conditions": [
+    { "kind": "NO", "symbol": "SingleStepMode" },
+    {
+      "kind": "P_EDGE",
+      "symbol": "SingleStepRun",
+      "bitSymbol": "SingleStepRunRise"
+    }
+  ],
+  "actions": [
+    {
+      "kind": "CTU",
+      "instance": "StepCounterDb",
+      "valueType": "Int",
+      "pv": { "scope": "LiteralConstant", "constantType": "Int", "value": "1" },
+      "resetConditionGroups": [
+        {
+          "conditions": [
+            { "kind": "NO", "symbol": "ResetCmd" }
+          ]
+        },
+        {
+          "conditions": [
+            { "kind": "NO", "symbol": "EquipmentResetCmd" }
+          ]
+        },
+        {
+          "conditions": [
+            { "kind": "NC", "symbol": "SingleStepMode" }
+          ]
+        },
+        {
+          "conditions": [
+            {
+              "kind": "GE",
+              "sourceType": "Int",
+              "left": { "symbol": "StepCounterDb.CV" },
+              "right": { "scope": "LiteralConstant", "constantType": "Int", "value": "31" }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

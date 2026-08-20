@@ -1,0 +1,61 @@
+TYPE "UDT_MaterialHandlingCellIO"
+VERSION : 0.1
+STRUCT
+    Mode : "UDT_OperatingModeIO";
+    Commands : STRUCT
+        AutoCycleRequest : Bool;
+        ResetSequence    : Bool;
+        ManualConveyor   : Bool;
+        ManualClamp      : Bool;
+        ManualPick       : Bool;
+        ManualRelease    : Bool;
+        LeftStarterStart : Bool;
+        RightStarterStart: Bool;
+    END_STRUCT;
+    Inputs : STRUCT
+        SafetyOk        : Bool := TRUE;
+        PermissiveOk    : Bool := TRUE;
+        AirOk           : Bool := TRUE;
+        CellHealthy     : Bool := TRUE;
+        PartPresent     : Bool;
+        ClampClosed     : Bool;
+        PickDone        : Bool;
+        ReleaseDone     : Bool;
+        TransferClear   : Bool := TRUE;
+        LeftRunFeedback : Bool;
+        RightRunFeedback: Bool;
+        LeftOverloadOK  : Bool := TRUE;
+        RightOverloadOK : Bool := TRUE;
+    END_STRUCT;
+    State : STRUCT
+        ManualMode         : Bool;
+        AutoMode           : Bool;
+        MotionEnabled      : Bool;
+        Ready              : Bool;
+        Running            : Bool;
+        CycleComplete      : Bool;
+        AnyFault           : Bool;
+        JamAlarmActive     : Bool;
+        StationAlarmActive : Bool;
+        LeftStarterFault   : Bool;
+        RightStarterFault  : Bool;
+        CycleCounter       : DInt;
+    END_STRUCT;
+    Outputs : STRUCT
+        ConveyorRun     : Bool;
+        ClampSolenoid   : Bool;
+        PickActuator    : Bool;
+        ReleaseActuator : Bool;
+        LeftMainCmd     : Bool;
+        LeftStarCmd     : Bool;
+        LeftDeltaCmd    : Bool;
+        RightMainCmd    : Bool;
+        RightStarCmd    : Bool;
+        RightDeltaCmd   : Bool;
+    END_STRUCT;
+    Starters : STRUCT
+        Left  : "UDT_StarDeltaStarterIO";
+        Right : "UDT_StarDeltaStarterIO";
+    END_STRUCT;
+END_STRUCT;
+END_TYPE

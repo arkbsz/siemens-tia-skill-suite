@@ -1,0 +1,10 @@
+DATA_BLOCK "DB_MaterialHandlingCellIO"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+NON_RETAIN
+VAR
+    Cell : "UDT_MaterialHandlingCellIO";
+END_VAR
+
+BEGIN
+END_DATA_BLOCK

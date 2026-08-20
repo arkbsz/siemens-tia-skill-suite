@@ -1,0 +1,17 @@
+DATA_BLOCK "DB_MotorCtrl"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+NON_RETAIN
+VAR
+    StartForward : Bool;
+    StartReverse : Bool;
+    Stop         : Bool;
+    OverloadOK   : Bool := TRUE;
+    ForwardLatch : Bool;
+    ReverseLatch : Bool;
+    Q_Forward    : Bool;
+    Q_Reverse    : Bool;
+END_VAR
+
+BEGIN
+END_DATA_BLOCK

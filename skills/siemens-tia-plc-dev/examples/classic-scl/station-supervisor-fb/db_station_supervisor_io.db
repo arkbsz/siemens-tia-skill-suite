@@ -1,0 +1,10 @@
+DATA_BLOCK "DB_StationSupervisorIO"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+NON_RETAIN
+VAR
+    Supervisor : "UDT_StationSupervisorIO";
+END_VAR
+
+BEGIN
+END_DATA_BLOCK

@@ -1,0 +1,61 @@
+FUNCTION_BLOCK "FB_StarDeltaStarter"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+VAR_IN_OUT
+    IO : "UDT_StarDeltaStarterIO";
+END_VAR
+VAR
+    State              : Int;
+    StarToDeltaTimer   : TON;
+    RunFeedbackTimer   : TON;
+END_VAR
+BEGIN
+    IF #IO.StopCmd OR NOT #IO.OverloadOK THEN
+        #State := 0;
+    END_IF;
+
+    #StarToDeltaTimer(
+        IN := (#State = 10),
+        PT := T#5s
+    );
+
+    #RunFeedbackTimer(
+        IN := (#State = 20) AND NOT #IO.RunFeedback,
+        PT := T#2s
+    );
+
+    #IO.MainCmd := FALSE;
+    #IO.StarCmd := FALSE;
+    #IO.DeltaCmd := FALSE;
+    #IO.Running := FALSE;
+
+    CASE #State OF
+        0:
+            #IO.Fault := FALSE;
+            IF #IO.StartCmd AND #IO.OverloadOK THEN
+                #State := 10;
+            END_IF;
+
+        10:
+            #IO.MainCmd := TRUE;
+            #IO.StarCmd := TRUE;
+            IF #StarToDeltaTimer.Q THEN
+                #State := 20;
+            END_IF;
+
+        20:
+            #IO.MainCmd := TRUE;
+            #IO.DeltaCmd := TRUE;
+            #IO.Running := #IO.RunFeedback;
+            IF #RunFeedbackTimer.Q THEN
+                #IO.Fault := TRUE;
+                #State := 30;
+            END_IF;
+
+        30:
+            #IO.Fault := TRUE;
+
+        ELSE
+            #State := 0;
+    END_CASE;
+END_FUNCTION_BLOCK

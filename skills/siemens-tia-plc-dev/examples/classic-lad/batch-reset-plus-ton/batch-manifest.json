@@ -1,0 +1,12 @@
+{
+  "steps": [
+    {
+      "networkIndex": 14,
+      "specPath": "network14.json"
+    },
+    {
+      "networkIndex": 15,
+      "specPath": "network15.json"
+    }
+  ]
+}

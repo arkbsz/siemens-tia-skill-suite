@@ -1,0 +1,28 @@
+{
+  "title": "Axis jog",
+  "comment": "batch free-write motion call validation for MC_MoveJog",
+  "actions": [
+    {
+      "kind": "CALL",
+      "partName": "MC_MoveJog",
+      "version": "8.0",
+      "instance": "MC_MoveJog_DB",
+      "powerRail": true,
+      "inputs": [
+        { "name": "Axis", "symbol": "Axis_1" },
+        { "name": "JogForward", "symbol": "JogForwardCmd" },
+        { "name": "JogBackward", "symbol": "JogBackwardCmd" },
+        { "name": "Velocity", "symbol": "JogVelocity" },
+        { "name": "PositionControlled", "open": true }
+      ],
+      "outputs": [
+        { "name": "InVelocity", "open": true },
+        { "name": "Busy", "open": true },
+        { "name": "CommandAborted", "open": true },
+        { "name": "Error", "open": true },
+        { "name": "ErrorID", "open": true },
+        { "name": "ErrorInfo", "open": true }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "title": "Step 2 to 3 with output set",
+  "comment": "Set one output and advance the step in the same rung",
+  "conditions": [
+    {
+      "kind": "EQ",
+      "sourceType": "Word",
+      "left": { "symbol": "AutoStep" },
+      "right": { "scope": "LiteralConstant", "constantType": "Word", "value": "2" }
+    },
+    { "kind": "NO", "symbol": "AutoRunning" },
+    { "kind": "NO", "symbol": "Cylinder2ExtendedFb" }
+  ],
+  "actions": [
+    { "kind": "SET", "symbol": "OutputDb.Cylinder2ExtendAuto" },
+    {
+      "kind": "MOVE",
+      "source": { "scope": "LiteralConstant", "constantType": "Word", "value": "3" },
+      "target": { "symbol": "AutoStep" }
+    }
+  ]
+}

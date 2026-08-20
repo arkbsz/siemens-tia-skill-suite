@@ -1,0 +1,60 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "TIA: Bridge Health",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "Invoke-RestMethod -Method Get -Uri 'http://127.0.0.1:8765/health' | ConvertTo-Json -Depth 8"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "TIA: List PLCs",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:8765/api/v1/tia/list-plcs' -ContentType 'application/json' -Body '{\"projectPath\":\"${workspaceFolder}\"}' | ConvertTo-Json -Depth 8"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "TIA: List Blocks",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:8765/api/v1/tia/list-blocks' -ContentType 'application/json' -Body '{\"projectPath\":\"${workspaceFolder}\",\"plc\":\"PLC_1\",\"useSession\":true}' | ConvertTo-Json -Depth 10"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "TIA: Open Warm Session",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:8765/api/v1/sessions/open' -ContentType 'application/json' -Body '{\"projectPath\":\"${workspaceFolder}\",\"ui\":false}' | ConvertTo-Json -Depth 10"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "TIA: Prepare GUI Download",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:8765/api/v1/download/prepare' -ContentType 'application/json' -Body '{\"projectPath\":\"${workspaceFolder}\",\"plcName\":\"PLC_1\"}' | ConvertTo-Json -Depth 10"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}

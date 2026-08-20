@@ -1,0 +1,40 @@
+TYPE "UDT_StationSupervisorIO"
+VERSION : 0.1
+STRUCT
+    Commands : STRUCT
+        AutoStart : Bool;
+        StopCmd   : Bool;
+        ResetCmd  : Bool;
+        AckCmd    : Bool;
+    END_STRUCT;
+    Faults : STRUCT
+        MotorFault    : Bool;
+        ConveyorFault : Bool;
+        CylinderFault : Bool;
+        SafetyFault   : Bool;
+    END_STRUCT;
+    Inputs : STRUCT
+        PartPresent  : Bool;
+        ClampClosed  : Bool;
+        PickDone     : Bool;
+        ReleaseDone  : Bool;
+        PermissiveOK : Bool := TRUE;
+    END_STRUCT;
+    State : STRUCT
+        AnyFault      : Bool;
+        MotorAlarmActive    : Bool;
+        ConveyorAlarmActive : Bool;
+        CylinderAlarmActive : Bool;
+        SafetyAlarmActive   : Bool;
+        StationAlarmActive  : Bool;
+        Ready               : Bool;
+        Busy                : Bool;
+        Running             : Bool;
+        Complete            : Bool;
+        ConveyorRunCmd      : Bool;
+        ClampCmd            : Bool;
+        PickCmd             : Bool;
+        ReleaseCmd          : Bool;
+    END_STRUCT;
+END_STRUCT;
+END_TYPE

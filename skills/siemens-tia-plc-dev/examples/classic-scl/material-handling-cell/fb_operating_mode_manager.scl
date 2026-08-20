@@ -1,0 +1,32 @@
+FUNCTION_BLOCK "FB_OperatingModeManager"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+VAR_IN_OUT
+    IO : "UDT_OperatingModeIO";
+END_VAR
+BEGIN
+    IF #IO.Commands.SelectManual THEN
+        #IO.State.ManualSelected := TRUE;
+        #IO.State.AutoSelected := FALSE;
+    ELSIF #IO.Commands.SelectAuto THEN
+        #IO.State.ManualSelected := FALSE;
+        #IO.State.AutoSelected := TRUE;
+    END_IF;
+
+    #IO.State.Ready := #IO.Inputs.SafetyOk AND #IO.Inputs.PermissiveOk AND #IO.Inputs.LocalEnabled;
+    #IO.State.StartDenied := #IO.Commands.StartCmd AND NOT #IO.State.Ready;
+
+    IF #IO.Commands.StopCmd OR NOT #IO.State.Ready OR #IO.Commands.ResetCmd THEN
+        #IO.State.MotionEnable := FALSE;
+    ELSIF #IO.Commands.StartCmd AND (#IO.State.ManualSelected OR #IO.State.AutoSelected) THEN
+        #IO.State.MotionEnable := TRUE;
+    END_IF;
+
+    IF #IO.State.ManualSelected THEN
+        #IO.State.ModeCode := 1;
+    ELSIF #IO.State.AutoSelected THEN
+        #IO.State.ModeCode := 2;
+    ELSE
+        #IO.State.ModeCode := 0;
+    END_IF;
+END_FUNCTION_BLOCK

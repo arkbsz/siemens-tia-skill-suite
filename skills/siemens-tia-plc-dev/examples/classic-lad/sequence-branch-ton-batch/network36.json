@@ -1,0 +1,40 @@
+{
+  "title": "Auto step 30 dwell loopback",
+  "comment": "timer-driven loopback to step 1",
+  "conditions": [
+    {
+      "kind": "EQ",
+      "sourceType": "Word",
+      "left": {
+        "symbol": "AutoStep"
+      },
+      "right": {
+        "scope": "LiteralConstant",
+        "constantType": "Word",
+        "value": "30"
+      }
+    },
+    {
+      "kind": "NO",
+      "symbol": "AutoRun"
+    }
+  ],
+  "actions": [
+    {
+      "kind": "TON",
+      "instance": "IEC_Timer_0_DB",
+      "pt": "T#2s"
+    },
+    {
+      "kind": "MOVE",
+      "source": {
+        "scope": "LiteralConstant",
+        "constantType": "Word",
+        "value": "1"
+      },
+      "target": {
+        "symbol": "AutoStep"
+      }
+    }
+  ]
+}

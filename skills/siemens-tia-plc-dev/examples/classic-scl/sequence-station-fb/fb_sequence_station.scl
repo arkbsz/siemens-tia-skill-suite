@@ -1,0 +1,85 @@
+FUNCTION_BLOCK "FB_SequenceStation"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+VAR_INPUT
+    AutoStart      : Bool;
+    StopCmd        : Bool;
+    ResetCmd       : Bool;
+    PartPresent    : Bool;
+    ClampClosed    : Bool;
+    PickDone       : Bool;
+    ReleaseDone    : Bool;
+END_VAR
+VAR_OUTPUT
+    ConveyorRun    : Bool;
+    ClampCmd       : Bool;
+    PickCmd        : Bool;
+    ReleaseCmd     : Bool;
+    Busy           : Bool;
+    Complete       : Bool;
+END_VAR
+VAR
+    Step           : Int;
+END_VAR
+BEGIN
+    IF #StopCmd THEN
+        #Step := 0;
+    END_IF;
+
+    IF #ResetCmd THEN
+        #Step := 0;
+        #Complete := FALSE;
+    END_IF;
+
+    #ConveyorRun := FALSE;
+    #ClampCmd := FALSE;
+    #PickCmd := FALSE;
+    #ReleaseCmd := FALSE;
+    #Busy := FALSE;
+
+    CASE #Step OF
+        0:
+            IF #AutoStart THEN
+                #Complete := FALSE;
+                #Step := 10;
+            END_IF;
+
+        10:
+            #Busy := TRUE;
+            #ConveyorRun := TRUE;
+            IF #PartPresent THEN
+                #Step := 20;
+            END_IF;
+
+        20:
+            #Busy := TRUE;
+            #ClampCmd := TRUE;
+            IF #ClampClosed THEN
+                #Step := 30;
+            END_IF;
+
+        30:
+            #Busy := TRUE;
+            #ClampCmd := TRUE;
+            #PickCmd := TRUE;
+            IF #PickDone THEN
+                #Step := 40;
+            END_IF;
+
+        40:
+            #Busy := TRUE;
+            #ReleaseCmd := TRUE;
+            IF #ReleaseDone THEN
+                #Step := 50;
+            END_IF;
+
+        50:
+            #Complete := TRUE;
+            IF NOT #AutoStart THEN
+                #Step := 0;
+            END_IF;
+
+        ELSE
+            #Step := 0;
+    END_CASE;
+END_FUNCTION_BLOCK

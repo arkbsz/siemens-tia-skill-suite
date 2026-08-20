@@ -1,0 +1,24 @@
+{
+  "steps": [
+    {
+      "networkIndex": 2,
+      "specPath": "D:\\path\\to\\motion-axis-core-batch\\network2.json"
+    },
+    {
+      "networkIndex": 3,
+      "specPath": "D:\\path\\to\\motion-axis-core-batch\\network3.json"
+    },
+    {
+      "networkIndex": 4,
+      "specPath": "D:\\path\\to\\motion-axis-core-batch\\network4.json"
+    },
+    {
+      "networkIndex": 5,
+      "specPath": "D:\\path\\to\\motion-axis-core-batch\\network5.json"
+    },
+    {
+      "networkIndex": 6,
+      "specPath": "D:\\path\\to\\motion-axis-core-batch\\network6.json"
+    }
+  ]
+}

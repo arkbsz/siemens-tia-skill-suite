@@ -1,0 +1,26 @@
+TYPE "UDT_OperatingModeIO"
+VERSION : 0.1
+STRUCT
+    Commands : STRUCT
+        SelectManual : Bool;
+        SelectAuto   : Bool;
+        StartCmd     : Bool;
+        StopCmd      : Bool;
+        ResetCmd     : Bool;
+        AckCmd       : Bool;
+    END_STRUCT;
+    Inputs : STRUCT
+        SafetyOk     : Bool := TRUE;
+        PermissiveOk : Bool := TRUE;
+        LocalEnabled : Bool := TRUE;
+    END_STRUCT;
+    State : STRUCT
+        ManualSelected : Bool;
+        AutoSelected   : Bool;
+        MotionEnable   : Bool;
+        Ready          : Bool;
+        StartDenied    : Bool;
+        ModeCode       : Int;
+    END_STRUCT;
+END_STRUCT;
+END_TYPE

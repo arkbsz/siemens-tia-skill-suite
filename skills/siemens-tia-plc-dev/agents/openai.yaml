@@ -1,0 +1,4 @@
+interface:
+  display_name: "Siemens TIA PLC Dev"
+  short_description: "General Siemens TIA PLC development across projects, including LAD templates and backup-first import/compile loops"
+  default_prompt: "Use $siemens-tia-plc-dev to work on Siemens TIA Portal PLC projects in a project-agnostic way, including SCL/LAD exports, template libraries, Openness import preview, and compile verification."

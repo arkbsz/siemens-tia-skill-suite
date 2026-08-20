@@ -1,0 +1,23 @@
+{
+  "title": "Start lamp rung",
+  "comment": "Simple single-rung ladder example for training.",
+  "conditions": [
+    {
+      "kind": "NO",
+      "symbol": "Start",
+      "scope": "LocalVariable"
+    }
+  ],
+  "actions": [
+    {
+      "kind": "COIL",
+      "symbol": "Lamp",
+      "scope": "LocalVariable"
+    }
+  ],
+  "notes": [
+    "One visible behavior per network",
+    "Use readable names when the block interface allows it",
+    "Keep comments short and explicit"
+  ]
+}

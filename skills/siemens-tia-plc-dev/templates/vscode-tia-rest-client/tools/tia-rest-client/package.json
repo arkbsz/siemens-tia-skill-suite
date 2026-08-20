@@ -1,0 +1,13 @@
+{
+  "name": "tia-rest-client",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "health": "node ./src/demo.mjs health",
+    "plcs": "node ./src/demo.mjs plcs",
+    "blocks": "node ./src/demo.mjs blocks",
+    "open-session": "node ./src/demo.mjs open-session",
+    "prepare-download": "node ./src/demo.mjs prepare-download"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "title": "Axis reset",
+  "comment": "batch free-write motion call validation for MC_Reset",
+  "conditions": [
+    {
+      "kind": "NO",
+      "symbol": "AxisResetCmd"
+    }
+  ],
+  "actions": [
+    {
+      "kind": "CALL",
+      "partName": "MC_Reset",
+      "version": "8.0",
+      "instance": "MC_Reset_DB",
+      "powerRail": true,
+      "signalTarget": "Execute",
+      "inputs": [
+        { "name": "Axis", "symbol": "Axis_1" },
+        { "name": "Restart", "open": true }
+      ],
+      "outputs": [
+        { "name": "Done", "open": true },
+        { "name": "Busy", "open": true },
+        { "name": "Error", "open": true },
+        { "name": "ErrorID", "open": true },
+        { "name": "ErrorInfo", "open": true }
+      ]
+    }
+  ]
+}

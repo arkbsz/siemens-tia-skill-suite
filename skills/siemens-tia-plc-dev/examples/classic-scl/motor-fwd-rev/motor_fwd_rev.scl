@@ -1,0 +1,28 @@
+FUNCTION "FC_MotorFwdRev" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+BEGIN
+    IF "DB_MotorCtrl".Stop OR NOT "DB_MotorCtrl".OverloadOK THEN
+        "DB_MotorCtrl".ForwardLatch := FALSE;
+        "DB_MotorCtrl".ReverseLatch := FALSE;
+    END_IF;
+
+    IF "DB_MotorCtrl".StartForward AND NOT "DB_MotorCtrl".ReverseLatch AND "DB_MotorCtrl".OverloadOK THEN
+        "DB_MotorCtrl".ForwardLatch := TRUE;
+    END_IF;
+
+    IF "DB_MotorCtrl".StartReverse AND NOT "DB_MotorCtrl".ForwardLatch AND "DB_MotorCtrl".OverloadOK THEN
+        "DB_MotorCtrl".ReverseLatch := TRUE;
+    END_IF;
+
+    IF "DB_MotorCtrl".StartForward THEN
+        "DB_MotorCtrl".ReverseLatch := FALSE;
+    END_IF;
+
+    IF "DB_MotorCtrl".StartReverse THEN
+        "DB_MotorCtrl".ForwardLatch := FALSE;
+    END_IF;
+
+    "DB_MotorCtrl".Q_Forward := "DB_MotorCtrl".ForwardLatch AND NOT "DB_MotorCtrl".ReverseLatch AND "DB_MotorCtrl".OverloadOK;
+    "DB_MotorCtrl".Q_Reverse := "DB_MotorCtrl".ReverseLatch AND NOT "DB_MotorCtrl".ForwardLatch AND "DB_MotorCtrl".OverloadOK;
+END_FUNCTION

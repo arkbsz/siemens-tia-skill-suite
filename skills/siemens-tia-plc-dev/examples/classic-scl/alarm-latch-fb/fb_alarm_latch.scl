@@ -1,0 +1,25 @@
+FUNCTION_BLOCK "FB_AlarmLatch"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+VAR_INPUT
+    FaultCondition   : Bool;
+    Ack              : Bool;
+    HealthyCondition : Bool;
+END_VAR
+VAR_OUTPUT
+    AlarmActive      : Bool;
+END_VAR
+VAR
+    AlarmLatched     : Bool;
+END_VAR
+BEGIN
+    IF #FaultCondition THEN
+        #AlarmLatched := TRUE;
+    END_IF;
+
+    IF #Ack AND #HealthyCondition THEN
+        #AlarmLatched := FALSE;
+    END_IF;
+
+    #AlarmActive := #AlarmLatched;
+END_FUNCTION_BLOCK
