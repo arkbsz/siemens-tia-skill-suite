@@ -42,6 +42,7 @@ Default install target:
 - `skills/`: packaged Codex skills
 - `install-skills.ps1`: local installer for the skill suite
 - `release-manifest.json`: packaged metadata and validation record
+- `LICENSE`: MIT license for the repository
 
 ## Validation Basis
 
