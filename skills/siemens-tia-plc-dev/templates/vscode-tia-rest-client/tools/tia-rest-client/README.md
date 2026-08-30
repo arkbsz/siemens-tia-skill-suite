@@ -8,10 +8,10 @@ From this folder:
 
 ```powershell
 node ./src/demo.mjs health
-node ./src/demo.mjs open-session "D:\plc\skill_demo_start_stop\skill_demo_start_stop"
-node ./src/demo.mjs plcs "D:\plc\skill_demo_start_stop\skill_demo_start_stop"
-node ./src/demo.mjs blocks "D:\plc\skill_demo_start_stop\skill_demo_start_stop" "PLC_1"
-node ./src/demo.mjs prepare-download "D:\plc\skill_demo_start_stop\skill_demo_start_stop" "PLC_1"
+node ./src/demo.mjs open-session "D:\path\to\project"
+node ./src/demo.mjs plcs "D:\path\to\project"
+node ./src/demo.mjs blocks "D:\path\to\project" "PLC_1"
+node ./src/demo.mjs prepare-download "D:\path\to\project" "PLC_1"
 ```
 
 ## Notes

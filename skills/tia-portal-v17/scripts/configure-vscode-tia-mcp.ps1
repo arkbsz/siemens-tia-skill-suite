@@ -1,7 +1,7 @@
 param(
     [string]$WorkspacePath = (Get-Location).Path,
 
-    [string]$ServerExe = "D:\plc\_analysis\skill-sources\vscode-tiaportal-mcp\srv\net48\TiaMcpServer.exe",
+    [string]$ServerExe = "C:\path\to\TiaMcpServer.exe",
 
     [string]$TiaPortalLocation = "C:\Program Files\Siemens\Automation\Portal V17"
 )

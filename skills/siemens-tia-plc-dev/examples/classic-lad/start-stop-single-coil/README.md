@@ -2,7 +2,7 @@
 
 Source case:
 
-- `D:\plc\skill_demo_start_stop\skill_demo_start_stop\PLC_Code\imports\FC10_示例启动停止.xml`
+- `D:\path\to\project\PLC_Code\imports\FC10_示例启动停止.xml`
 
 What it shows:
 

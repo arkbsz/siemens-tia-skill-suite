@@ -2,7 +2,7 @@
 
 Source case:
 
-- `D:\plc\手动程序\PLC_Code\changes\fc1-reset-fanout-freewrite\network15.json`
+- `D:\path\to\project\PLC_Code\changes\fc1-reset-fanout-freewrite\network15.json`
 
 What it shows:
 

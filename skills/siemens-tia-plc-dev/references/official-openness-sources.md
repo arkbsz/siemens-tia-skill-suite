@@ -25,8 +25,8 @@ Use these official sources as the baseline when implementing Siemens TIA Portal 
 
 The current local implementation already uses these Openness patterns in:
 
-- `C:\Users\bsz\.codex\skills\tia-portal-v17\scripts\TiaPlcTool.cs`
-- `C:\Users\bsz\.codex\skills\siemens-tia-plc-dev\scripts\tia_rest_bridge.py`
+- `%USERPROFILE%\.codex\skills\tia-portal-v17\scripts\TiaPlcTool.cs`
+- `%USERPROFILE%\.codex\skills\siemens-tia-plc-dev\scripts\tia_rest_bridge.py`
 
 For source-import helpers that you compile locally, two practical lessons were validated on this machine:
 

@@ -14,5 +14,5 @@ Typical use:
 
 Validation note:
 
-- the underlying branch shape was validated on July 22, 2026 against the real `D:\plc\手动程序` project clone flow
+- the underlying branch shape was validated on July 22, 2026 against a real project clone flow
 - accepted gate: `ImportExitCode=0`, `CompileExitCode=0`, `ExportExitCode=0`
