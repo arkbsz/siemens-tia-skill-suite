@@ -3,13 +3,26 @@
 Version: `1.0.0`  
 Release date: `2026-08-10`
 
-This repository packages a reusable Siemens TIA Portal skill suite for Codex. It is designed to support practical PLC-as-code workflows such as project backup, block export, LAD XML editing, source import, compile verification, and local Openness or REST-bridge based automation.
+面向 Siemens TIA Portal 的 Codex 技能套件，主打 PLC-as-code 工作流。适合做项目备份、块导出、LAD/XML 编辑、源码导入、编译验证，以及本地 Openness / REST 桥接自动化。
+
+## 项目简介
+
+这套仓库把 Siemens PLC 开发里常见、重复、容易出错的流程打包成可复用技能，目标是让 PLC 编程更接近普通代码开发体验。
 
 ## Included Skills
 
 - `siemens-tia-plc-dev`: generic Siemens PLC workflow wrapper
 - `tia-portal-v17`: local TIA Portal V17 bridge and Openness helper surface
 - `codex-tia-client`: Codex-first entrypoint for backup, export, write, import, and compile loops
+
+## 功能
+
+- 项目备份优先，先复制再改
+- 导出/导入 FC、FB、DB、LAD XML、SCL
+- LAD 模板化生成与网络批量写入
+- 本地 Openness 自动化和 REST 桥接
+- 编译验证与回读比对
+- 可复用的工业项目示例与命名规范
 
 ## What Is Intentionally Excluded
 
@@ -25,6 +38,12 @@ These binaries are excluded so the package can bind to the target machine's own 
 1. Download or extract this repository.
 2. Run `install-skills.ps1`.
 3. Restart Codex if it is already open.
+
+## 一键部署
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install-skills.ps1
+```
 
 Default install target:
 
