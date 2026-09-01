@@ -16,11 +16,18 @@ param(
 $ErrorActionPreference = "Stop"
 
 $skillsRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$v17Skill = Join-Path $skillsRoot "tia-portal-v17"
+. (Join-Path $PSScriptRoot "resolve-bridge-skill.ps1")
 
-$summarizeScript = Join-Path $v17Skill "scripts\summarize-lad-xml.ps1"
-$validateScript = Join-Path $v17Skill "scripts\validate-lad-xml.ps1"
-$exportTemplateScript = Join-Path $v17Skill "scripts\export-lad-network-template.ps1"
+$bridge = Resolve-TiaBridgeSkill -SkillsRoot $skillsRoot
+$summarizeScript = Resolve-TiaBridgeScript -SkillPath $bridge.SkillPath -Candidates @(
+    "scripts\summarize-lad-xml.ps1"
+)
+$validateScript = Resolve-TiaBridgeScript -SkillPath $bridge.SkillPath -Candidates @(
+    "scripts\validate-lad-xml.ps1"
+)
+$exportTemplateScript = Resolve-TiaBridgeScript -SkillPath $bridge.SkillPath -Candidates @(
+    "scripts\export-lad-network-template.ps1"
+)
 
 foreach ($path in @($summarizeScript, $validateScript)) {
     if (-not (Test-Path -LiteralPath $path)) {

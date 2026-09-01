@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Extended the packaged Openness bridge from a V17-only assumption to version-aware routing across TIA Portal V17 through V21.
+- Added shared TIA version resolution, `.ap17` through `.ap21` project detection, and V21 modular assembly handling for helper builds and scaffolds.
+- Added a version-compatibility reference that captures the V17-V21 differences most relevant to Openness, XML, and SIMATIC SD workflows.
 - Added `siemens-wincc-hmi-dev` for WinCC HMI automation workflows.
 - Updated the release package metadata and installer to include the WinCC skill.
 - Expanded `siemens-tia-plc-dev` with instruction-routing guidance so most Siemens instruction families can be routed through LAD JSON, generic `CALL`, SCL source import, or donor-network patching.

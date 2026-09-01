@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Text.RegularExpressions;
 
 namespace __PROJECT_NAME__
 {
@@ -123,7 +124,7 @@ namespace __PROJECT_NAME__
                 return null;
             }
 
-            string publicApiRoot = Path.Combine(GetTiaPortalRoot(), "PublicAPI", "V17");
+            string publicApiRoot = GetTiaPortalPublicApiRoot();
             string candidate = Path.Combine(publicApiRoot, requested.Name + ".dll");
             if (File.Exists(candidate))
             {
@@ -141,7 +142,66 @@ namespace __PROJECT_NAME__
                 return configured;
             }
 
+            string versionTag = GetTiaPortalVersionTag();
+            if (!string.IsNullOrWhiteSpace(versionTag))
+            {
+                return @"C:\Program Files\Siemens\Automation\Portal " + versionTag;
+            }
+
             return @"C:\Program Files\Siemens\Automation\Portal V17";
+        }
+
+        private static string GetTiaPortalPublicApiRoot()
+        {
+            string configured = Environment.GetEnvironmentVariable("TiaPortalPublicApiPath");
+            if (!string.IsNullOrWhiteSpace(configured))
+            {
+                return configured;
+            }
+
+            string root = GetTiaPortalRoot();
+            string versionTag = GetTiaPortalVersionTag();
+            if (string.Equals(versionTag, "V21", StringComparison.OrdinalIgnoreCase))
+            {
+                string net48 = Path.Combine(root, "PublicAPI", "V21", "net48");
+                if (Directory.Exists(net48))
+                {
+                    return net48;
+                }
+
+                return Path.Combine(root, "PublicAPI", "V21");
+            }
+
+            if (!string.IsNullOrWhiteSpace(versionTag))
+            {
+                return Path.Combine(root, "PublicAPI", versionTag);
+            }
+
+            return Path.Combine(root, "PublicAPI", "V17");
+        }
+
+        private static string GetTiaPortalVersionTag()
+        {
+            foreach (string value in new[]
+            {
+                Environment.GetEnvironmentVariable("CODEX_TIA_PREFERRED_VERSION"),
+                Environment.GetEnvironmentVariable("TiaPortalVersion"),
+                Environment.GetEnvironmentVariable("TiaPortalLocation")
+            })
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    continue;
+                }
+
+                Match match = Regex.Match(value, @"(?i)V(1[7-9]|2[0-1])");
+                if (match.Success)
+                {
+                    return "V" + match.Groups[1].Value;
+                }
+            }
+
+            return null;
         }
 
         private static string DescribeException(Exception ex)
@@ -283,25 +343,34 @@ namespace __PROJECT_NAME__
                 throw new DirectoryNotFoundException(path);
             }
 
-            string[] files = Directory.GetFiles(path, "*.ap17", SearchOption.TopDirectoryOnly);
-            if (files.Length == 0)
+            string[] files = Directory.GetFiles(path, "*.ap*", SearchOption.TopDirectoryOnly);
+            List<string> supported = new List<string>();
+            foreach (string file in files)
             {
-                throw new FileNotFoundException("No .ap17 project file found in " + path);
+                if (Regex.IsMatch(file, @"\.ap(1[7-9]|2[0-1])$", RegexOptions.IgnoreCase))
+                {
+                    supported.Add(file);
+                }
             }
-            if (files.Length > 1)
+
+            if (supported.Count == 0)
             {
-                throw new InvalidOperationException("Multiple .ap17 files found. Pass the exact --project file.");
+                throw new FileNotFoundException("No supported TIA project file (.ap17 through .ap21) found in " + path);
             }
-            return new FileInfo(files[0]);
+            if (supported.Count > 1)
+            {
+                throw new InvalidOperationException("Multiple supported TIA project files found. Pass the exact --project file.");
+            }
+            return new FileInfo(supported[0]);
         }
 
         private static void Usage()
         {
             Console.WriteLine("__PROJECT_NAME__");
             Console.WriteLine("Commands:");
-            Console.WriteLine("  list-plcs --project <projectDir|ap17>");
-            Console.WriteLine("  list-blocks --project <projectDir|ap17> [--plc <name>]");
-            Console.WriteLine("  compile-plc --project <projectDir|ap17> [--plc <name>] [--save]");
+            Console.WriteLine("  list-plcs --project <projectDir|ap17..ap21>");
+            Console.WriteLine("  list-blocks --project <projectDir|ap17..ap21> [--plc <name>]");
+            Console.WriteLine("  compile-plc --project <projectDir|ap17..ap21> [--plc <name>] [--save]");
         }
     }
 

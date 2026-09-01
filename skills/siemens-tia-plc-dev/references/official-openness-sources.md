@@ -15,10 +15,14 @@ Use these official sources as the baseline when implementing Siemens TIA Portal 
 ## What they establish
 
 - TIA Portal Openness is the official .NET API for engineering automation.
-- TIA Portal V17 includes the Openness option package in the standard installation.
+- TIA Portal `V17` through `V20` follow the classic monolithic assembly layout.
+- TIA Portal `V21` changes to modular Openness assemblies under `PublicAPI\V21\net48`.
 - The Windows user should be in the `Siemens TIA Openness` group.
 - Siemens also documents the user-group setup as an explicit prerequisite and, in practice, the current Windows sign-in session must already contain that group before Openness automation will connect reliably.
-- Applications typically reference `Siemens.Engineering.dll` from the local `PublicAPI\V17` folder.
+- Applications typically reference:
+  - `V17-V20`: `Siemens.Engineering.dll`
+  - `V21`: `Siemens.Engineering.Base.dll` plus `Siemens.Engineering.Step7.dll`
+- Siemens documents `SIMATIC SD` and `SimaticML` document workflows as version-sensitive features, so live write tooling should pick the route based on the detected TIA version.
 - Siemens demonstrates patterns such as:
   - open or connect to TIA Portal
   - create or open a project
@@ -32,6 +36,7 @@ Use these official sources as the baseline when implementing Siemens TIA Portal 
   - SCL source import for algorithmic and data-heavy logic
 
 For specific instruction-family references, also read `references/official-instruction-sources.md`.
+For version differences that affect this skill suite, also read `references/version-compatibility-v17-v21.md`.
 
 ## Local implementation mapping
 

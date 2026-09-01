@@ -42,11 +42,16 @@ if ($robocopyCode -ge 8) {
     throw "Project clone failed with robocopy exit code $robocopyCode"
 }
 
-$ap17 = @(Get-ChildItem -LiteralPath $clonePath -Filter *.ap17 -Force -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName)
+$projectFiles = @(
+    Get-ChildItem -LiteralPath $clonePath -File -Force -ErrorAction SilentlyContinue |
+        Where-Object { $_.Extension -match '^\.ap(1[7-9]|2[0-1])$' } |
+        Select-Object -ExpandProperty FullName
+)
 
 [pscustomobject]@{
     SourceProject = $projectDir.FullName
     ClonePath = $clonePath
-    Ap17Files = $ap17
+    Ap17Files = @($projectFiles | Where-Object { $_ -match '\.ap17$' })
+    ProjectFiles = $projectFiles
     Timestamp = $timestamp
 } | ConvertTo-Json -Depth 4

@@ -26,7 +26,7 @@ SoftwareContainer sc = deviceItem.GetService<SoftwareContainer>();
 PlcSoftware plcSoftware = sc?.Software as PlcSoftware;
 ```
 
-For regular block XML export/import on V17:
+For regular block XML export/import on `V17-V20` and as the fallback route on `V21`:
 
 ```csharp
 plcBlock.Export(new FileInfo(outputXml), ExportOptions.WithDefaults);
@@ -38,7 +38,7 @@ plcSoftware.BlockGroup.Blocks.Import(
     SWImportOptions.IgnoreUnitAttributes);
 ```
 
-V17 reflection on this machine exposes `PlcBlock.Export(...)` and `PlcBlockComposition.Import(...)`. Do not assume `ExportAsDocuments(...)` or `ImportFromDocuments(...)` exists on this installation unless reflection confirms it.
+Classic Openness installations expose `PlcBlock.Export(...)` and `PlcBlockComposition.Import(...)`. Do not assume `ExportAsDocuments(...)` or `ImportFromDocuments(...)` exists on the target installation unless reflection confirms it.
 
 For UDT export/import:
 
@@ -48,7 +48,7 @@ plcSoftware.TypeGroup.Types.Import(new FileInfo(inputXml), ImportOptions.Overrid
 
 ## Version notes
 
-This machine has TIA Portal V17. V21 examples use modular assemblies; V17 commonly exposes `Siemens.Engineering.dll` plus related domain assemblies. Probe local DLLs before compiling helpers.
+This package now routes TIA Portal V17 through V21. `V17-V20` commonly expose `Siemens.Engineering.dll`, while `V21` uses modular assemblies. Probe local DLLs before compiling helpers.
 
 ## Failure handling
 

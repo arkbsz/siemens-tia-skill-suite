@@ -1,11 +1,12 @@
 # Version Routing
 
-This skill is intentionally generic, but this release packages a validated sibling bridge for TIA Portal V17.
+This skill is intentionally generic. This release keeps the legacy sibling name `tia-portal-v17`, but the packaged bridge now routes TIA Portal `V17` through `V21`.
 
 ## Packaged implementation
 
 - packaged sibling skill: `tia-portal-v17`
 - packaged helper entrypoint: `scripts\invoke-tia-openness.ps1`
+- packaged version resolver: `scripts\resolve-tia-portal.ps1`
 - packaged ladder helpers:
   - `summarize-lad-xml.ps1`
   - `apply-lad-template-replacements.ps1`
@@ -15,10 +16,13 @@ This skill is intentionally generic, but this release packages a validated sibli
 
 ## Practical rule
 
-- If the target machine is TIA Portal V17 and the local probe passes, use the packaged V17 bridge directly.
+- Use `doctor` or `probe` first so the bridge can detect the project suffix, installed TIA version, and Openness assembly layout.
 - Prefer the generic wrapper entrypoint `scripts\invoke-siemens-plc-dev.ps1` so the command surface stays stable even if the bridge version changes later.
-- If the machine differs, keep the generic workflow but re-probe assemblies and method availability before assuming the same API surface.
+- `V17` through `V20` use the classic monolithic Openness layout.
+- `V21` uses modular assemblies under `PublicAPI\V21\net48`, so helper builds must switch references.
 - If document-style export/import is unavailable, use block XML export/import.
+
+For the version-by-version differences that affect the skill behavior, also read `references/version-compatibility-v17-v21.md`.
 
 ## Anti-stall rule
 

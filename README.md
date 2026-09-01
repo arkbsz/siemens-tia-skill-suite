@@ -3,7 +3,7 @@
 Version: `1.0.0`  
 Release date: `2026-08-10`
 
-面向 Siemens TIA Portal 的多平台技能套件，兼容 Codex、Claude Code 与 Cursor，主打 PLC-as-code 与 HMI/WinCC 自动化工作流。适合做项目备份、块导出、LAD/XML 编辑、WinCC 画面与标签自动化、源码导入、编译验证，以及本地 Openness / REST 桥接自动化。
+面向 Siemens TIA Portal 的多平台技能套件，兼容 Codex、Claude Code 与 Cursor，支持 TIA Portal `V17-V21`，主打 PLC-as-code 与 HMI/WinCC 自动化工作流。适合做项目备份、块导出、LAD/XML 编辑、WinCC 画面与标签自动化、源码导入、编译验证，以及本地 Openness / REST 桥接自动化。
 
 ## 项目简介
 
@@ -31,6 +31,7 @@ Release date: `2026-08-10`
 - LAD 模板化生成与网络批量写入
 - WinCC 画面、标签、报警、面板与 runtime 联动自动化
 - 本地 Openness 自动化和 REST 桥接
+- `V17-V21` 版本探测、项目后缀识别、程序集路径路由
 - 编译验证与回读比对
 - 可复用的工业项目示例与命名规范
 - 官方文档优先、社区案例补充、结合当前项目结构的知识检索路线
@@ -54,7 +55,7 @@ Release date: `2026-08-10`
 - prebuilt `TiaPlcTool.exe`
 - session caches and Python bytecode
 
-These binaries are excluded so the package can bind to the target machine's own TIA Portal V17 PublicAPI installation and rebuild local helper binaries when needed.
+These binaries are excluded so the package can bind to the target machine's own TIA Portal `V17-V21` PublicAPI installation and rebuild local helper binaries when needed.
 
 ## Install
 
@@ -86,7 +87,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc
 
 ## Target Machine Prerequisites
 
-- TIA Portal V17
+- TIA Portal V17, V18, V19, V20, or V21
 - Openness PublicAPI available under the local TIA installation
 - .NET Framework 4.8 or compatible local build environment
 - A Windows user configured for `Siemens TIA Openness` when write workflows are required

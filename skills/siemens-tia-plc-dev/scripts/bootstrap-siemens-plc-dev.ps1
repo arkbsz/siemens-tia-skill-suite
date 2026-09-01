@@ -6,12 +6,22 @@ param(
 $ErrorActionPreference = "Stop"
 
 $skillsRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$v17Skill = Join-Path $skillsRoot "tia-portal-v17"
+. (Join-Path $PSScriptRoot "resolve-bridge-skill.ps1")
 
-$probe = Join-Path $v17Skill "scripts\probe-tia-v17.ps1"
-$init = Join-Path $v17Skill "scripts\init-plc-code-workspace.ps1"
-$catalog = Join-Path $v17Skill "scripts\build-lad-template-catalog.ps1"
-$templateIndex = Join-Path $v17Skill "scripts\build-lad-template-index.ps1"
+$bridge = Resolve-TiaBridgeSkill -SkillsRoot $skillsRoot
+$probe = Resolve-TiaBridgeScript -SkillPath $bridge.SkillPath -Candidates @(
+    "scripts\probe-tia-portal.ps1",
+    "scripts\probe-tia-v17.ps1"
+)
+$init = Resolve-TiaBridgeScript -SkillPath $bridge.SkillPath -Candidates @(
+    "scripts\init-plc-code-workspace.ps1"
+)
+$catalog = Resolve-TiaBridgeScript -SkillPath $bridge.SkillPath -Candidates @(
+    "scripts\build-lad-template-catalog.ps1"
+)
+$templateIndex = Resolve-TiaBridgeScript -SkillPath $bridge.SkillPath -Candidates @(
+    "scripts\build-lad-template-index.ps1"
+)
 
 foreach ($path in @($probe, $init, $catalog, $templateIndex)) {
     if (-not (Test-Path -LiteralPath $path)) {

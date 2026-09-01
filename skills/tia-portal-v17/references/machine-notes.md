@@ -4,13 +4,16 @@ These notes are specific to the current workstation profile this skill was desig
 
 ## Expected local paths
 
-- TIA main install: `C:\Program Files\Siemens\Automation\Portal V17`
-- Openness public API: `C:\Program Files\Siemens\Automation\Portal V17\PublicAPI\V17`
-- main assembly: `C:\Program Files\Siemens\Automation\Portal V17\PublicAPI\V17\Siemens.Engineering.dll`
+- `V17-V20` main install: `C:\Program Files\Siemens\Automation\Portal VXX`
+- `V17-V20` public API: `...\PublicAPI\VXX`
+- `V21` public API: `...\PublicAPI\V21\net48`
+- main assembly:
+  - `V17-V20`: `Siemens.Engineering.dll`
+  - `V21`: `Siemens.Engineering.Base.dll`
 
 ## Practical implications
 
-- A `.ap17` project may be opened by TIA but not be directly editable as plain text.
+- A `.ap17` through `.ap21` project may be opened by TIA but not be directly editable as plain text.
 - If `Siemens.Automation.Portal` is running, backup may fall back to snapshot mode because project files are locked.
 - If the user is not in the `Siemens TIA Openness` Windows group, Openness open/attach/read/write scenarios may fail even when the DLLs exist.
 - If the user was added to the `Siemens TIA Openness` group after logging in, a new PowerShell window is usually not enough; a full Windows sign-out and sign-in is typically required before the current logon token contains the group.
@@ -18,7 +21,7 @@ These notes are specific to the current workstation profile this skill was desig
   - `System\PEData.*`
   - `XRef\XRef.db`
   - `Vci\Vci.db`
-  - root `.ap17`
+  - root `.ap17` through `.ap21`
 
 ## Read-first strategy
 
@@ -31,9 +34,9 @@ For local binary TIA projects:
 
 ## Minimum prerequisites for Openness-style work
 
-- TIA Portal V17 installed
+- TIA Portal V17, V18, V19, V20, or V21 installed
 - .NET Framework 4.8 available
-- access to `Siemens.Engineering.dll`
+- access to the version-matching Openness assemblies
 - current Windows user configured in `Siemens TIA Openness`
 - current Windows logon token already contains `Siemens TIA Openness`
 

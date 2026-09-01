@@ -2,10 +2,35 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Path,
 
-    [string]$SchemaRoot = "C:\Program Files\Siemens\Automation\Portal V17\PublicAPI\V17\Schemas"
+    [string]$SchemaRoot,
+
+    [string]$ProjectPath,
+
+    [string]$PreferredVersion
 )
 
 $ErrorActionPreference = "Stop"
+
+if (-not $SchemaRoot) {
+    . (Join-Path $PSScriptRoot "resolve-tia-portal.ps1")
+    $resolvedPreferredVersion = if ($PreferredVersion) { $PreferredVersion } else { $env:CODEX_TIA_PREFERRED_VERSION }
+    $locationHint = Get-TiaLocationHint `
+        -ProjectPath $ProjectPath `
+        -PreferredVersion $resolvedPreferredVersion `
+        -ExplicitLocation $null `
+        -EnvironmentLocation $env:TiaPortalLocation
+    $publicApiHint = Get-TiaPublicApiHint `
+        -ProjectPath $ProjectPath `
+        -PreferredVersion $resolvedPreferredVersion `
+        -ExplicitPublicApiPath $null `
+        -EnvironmentPublicApiPath $env:TiaPortalPublicApiPath
+    $resolved = Resolve-TiaPortalEnvironment `
+        -ProjectPath $ProjectPath `
+        -PreferredVersion $resolvedPreferredVersion `
+        -TiaPortalLocation $locationHint `
+        -TiaPortalPublicApiPath $publicApiHint
+    $SchemaRoot = $resolved.SchemaRoot
+}
 
 $files = if ((Get-Item -LiteralPath $Path).PSIsContainer) {
     Get-ChildItem -LiteralPath $Path -Recurse -File | Where-Object { $_.Extension -ieq ".xml" }

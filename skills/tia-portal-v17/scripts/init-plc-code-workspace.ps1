@@ -2,14 +2,33 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$ProjectPath,
 
-    [string]$WorkspaceName = "PLC_Code"
+    [string]$WorkspaceName = "PLC_Code",
+
+    [string]$PreferredVersion
 )
 
 $ErrorActionPreference = "Stop"
 
+. (Join-Path $PSScriptRoot "resolve-tia-portal.ps1")
+
 $item = Get-Item -LiteralPath $ProjectPath
 $projectDir = if ($item.PSIsContainer) { $item.FullName } else { $item.Directory.FullName }
 $workspace = Join-Path $projectDir $WorkspaceName
+$locationHint = Get-TiaLocationHint `
+    -ProjectPath $ProjectPath `
+    -PreferredVersion $PreferredVersion `
+    -ExplicitLocation $null `
+    -EnvironmentLocation $env:TiaPortalLocation
+$publicApiHint = Get-TiaPublicApiHint `
+    -ProjectPath $ProjectPath `
+    -PreferredVersion $PreferredVersion `
+    -ExplicitPublicApiPath $null `
+    -EnvironmentPublicApiPath $env:TiaPortalPublicApiPath
+$resolved = Resolve-TiaPortalEnvironment `
+    -ProjectPath $ProjectPath `
+    -PreferredVersion $(if ($PreferredVersion) { $PreferredVersion } else { $env:CODEX_TIA_PREFERRED_VERSION }) `
+    -TiaPortalLocation $locationHint `
+    -TiaPortalPublicApiPath $publicApiHint
 
 $folders = @(
     "blocks",
@@ -40,8 +59,12 @@ if (-not (Test-Path -LiteralPath $manifestPath)) {
     $manifest = [ordered]@{
         projectPath = $projectDir
         workspace = $workspace
-        tiaVersion = "V17"
+        tiaVersion = $resolved.VersionTag
         workflow = "export-edit-check-import-compile"
+        projectExtension = $resolved.ProjectExtension
+        supportsSimaticSd = $resolved.SupportsSimaticSd
+        supportsExpandedSimaticSd = $resolved.SupportsExpandedSimaticSd
+        usesModularAssemblies = $resolved.UsesModularAssemblies
         importOrder = @(
             "types",
             "blocks",

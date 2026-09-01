@@ -3,10 +3,32 @@ param(
 
     [string]$ServerExe = "C:\path\to\TiaMcpServer.exe",
 
-    [string]$TiaPortalLocation = "C:\Program Files\Siemens\Automation\Portal V17"
+    [string]$TiaPortalLocation,
+
+    [string]$PreferredVersion
 )
 
 $ErrorActionPreference = "Stop"
+
+. (Join-Path $PSScriptRoot "resolve-tia-portal.ps1")
+
+if (-not $TiaPortalLocation) {
+    $locationHint = Get-TiaLocationHint `
+        -ProjectPath $null `
+        -PreferredVersion $PreferredVersion `
+        -ExplicitLocation $null `
+        -EnvironmentLocation $env:TiaPortalLocation
+    $publicApiHint = Get-TiaPublicApiHint `
+        -ProjectPath $null `
+        -PreferredVersion $PreferredVersion `
+        -ExplicitPublicApiPath $null `
+        -EnvironmentPublicApiPath $env:TiaPortalPublicApiPath
+    $resolved = Resolve-TiaPortalEnvironment `
+        -PreferredVersion $(if ($PreferredVersion) { $PreferredVersion } else { $env:CODEX_TIA_PREFERRED_VERSION }) `
+        -TiaPortalLocation $locationHint `
+        -TiaPortalPublicApiPath $publicApiHint
+    $TiaPortalLocation = $resolved.TiaRoot
+}
 
 if (-not (Test-Path -LiteralPath $ServerExe)) {
     throw "TiaMcpServer.exe not found: $ServerExe"

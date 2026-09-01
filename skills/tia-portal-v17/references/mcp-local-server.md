@@ -10,7 +10,7 @@ This release does not bundle any third-party MCP server executable. Treat MCP as
 
 ## Setup checks
 
-- TIA Portal V17 is installed and can start
+- A matching TIA Portal V17, V18, V19, V20, or V21 installation is available and can start
 - the current user belongs to `Siemens TIA Openness` if write operations are required
 - the MCP server can resolve Siemens Openness assemblies from the local TIA install
 - any configured `TiaPortalLocation` points at the target machine's local TIA install directory

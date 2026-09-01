@@ -9,17 +9,12 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $source = Join-Path $scriptDir "TiaPlcTool.cs"
 $buildDir = Join-Path $scriptDir "bin"
 $exe = Join-Path $buildDir "TiaPlcTool.exe"
+$buildMetadataPath = Join-Path $buildDir "TiaPlcTool.build.json"
 $probeScript = Join-Path $scriptDir "probe-tia-v17.ps1"
 
-$tiaRoot = if ($env:TiaPortalLocation) {
-    $env:TiaPortalLocation
-} else {
-    "C:\Program Files\Siemens\Automation\Portal V17"
-}
-
-$engineeringDll = Join-Path $tiaRoot "PublicAPI\V17\Siemens.Engineering.dll"
-$hmiDll = Join-Path $tiaRoot "PublicAPI\V17\Siemens.Engineering.Hmi.dll"
 $csc = "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
+
+. (Join-Path $scriptDir "resolve-tia-portal.ps1")
 
 function Get-ToolOptionValue {
     param(
@@ -36,55 +31,113 @@ function Get-ToolOptionValue {
     return $null
 }
 
-if (-not (Test-Path -LiteralPath $engineeringDll)) {
-    throw "Siemens.Engineering.dll not found: $engineeringDll"
-}
 if (-not (Test-Path -LiteralPath $csc)) {
     throw ".NET Framework C# compiler not found: $csc"
 }
 
 New-Item -ItemType Directory -Path $buildDir -Force | Out-Null
 
-foreach ($dll in @($engineeringDll, $hmiDll)) {
-    if (Test-Path -LiteralPath $dll) {
-        $targetDll = Join-Path $buildDir (Split-Path -Leaf $dll)
-        if ((-not (Test-Path -LiteralPath $targetDll)) -or
-            ((Get-Item -LiteralPath $dll).LastWriteTimeUtc -gt (Get-Item -LiteralPath $targetDll).LastWriteTimeUtc)) {
-            Copy-Item -LiteralPath $dll -Destination $targetDll -Force
-        }
+$commandName = if ($ToolArgs.Count -gt 0) { $ToolArgs[0].ToLowerInvariant() } else { "help" }
+$projectForProbe = Get-ToolOptionValue -Arguments $ToolArgs -Name "--project"
+$preferredVersionHint = $env:CODEX_TIA_PREFERRED_VERSION
+$locationHint = Get-TiaLocationHint `
+    -ProjectPath $projectForProbe `
+    -PreferredVersion $preferredVersionHint `
+    -ExplicitLocation $null `
+    -EnvironmentLocation $env:TiaPortalLocation
+$publicApiHint = Get-TiaPublicApiHint `
+    -ProjectPath $projectForProbe `
+    -PreferredVersion $preferredVersionHint `
+    -ExplicitPublicApiPath $null `
+    -EnvironmentPublicApiPath $env:TiaPortalPublicApiPath
+$resolved = Resolve-TiaPortalEnvironment `
+    -ProjectPath $projectForProbe `
+    -PreferredVersion $preferredVersionHint `
+    -TiaPortalLocation $locationHint `
+    -TiaPortalPublicApiPath $publicApiHint
+
+if (-not $resolved.EngineeringAssemblyExists) {
+    throw "Primary TIA Openness assembly not found for $($resolved.VersionTag): $($resolved.EngineeringAssemblyPath)"
+}
+if ($resolved.ExistingPrimaryReferencePaths.Count -lt $resolved.PrimaryReferencePaths.Count) {
+    $missingReferences = @($resolved.PrimaryReferencePaths | Where-Object { -not (Test-Path -LiteralPath $_) })
+    throw "Required TIA Openness compile references are missing for $($resolved.VersionTag): $($missingReferences -join ', ')"
+}
+
+$runtimeAssemblies = @(
+    Get-ChildItem -LiteralPath $resolved.PublicApiRoot -Filter "Siemens.Engineering*.dll" -File -ErrorAction SilentlyContinue |
+        Select-Object -ExpandProperty FullName
+)
+
+foreach ($dll in $runtimeAssemblies) {
+    $targetDll = Join-Path $buildDir (Split-Path -Leaf $dll)
+    if ((-not (Test-Path -LiteralPath $targetDll)) -or
+        ((Get-Item -LiteralPath $dll).LastWriteTimeUtc -gt (Get-Item -LiteralPath $targetDll).LastWriteTimeUtc)) {
+        Copy-Item -LiteralPath $dll -Destination $targetDll -Force
     }
 }
+
+$buildFingerprint = [ordered]@{
+    VersionTag = $resolved.VersionTag
+    PublicApiRoot = $resolved.PublicApiRoot
+    ReferencePaths = @($resolved.PrimaryReferencePaths)
+}
+$buildFingerprintJson = $buildFingerprint | ConvertTo-Json -Depth 4
 
 $needsBuild = -not (Test-Path -LiteralPath $exe)
 if (-not $needsBuild) {
     $needsBuild = (Get-Item -LiteralPath $source).LastWriteTimeUtc -gt (Get-Item -LiteralPath $exe).LastWriteTimeUtc
 }
-
-if ($needsBuild) {
-    & $csc `
-        /nologo `
-        /platform:x64 `
-        /target:exe `
-        "/out:$exe" `
-        "/reference:$engineeringDll" `
-        "/reference:System.Core.dll" `
-        $source
-
-    if ($LASTEXITCODE -ne 0) {
-        throw "TiaPlcTool build failed with exit code $LASTEXITCODE"
+if ((-not $needsBuild) -and (Test-Path -LiteralPath $buildMetadataPath)) {
+    $existingFingerprintJson = (Get-Content -LiteralPath $buildMetadataPath -Raw).Trim()
+    if ($existingFingerprintJson -ne $buildFingerprintJson.Trim()) {
+        $needsBuild = $true
     }
 }
+elseif (-not $needsBuild) {
+    $needsBuild = $true
+}
 
-$commandName = if ($ToolArgs.Count -gt 0) { $ToolArgs[0].ToLowerInvariant() } else { "help" }
+if ($needsBuild) {
+    $cscArgs = @(
+        "/nologo"
+        "/platform:x64"
+        "/target:exe"
+        "/out:$exe"
+        "/reference:System.Core.dll"
+    )
+
+    foreach ($referencePath in $resolved.PrimaryReferencePaths) {
+        $cscArgs += "/reference:$referencePath"
+    }
+    $cscArgs += $source
+
+    & $csc @cscArgs
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "TiaPlcTool build failed for $($resolved.VersionTag) with exit code $LASTEXITCODE"
+    }
+
+    $buildFingerprintJson | Set-Content -LiteralPath $buildMetadataPath -Encoding UTF8
+}
+
 if ($commandName -ne "help") {
     if (-not (Test-Path -LiteralPath $probeScript)) {
         throw "Probe script not found: $probeScript"
     }
 
-    $projectForProbe = Get-ToolOptionValue -Arguments $ToolArgs -Name "--project"
     $probeArgs = @()
     if ($projectForProbe) {
         $probeArgs += @("-ProjectPath", $projectForProbe)
+    }
+    if ($resolved.VersionTag) {
+        $probeArgs += @("-PreferredVersion", $resolved.VersionTag)
+    }
+    if ($resolved.TiaRoot) {
+        $probeArgs += @("-TiaPortalLocation", $resolved.TiaRoot)
+    }
+    if ($resolved.PublicApiRoot) {
+        $probeArgs += @("-TiaPortalPublicApiPath", $resolved.PublicApiRoot)
     }
 
     $probeOutput = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $probeScript @probeArgs 2>&1
@@ -111,6 +164,10 @@ if ($commandName -ne "help") {
         exit 2
     }
 }
+
+$env:TiaPortalLocation = $resolved.TiaRoot
+$env:TiaPortalPublicApiPath = $resolved.PublicApiRoot
+$env:CODEX_TIA_PREFERRED_VERSION = $resolved.VersionTag
 
 & $exe @ToolArgs
 exit $LASTEXITCODE

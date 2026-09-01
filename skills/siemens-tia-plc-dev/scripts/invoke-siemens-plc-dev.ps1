@@ -6,114 +6,40 @@ param(
 $ErrorActionPreference = "Stop"
 
 $skillsRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+. (Join-Path $PSScriptRoot "resolve-bridge-skill.ps1")
 
 $Command = if ($AllArgs.Count -gt 0) { $AllArgs[0] } else { "help" }
 $CommandArgs = if ($AllArgs.Count -gt 1) { $AllArgs[1..($AllArgs.Count - 1)] } else { @() }
-
-function Get-VersionNumber {
-    param(
-        [string]$Value
-    )
-
-    if ($Value -and $Value -match "V?(?<Version>\d+)$") {
-        return $Matches.Version
-    }
-
-    return $null
-}
-
-function Resolve-TiaBridge {
-    $availableSkills = @(
-        Get-ChildItem -LiteralPath $skillsRoot -Directory -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -like "tia-portal-v*" } |
-            Sort-Object Name
-    )
-
-    $candidateVersions = [System.Collections.Generic.List[string]]::new()
-
-    $preferred = Get-VersionNumber $env:CODEX_TIA_PREFERRED_VERSION
-    if ($preferred) {
-        $candidateVersions.Add($preferred)
-    }
-
-    $locationVersion = Get-VersionNumber $env:TiaPortalLocation
-    if ($locationVersion) {
-        $candidateVersions.Add($locationVersion)
-    }
-
-    foreach ($skill in $availableSkills) {
-        $skillVersion = Get-VersionNumber $skill.Name
-        if ($skillVersion) {
-            $candidateVersions.Add($skillVersion)
-        }
-    }
-
-    $checked = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-    foreach ($version in $candidateVersions) {
-        if (-not $checked.Add($version)) {
-            continue
-        }
-
-        $skillPath = Join-Path $skillsRoot ("tia-portal-v{0}" -f $version)
-        if (Test-Path -LiteralPath $skillPath) {
-            return [pscustomobject]@{
-                Version = "V$version"
-                SkillPath = $skillPath
-            }
-        }
-    }
-
-    throw "No local TIA Portal bridge skill was found under $skillsRoot. Expected a sibling skill such as tia-portal-v17."
-}
-
-function Resolve-BridgeScript {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$SkillPath,
-
-        [Parameter(Mandatory = $true)]
-        [string[]]$Candidates
-    )
-
-    foreach ($candidate in $Candidates) {
-        $path = Join-Path $SkillPath $candidate
-        if (Test-Path -LiteralPath $path) {
-            return $path
-        }
-    }
-
-    throw "Unable to resolve any of these bridge scripts under ${SkillPath}: $($Candidates -join ', ')"
-}
 
 function Show-Help {
     @"
 Siemens TIA PLC Dev
 Commands:
   route-info
-  doctor [-ProjectPath <projectDir|ap17>]
+  doctor [-ProjectPath <projectDir|ap17..ap21>]
   create-project --name <projectName> [--directory <dir>] [--device-type <typeIdentifier>] [--device-item-type <typeIdentifier>] [--item-name <name>] [--device-name <name>]
-  hold-project --project <projectDir|ap17> [--ui] [--lease-file <path>] [--poll-ms <ms>]
-  probe [-ProjectPath <projectDir|ap17>]
-  backup-project -ProjectPath <projectDir|ap17>
-  clone-project -ProjectPath <projectDir|ap17> [-CloneRoot <dir>] [-CloneName <name>]
-  bootstrap -ProjectPath <projectDir|ap17>
-  refresh -ProjectPath <projectDir|ap17>
-  init-workspace -ProjectPath <projectDir|ap17>
-  prepare-write-session -ProjectPath <projectDir|ap17> [-BaseUrl <url>] [-StartupTimeoutSeconds <n>] [-Ui] [-SkipBridgeStart]
-  scaffold-lad-change -ProjectPath <projectDir|ap17> -SourceXml <path> -ChangeName <name> [-NetworkIndex <n>] [-CreateTemplate]
-  verify-lad-change -ProjectPath <projectDir|ap17> -InputXml <path> -PlcName <name> [-ChangeName <name>] [-CloneName <name>]
-  prepare-release -ProjectPath <projectDir|ap17> -InputXml <path> -ReleaseName <name> [-ReadableSummaryPath <path>] [-VerificationReportPath <path>]
-  apply-release -ProjectPath <projectDir|ap17> -InputXml <path> -PlcName <name> [-BlockName <name>] [-ReleaseLabel <name>] [-SkipBackup] [-DryRunOnly]
+  hold-project --project <projectDir|ap17..ap21> [--ui] [--lease-file <path>] [--poll-ms <ms>]
+  probe [-ProjectPath <projectDir|ap17..ap21>]
+  backup-project -ProjectPath <projectDir|ap17..ap21>
+  clone-project -ProjectPath <projectDir|ap17..ap21> [-CloneRoot <dir>] [-CloneName <name>]
+  bootstrap -ProjectPath <projectDir|ap17..ap21>
+  refresh -ProjectPath <projectDir|ap17..ap21>
+  init-workspace -ProjectPath <projectDir|ap17..ap21>
+  prepare-write-session -ProjectPath <projectDir|ap17..ap21> [-BaseUrl <url>] [-StartupTimeoutSeconds <n>] [-Ui] [-SkipBridgeStart]
+  scaffold-lad-change -ProjectPath <projectDir|ap17..ap21> -SourceXml <path> -ChangeName <name> [-NetworkIndex <n>] [-CreateTemplate]
+  verify-lad-change -ProjectPath <projectDir|ap17..ap21> -InputXml <path> -PlcName <name> [-ChangeName <name>] [-CloneName <name>]
+  prepare-release -ProjectPath <projectDir|ap17..ap21> -InputXml <path> -ReleaseName <name> [-ReadableSummaryPath <path>] [-VerificationReportPath <path>]
+  apply-release -ProjectPath <projectDir|ap17..ap21> -InputXml <path> -PlcName <name> [-BlockName <name>] [-ReleaseLabel <name>] [-SkipBackup] [-DryRunOnly]
 
 TIA project commands:
-  hold-project --project <projectDir|ap17> [--ui] [--lease-file <path>] [--poll-ms <ms>]
-  list-devices --project <projectDir|ap17>
-  list-plcs --project <projectDir|ap17>
-  list-blocks --project <projectDir|ap17> [--plc <name>]
-  export-blocks --project <projectDir|ap17> [--plc <name>] [--block <name>] [--language LAD|FBD|SCL] [--output <dir>]
-  import-blocks --project <projectDir|ap17> --input <xml|dir> [--plc <name>] [--group <path>] [--apply] [--no-save]
-  import-sources --project <projectDir|ap17> [--plc <name>] --source-dir <dir> [--compile] [--save]
-  compile-plc --project <projectDir|ap17> [--plc <name>] [--save]
+  hold-project --project <projectDir|ap17..ap21> [--ui] [--lease-file <path>] [--poll-ms <ms>]
+  list-devices --project <projectDir|ap17..ap21>
+  list-plcs --project <projectDir|ap17..ap21>
+  list-blocks --project <projectDir|ap17..ap21> [--plc <name>]
+  export-blocks --project <projectDir|ap17..ap21> [--plc <name>] [--block <name>] [--language LAD|FBD|SCL] [--output <dir>]
+  import-blocks --project <projectDir|ap17..ap21> --input <xml|dir> [--plc <name>] [--group <path>] [--apply] [--no-save]
+  import-sources --project <projectDir|ap17..ap21> [--plc <name>] --source-dir <dir> [--compile] [--save]
+  compile-plc --project <projectDir|ap17..ap21> [--plc <name>] [--save]
 
 LAD helper commands:
   inspect-lad -Path <xml>
@@ -130,7 +56,7 @@ LAD helper commands:
 
 Notes:
   - This generic wrapper routes to the best local tia-portal-vXX sibling skill on the machine.
-  - On this machine the validated implementation is currently V17.
+  - This release is prepared to route TIA Portal V17 through V21 projects.
 "@
 }
 
@@ -148,40 +74,41 @@ function Invoke-PowerShellFile {
     }
 }
 
-$bridge = Resolve-TiaBridge
+$bridge = Resolve-TiaBridgeSkill -SkillsRoot $skillsRoot
 
-$opennessScript = Resolve-BridgeScript -SkillPath $bridge.SkillPath -Candidates @(
+$opennessScript = Resolve-TiaBridgeScript -SkillPath $bridge.SkillPath -Candidates @(
     "scripts\invoke-tia-openness.ps1"
 )
-$probeScript = Resolve-BridgeScript -SkillPath $bridge.SkillPath -Candidates @(
+$probeScript = Resolve-TiaBridgeScript -SkillPath $bridge.SkillPath -Candidates @(
+    "scripts\probe-tia-portal.ps1",
     ("scripts\probe-tia-{0}.ps1" -f $bridge.Version.ToLowerInvariant()),
     "scripts\probe-tia-v17.ps1"
 )
-$backupScript = Resolve-BridgeScript -SkillPath $bridge.SkillPath -Candidates @(
+$backupScript = Resolve-TiaBridgeScript -SkillPath $bridge.SkillPath -Candidates @(
     "scripts\backup-tia-project.ps1"
 )
-$initScript = Resolve-BridgeScript -SkillPath $bridge.SkillPath -Candidates @(
+$initScript = Resolve-TiaBridgeScript -SkillPath $bridge.SkillPath -Candidates @(
     "scripts\init-plc-code-workspace.ps1"
 )
-$inspectLadScript = Resolve-BridgeScript -SkillPath $bridge.SkillPath -Candidates @(
+$inspectLadScript = Resolve-TiaBridgeScript -SkillPath $bridge.SkillPath -Candidates @(
     "scripts\inspect-lad-xml.ps1"
 )
-$validateLadScript = Resolve-BridgeScript -SkillPath $bridge.SkillPath -Candidates @(
+$validateLadScript = Resolve-TiaBridgeScript -SkillPath $bridge.SkillPath -Candidates @(
     "scripts\validate-lad-xml.ps1"
 )
-$summarizeLadScript = Resolve-BridgeScript -SkillPath $bridge.SkillPath -Candidates @(
+$summarizeLadScript = Resolve-TiaBridgeScript -SkillPath $bridge.SkillPath -Candidates @(
     "scripts\summarize-lad-xml.ps1"
 )
-$applyTemplateScript = Resolve-BridgeScript -SkillPath $bridge.SkillPath -Candidates @(
+$applyTemplateScript = Resolve-TiaBridgeScript -SkillPath $bridge.SkillPath -Candidates @(
     "scripts\apply-lad-template-replacements.ps1"
 )
-$exportTemplateScript = Resolve-BridgeScript -SkillPath $bridge.SkillPath -Candidates @(
+$exportTemplateScript = Resolve-TiaBridgeScript -SkillPath $bridge.SkillPath -Candidates @(
     "scripts\export-lad-network-template.ps1"
 )
-$buildCatalogScript = Resolve-BridgeScript -SkillPath $bridge.SkillPath -Candidates @(
+$buildCatalogScript = Resolve-TiaBridgeScript -SkillPath $bridge.SkillPath -Candidates @(
     "scripts\build-lad-template-catalog.ps1"
 )
-$buildIndexScript = Resolve-BridgeScript -SkillPath $bridge.SkillPath -Candidates @(
+$buildIndexScript = Resolve-TiaBridgeScript -SkillPath $bridge.SkillPath -Candidates @(
     "scripts\build-lad-template-index.ps1"
 )
 
@@ -196,6 +123,7 @@ switch ($Command.ToLowerInvariant()) {
         $available = @(
             Get-ChildItem -LiteralPath $skillsRoot -Directory -ErrorAction SilentlyContinue |
                 Where-Object { $_.Name -like "tia-portal-v*" } |
+                Sort-Object { [int](Get-TiaBridgeVersionNumber $_.Name) } -Descending |
                 Select-Object -ExpandProperty FullName
         )
 

@@ -19,7 +19,7 @@ PLC_Code/
   manifest.json
 ```
 
-The `.ap17` project remains the source of truth inside TIA. The text workspace is the reviewable engineering surface used by Codex, git, diff tools, and import/export scripts.
+The `.ap17` through `.ap21` project remains the source of truth inside TIA. The text workspace is the reviewable engineering surface used by Codex, git, diff tools, and import/export scripts.
 
 ## Recommended loop
 
