@@ -10,6 +10,7 @@
 - Hardened the Openness workflow with structured readiness fields in `probe-tia-v17.ps1`, a `doctor` alias in the generic wrapper, and fail-fast preflight checks before live Openness commands or clone-based LAD verification.
 - Added a reusable knowledge-retrieval reference plus broader official instruction-family links for math, conversion, string, word-logic, and shift/rotate routes.
 - Added new source-backed training examples for analog scaling/conditioning and status-word packing/decoding.
+- Added root-level `CLAUDE.md` and `.cursorrules` files so the same repository instructions work in Claude Code and Cursor.
 
 ## 1.0.0 - 2026-08-10
 

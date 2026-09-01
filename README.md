@@ -3,11 +3,19 @@
 Version: `1.0.0`  
 Release date: `2026-08-10`
 
-面向 Siemens TIA Portal 的 Codex 技能套件，主打 PLC-as-code 与 HMI/WinCC 自动化工作流。适合做项目备份、块导出、LAD/XML 编辑、WinCC 画面与标签自动化、源码导入、编译验证，以及本地 Openness / REST 桥接自动化。
+面向 Siemens TIA Portal 的多平台技能套件，兼容 Codex、Claude Code 与 Cursor，主打 PLC-as-code 与 HMI/WinCC 自动化工作流。适合做项目备份、块导出、LAD/XML 编辑、WinCC 画面与标签自动化、源码导入、编译验证，以及本地 Openness / REST 桥接自动化。
 
 ## 项目简介
 
 这套仓库把 Siemens PLC 开发里常见、重复、容易出错的流程打包成可复用技能，目标是让 PLC 编程更接近普通代码开发体验。
+
+## 多平台支持
+
+- Codex：使用 `skills/` 下的技能目录
+- Claude Code：使用仓库根目录的 `CLAUDE.md`
+- Cursor：使用仓库根目录的 `.cursorrules`
+
+三者共用同一套 TIA / Openness / LAD / SCL 资源。
 
 ## Included Skills
 

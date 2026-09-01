@@ -1,0 +1,13 @@
+# Siemens TIA Skill Suite
+
+这个仓库也可直接给 Cursor 使用。
+
+## 规则
+
+- 先读 `README.md`、`skills/siemens-tia-plc-dev/SKILL.md`、`skills/tia-portal-v17/SKILL.md`
+- 先备份，再改项目
+- 先跑 `doctor`；如果 `ReadyForOpennessSession = false`，先走离线 XML / SCL
+- 官方文档优先，社区案例补充，最后结合当前项目结构
+- LAD 负责维护面逻辑，SCL 负责算法、转换、字符串、位打包
+- 命名尽量清晰，保持中文/英文双语一致
+- 不要修改 TIA 二进制存储
