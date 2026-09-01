@@ -1,0 +1,4 @@
+interface:
+  display_name: "Siemens WinCC HMI Dev"
+  short_description: "Automate WinCC HMI screens, tags, alarms, and Unified runtime flows"
+  default_prompt: "Use $siemens-wincc-hmi-dev to automate Siemens WinCC HMI engineering, screen generation, tag mapping, and runtime integration."

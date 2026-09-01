@@ -117,7 +117,7 @@ function Get-SignalInputMap {
 
         if ($nameCons.Count -lt 2) { continue }
 
-        $source = @($nameCons | Where-Object { $_.Name -in @("out", "Q", "ENO") } | Select-Object -First 1)[0]
+        $source = @($nameCons | Where-Object { $_.Name -in @("out", "out1", "Q", "q", "QU", "QD", "qu", "qd", "ENO", "eno") } | Select-Object -First 1)[0]
         if (-not $source) { continue }
 
         foreach ($target in @($nameCons | Where-Object { -not ($_.UId -eq $source.UId -and $_.Name -eq $source.Name) })) {
@@ -271,7 +271,7 @@ function Get-PartSignalExpression {
                 }
             }
         }
-        "^TON$" {
+        "^(TON|TOF|TP)$" {
             $source = Get-SignalSource -SignalInputMap $SignalInputMap -PartUid $PartUid -InputName "IN"
             if ($source -and $source.Kind -eq "Part") {
                 $expression = Get-PartSignalExpression -PartUid ([string]$source.FromPartUid) -Unit $Unit -PartMap $PartMap -SignalInputMap $SignalInputMap -AccessMap $AccessMap -Cache $Cache
@@ -328,7 +328,7 @@ function Get-NetworkConditionSummary {
         $actionPartUid = Get-Attr -Node $actionPart -Name "UId"
         $actionName = Get-Attr -Node $actionPart -Name "Name"
         switch ($actionName) {
-            "TON" {
+            { $_ -in @("TON", "TOF", "TP") } {
                 $source = Get-SignalSource -SignalInputMap $signalInputMap -PartUid $actionPartUid -InputName "IN"
                 if (-not $source -or $source.Kind -ne "Part") { continue }
 
@@ -348,6 +348,56 @@ function Get-NetworkConditionSummary {
                 if ($rSource -and $rSource.Kind -eq "Part") {
                     $rExpression = Get-PartSignalExpression -PartUid ([string]$rSource.FromPartUid) -Unit $Unit -PartMap $partMap -SignalInputMap $signalInputMap -AccessMap $AccessMap -Cache $cache
                     if ($rExpression) { $summaryParts.Add("R=($rExpression)") }
+                }
+
+                if ($summaryParts.Count -gt 0) {
+                    return ($summaryParts -join "; ")
+                }
+            }
+            "CTD" {
+                $summaryParts = New-Object System.Collections.Generic.List[string]
+
+                $cdSource = Get-SignalSource -SignalInputMap $signalInputMap -PartUid $actionPartUid -InputName "CD"
+                if ($cdSource -and $cdSource.Kind -eq "Part") {
+                    $cdExpression = Get-PartSignalExpression -PartUid ([string]$cdSource.FromPartUid) -Unit $Unit -PartMap $partMap -SignalInputMap $signalInputMap -AccessMap $AccessMap -Cache $cache
+                    if ($cdExpression) { $summaryParts.Add("CD=($cdExpression)") }
+                }
+
+                $ldSource = Get-SignalSource -SignalInputMap $signalInputMap -PartUid $actionPartUid -InputName "LD"
+                if ($ldSource -and $ldSource.Kind -eq "Part") {
+                    $ldExpression = Get-PartSignalExpression -PartUid ([string]$ldSource.FromPartUid) -Unit $Unit -PartMap $partMap -SignalInputMap $signalInputMap -AccessMap $AccessMap -Cache $cache
+                    if ($ldExpression) { $summaryParts.Add("LD=($ldExpression)") }
+                }
+
+                if ($summaryParts.Count -gt 0) {
+                    return ($summaryParts -join "; ")
+                }
+            }
+            "CTUD" {
+                $summaryParts = New-Object System.Collections.Generic.List[string]
+
+                $cuSource = Get-SignalSource -SignalInputMap $signalInputMap -PartUid $actionPartUid -InputName "CU"
+                if ($cuSource -and $cuSource.Kind -eq "Part") {
+                    $cuExpression = Get-PartSignalExpression -PartUid ([string]$cuSource.FromPartUid) -Unit $Unit -PartMap $partMap -SignalInputMap $signalInputMap -AccessMap $AccessMap -Cache $cache
+                    if ($cuExpression) { $summaryParts.Add("CU=($cuExpression)") }
+                }
+
+                $cdSource = Get-SignalSource -SignalInputMap $signalInputMap -PartUid $actionPartUid -InputName "CD"
+                if ($cdSource -and $cdSource.Kind -eq "Part") {
+                    $cdExpression = Get-PartSignalExpression -PartUid ([string]$cdSource.FromPartUid) -Unit $Unit -PartMap $partMap -SignalInputMap $signalInputMap -AccessMap $AccessMap -Cache $cache
+                    if ($cdExpression) { $summaryParts.Add("CD=($cdExpression)") }
+                }
+
+                $rSource = Get-SignalSource -SignalInputMap $signalInputMap -PartUid $actionPartUid -InputName "R"
+                if ($rSource -and $rSource.Kind -eq "Part") {
+                    $rExpression = Get-PartSignalExpression -PartUid ([string]$rSource.FromPartUid) -Unit $Unit -PartMap $partMap -SignalInputMap $signalInputMap -AccessMap $AccessMap -Cache $cache
+                    if ($rExpression) { $summaryParts.Add("R=($rExpression)") }
+                }
+
+                $ldSource = Get-SignalSource -SignalInputMap $signalInputMap -PartUid $actionPartUid -InputName "LD"
+                if ($ldSource -and $ldSource.Kind -eq "Part") {
+                    $ldExpression = Get-PartSignalExpression -PartUid ([string]$ldSource.FromPartUid) -Unit $Unit -PartMap $partMap -SignalInputMap $signalInputMap -AccessMap $AccessMap -Cache $cache
+                    if ($ldExpression) { $summaryParts.Add("LD=($ldExpression)") }
                 }
 
                 if ($summaryParts.Count -gt 0) {
@@ -385,7 +435,7 @@ function Get-ActionBranchSummaries {
     $branchGroups = New-Object System.Collections.Generic.List[object]
 
     $actionParts = @($Parts | Where-Object {
-        (Get-Attr -Node $_ -Name "Name") -match "^(Coil|SCoil|RCoil|Move|TON|TOF|TP|MC_|MB_)$"
+        (Get-Attr -Node $_ -Name "Name") -match "^(Coil|SCoil|RCoil|Move|TON|TOF|TP|CTU|CTD|CTUD|MC_|MB_)$"
     })
 
     foreach ($actionPart in $actionParts) {

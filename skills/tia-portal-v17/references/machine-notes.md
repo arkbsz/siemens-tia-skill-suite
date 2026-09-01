@@ -12,7 +12,8 @@ These notes are specific to the current workstation profile this skill was desig
 
 - A `.ap17` project may be opened by TIA but not be directly editable as plain text.
 - If `Siemens.Automation.Portal` is running, backup may fall back to snapshot mode because project files are locked.
-- If the user is not in the `Siemens TIA Openness` Windows group, some Openness attach/write scenarios may fail even when the DLLs exist.
+- If the user is not in the `Siemens TIA Openness` Windows group, Openness open/attach/read/write scenarios may fail even when the DLLs exist.
+- If the user was added to the `Siemens TIA Openness` group after logging in, a new PowerShell window is usually not enough; a full Windows sign-out and sign-in is typically required before the current logon token contains the group.
 - The project directory often contains useful metadata:
   - `System\PEData.*`
   - `XRef\XRef.db`
@@ -33,6 +34,7 @@ For local binary TIA projects:
 - TIA Portal V17 installed
 - .NET Framework 4.8 available
 - access to `Siemens.Engineering.dll`
-- current Windows user ideally in `Siemens TIA Openness` group for full scenarios
+- current Windows user configured in `Siemens TIA Openness`
+- current Windows logon token already contains `Siemens TIA Openness`
 
 Run the bundled probe script instead of assuming these are all satisfied.

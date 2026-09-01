@@ -6,13 +6,18 @@ Use these official sources as the baseline when implementing Siemens TIA Portal 
 
 - Siemens support overview: `109792902`
 - Siemens "Getting Started and Demo Application": `108716692`
+- Siemens docs.tia page: `Requirements for TIA Portal Openness`
+- Siemens docs.tia page: `Adding users to the 'Siemens TIA Openness' user group`
 - Siemens official GitHub snippets: `siemens/tia-portal-openness-code-snippets`
+- Siemens standard instruction manual: `1214574`
+- Siemens programming guideline: `81318674`
 
 ## What they establish
 
 - TIA Portal Openness is the official .NET API for engineering automation.
 - TIA Portal V17 includes the Openness option package in the standard installation.
 - The Windows user should be in the `Siemens TIA Openness` group.
+- Siemens also documents the user-group setup as an explicit prerequisite and, in practice, the current Windows sign-in session must already contain that group before Openness automation will connect reliably.
 - Applications typically reference `Siemens.Engineering.dll` from the local `PublicAPI\V17` folder.
 - Siemens demonstrates patterns such as:
   - open or connect to TIA Portal
@@ -20,6 +25,13 @@ Use these official sources as the baseline when implementing Siemens TIA Portal 
   - add devices
   - traverse the engineering object model
   - compile devices
+- Siemens documents instruction families separately, which is a strong hint not to force every instruction into one direct LAD JSON encoding.
+- The stable route is:
+  - direct JSON for simple ladder parts
+  - generic `CALL` for block-like instruction surfaces
+  - SCL source import for algorithmic and data-heavy logic
+
+For specific instruction-family references, also read `references/official-instruction-sources.md`.
 
 ## Local implementation mapping
 

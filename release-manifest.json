@@ -14,6 +14,15 @@
                                "relativePath":  "skills\\siemens-tia-plc-dev"
                            },
                            {
+                               "name":  "siemens-wincc-hmi-dev",
+                               "role":  "hmi-automation-entrypoint",
+                               "dependsOn":  [
+                                                 "siemens-tia-plc-dev",
+                                                 "tia-portal-v17"
+                                             ],
+                               "relativePath":  "skills\\siemens-wincc-hmi-dev"
+                           },
+                           {
                                "name":  "tia-portal-v17",
                                "role":  "local-v17-bridge",
                                "dependsOn":  [
@@ -50,18 +59,24 @@
                            "Status":  "passed",
                            "Output":  "Skill is valid!"
                        },
-                       {
-                           "Skill":  "codex-tia-client",
-                           "Status":  "passed",
-                           "Output":  "Skill is valid!"
-                       }
-                   ],
+                            {
+                               "Skill":  "codex-tia-client",
+                               "Status":  "passed",
+                               "Output":  "Skill is valid!"
+                           },
+                           {
+                               "Skill":  "siemens-wincc-hmi-dev",
+                               "Status":  "passed",
+                               "Output":  "Skill is valid!"
+                           }
+                       ],
     "residualLocalPathHits":  [
 
                               ],
     "notes":  [
                   "Siemens runtime binaries are intentionally excluded from the distributable package.",
                   "TIA V17 bridge binaries are compiled locally on first use from packaged source.",
-                  "codex-tia-client packaged scripts were patched to resolve sibling skills before falling back to the default user profile path."
+                  "codex-tia-client packaged scripts were patched to resolve sibling skills before falling back to the default user profile path.",
+                  "WinCC HMI automation content is packaged as a separate skill and resolved from the local TIA installation."
               ]
 }

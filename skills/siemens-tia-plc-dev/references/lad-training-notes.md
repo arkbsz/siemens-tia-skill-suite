@@ -32,6 +32,17 @@ Current ladder lessons:
 - When `MOVE` shares the same source condition path with `SET`, `RESET`, or `COIL`, use one shared source wire that fans out to all immediate targets. Emitting several independent wires from the same source output caused import failure before the fanout fix.
 - A real-project `CTU` validation exists for `fc5-ctu-reset-freewrite.generated.xml`, and it passed clone import, compile, and post-import export with `ImportExitCode=0`, `CompileExitCode=0`, and `ExportExitCode=0` on July 22, 2026.
 - The validated `CTU` shape is: one `CU` signal path, one independent `R` signal path, one `PV` access, one counter instance DB, and one open `CV` connection when the current value is not consumed in the same network.
+- On August 30, 2026, the skill documentation was expanded to treat Siemens instruction coverage as a routing problem instead of a single-LAD-JSON problem.
+- The new route is:
+  - direct LAD JSON for bit logic, compares, timers, and counters
+  - generic `CALL` for motion, communication, drive, and technology/library blocks
+  - SCL source import for arithmetic, conversion, string, array, and bulk data handling
+  - donor-network patching when a ladder box shape is still missing from the JSON writer
+- The LAD JSON writer now also models `TOF`, `TP`, `CTD`, and `CTUD` at the XML-generation layer.
+- Until clone compile validation is recorded on a real project, treat `TOF`, `TP`, `CTD`, and `CTUD` as supported-but-not-yet-project-validated shapes.
+- On August 30, 2026, `verify-lad-change-on-clone.ps1` was adjusted to default its clone workspace under `PLC_Code\verification\_clones` so it works in workspace-restricted environments.
+- The same verification script now prints step progress for clone, import, compile, and export so long Openness waits do not look like a dead session.
+- If a verification run creates the clone directory but still produces no TIA/compile progress, stop waiting blindly and switch to stepwise diagnostics instead of assuming the instruction XML itself is wrong.
 - `P_EDGE` needs both the live operand symbol and a separate edge-memory symbol wired to `bit`.
 - A mixed-path network such as `CTU` should still use one shared `Powerrail` wire for all root branches. Multiple separate `Powerrail` wires in one generated network caused import failure before the fix.
 - A real-project `MC_Power` validation exists for `fc2-mc-power-freewrite.generated.xml`, and it passed clone import, compile, and post-import export with `ImportExitCode=0`, `CompileExitCode=0`, and `ExportExitCode=0` on July 22, 2026.
@@ -64,6 +75,7 @@ Current ladder lessons:
 - The validated full FC5 batch covers all 36 networks of the automatic sequence block, including auto-start seal-in, stop latching, single-step counter logic, repeated set/reset actuator steps, shared-prefix motion branches, and timer-driven dwell transitions.
 - A practical scaffold route now exists for large Chinese-symbol projects: read a verified ladder summary, harvest symbol names from that summary, reuse a few proven JSON templates, and emit batch specs through an ASCII-safe generator so Windows PowerShell encoding does not corrupt the source symbols.
 - When parity with the live project matters more than cleanup, preserve exported quirks explicitly in the generated specs and note them in comments; on the July 22, 2026 FC5 full-batch run, network 15 intentionally kept the exported step return behavior instead of silently "fixing" it.
+- On September 1, 2026, a local `probe` on `D:\plc\手动程序\手动程序.ap17` showed `ConfiguredInSiemensTiaOpennessGroup = true` but `ActiveInCurrentLogonToken = false`, and a live `list-plcs` attempt failed with `Connection to TiaPortal failed`. Treat that combination as a session-level Openness prerequisite failure and stop before clone/import/compile; tell the user to fully sign out of Windows and sign in again, then rerun `probe` or `doctor`.
 
 Useful case studies:
 

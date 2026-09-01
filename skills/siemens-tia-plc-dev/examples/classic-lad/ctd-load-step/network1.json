@@ -1,0 +1,26 @@
+{
+  "title": "递减计数 / Down Counter",
+  "comment": "每次步减命令到来时递减计数，并允许通过装载命令恢复预置值。 / Decrement the counter on each step-down trigger and allow a preset reload command.",
+  "conditions": [
+    {
+      "kind": "P_EDGE",
+      "symbol": "StepDownCmd_步减命令",
+      "bitSymbol": "StepDownEdgeMem_步减边沿记忆"
+    }
+  ],
+  "actions": [
+    {
+      "kind": "CTD",
+      "instance": "StepDownCounterDb",
+      "valueType": "Int",
+      "pv": { "scope": "LiteralConstant", "constantType": "Int", "value": "10" },
+      "loadConditionGroups": [
+        {
+          "conditions": [
+            { "kind": "NO", "symbol": "LoadStepPreset_装载步计数预置" }
+          ]
+        }
+      ]
+    }
+  ]
+}

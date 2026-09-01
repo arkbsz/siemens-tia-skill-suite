@@ -1,0 +1,73 @@
+FUNCTION "FC_AnalogScaling" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+BEGIN
+    // Normalize raw input counts to a 0.0..1.0 engineering fraction.
+    "DB_AnalogScaling".NormalizedValue :=
+        NORM_X(
+            MIN := "DB_AnalogScaling".RawMinCount,
+            VALUE := "DB_AnalogScaling".RawInputCount,
+            MAX := "DB_AnalogScaling".RawMaxCount
+        );
+
+    // Clamp the normalized value so later scaling stays inside the expected range.
+    "DB_AnalogScaling".NormalizedLimited :=
+        LIMIT(
+            MN := 0.0,
+            IN := "DB_AnalogScaling".NormalizedValue,
+            MX := 1.0
+        );
+
+    // Scale the normalized fraction into process engineering units.
+    "DB_AnalogScaling".EngineeringValue :=
+        SCALE_X(
+            MIN := "DB_AnalogScaling".EngMinValue,
+            VALUE := "DB_AnalogScaling".NormalizedLimited,
+            MAX := "DB_AnalogScaling".EngMaxValue
+        );
+
+    // Let maintenance override the automatic setpoint when needed.
+    "DB_AnalogScaling".ActiveSetpoint :=
+        SEL(
+            G := "DB_AnalogScaling".UseMaintenanceSetpoint,
+            IN0 := "DB_AnalogScaling".AutoSetpoint,
+            IN1 := "DB_AnalogScaling".MaintenanceSetpoint
+        );
+
+    "DB_AnalogScaling".ActiveSetpointLimited :=
+        LIMIT(
+            MN := "DB_AnalogScaling".EngMinValue,
+            IN := "DB_AnalogScaling".ActiveSetpoint,
+            MX := "DB_AnalogScaling".EngMaxValue
+        );
+
+    // If the sensor is unhealthy, fall back to a substitute value for the control layer.
+    "DB_AnalogScaling".ValueForControl :=
+        SEL(
+            G := "DB_AnalogScaling".SensorHealthy,
+            IN0 := "DB_AnalogScaling".SubstituteValue,
+            IN1 := "DB_AnalogScaling".EngineeringValue
+        );
+
+    // Apply a small first-order filter to keep the value stable for HMI and sequence use.
+    "DB_AnalogScaling".FilteredValue :=
+        "DB_AnalogScaling".FilteredValue
+        + (("DB_AnalogScaling".ValueForControl - "DB_AnalogScaling".FilteredValue) * "DB_AnalogScaling".FilterGain);
+
+    "DB_AnalogScaling".FilteredValue :=
+        LIMIT(
+            MN := "DB_AnalogScaling".EngMinValue,
+            IN := "DB_AnalogScaling".FilteredValue,
+            MX := "DB_AnalogScaling".EngMaxValue
+        );
+
+    // Track the absolute control deviation for warning generation.
+    "DB_AnalogScaling".DeviationAbs :=
+        ABS(
+            IN := "DB_AnalogScaling".ActiveSetpointLimited - "DB_AnalogScaling".FilteredValue
+        );
+
+    "DB_AnalogScaling".HighAlarm := "DB_AnalogScaling".FilteredValue >= "DB_AnalogScaling".HighAlarmLimit;
+    "DB_AnalogScaling".LowAlarm := "DB_AnalogScaling".FilteredValue <= "DB_AnalogScaling".LowAlarmLimit;
+    "DB_AnalogScaling".DeviationWarning := "DB_AnalogScaling".DeviationAbs >= "DB_AnalogScaling".DeviationWarnBand;
+END_FUNCTION

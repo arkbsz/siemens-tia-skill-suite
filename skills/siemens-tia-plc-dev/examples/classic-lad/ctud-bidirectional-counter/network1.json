@@ -1,0 +1,44 @@
+{
+  "title": "双向计数 / Bidirectional Counter",
+  "comment": "同一网络里实现加计数、减计数、复位和装载预置，适合工位循环统计或双向节拍统计。 / Combine up-count, down-count, reset, and preset load in one network.",
+  "conditions": [
+    {
+      "kind": "P_EDGE",
+      "symbol": "CountUpCmd_加计数命令",
+      "bitSymbol": "CountUpEdgeMem_加计数边沿记忆"
+    }
+  ],
+  "actions": [
+    {
+      "kind": "CTUD",
+      "instance": "BidirectionalCounterDb",
+      "valueType": "Int",
+      "pv": { "scope": "LiteralConstant", "constantType": "Int", "value": "20" },
+      "downConditionGroups": [
+        {
+          "conditions": [
+            {
+              "kind": "P_EDGE",
+              "symbol": "CountDownCmd_减计数命令",
+              "bitSymbol": "CountDownEdgeMem_减计数边沿记忆"
+            }
+          ]
+        }
+      ],
+      "resetConditionGroups": [
+        {
+          "conditions": [
+            { "kind": "NO", "symbol": "ResetCounterCmd_复位计数命令" }
+          ]
+        }
+      ],
+      "loadConditionGroups": [
+        {
+          "conditions": [
+            { "kind": "NO", "symbol": "LoadCounterPreset_装载计数预置" }
+          ]
+        }
+      ]
+    }
+  ]
+}

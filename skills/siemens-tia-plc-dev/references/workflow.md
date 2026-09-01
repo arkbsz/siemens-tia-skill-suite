@@ -5,7 +5,7 @@ Use this when the task is about Siemens PLC development in general rather than o
 ## Standard loop
 
 1. Back up the project.
-2. Probe the local environment.
+2. Probe the local environment and stop there if `ReadyForOpennessSession` is `false`.
 3. Build or refresh `PLC_Code`.
 4. Export target blocks.
 5. Summarize and inspect.
@@ -22,11 +22,22 @@ Use this when the task is about Siemens PLC development in general rather than o
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\bootstrap-siemens-plc-dev.ps1" -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\refresh-plc-libraries.ps1" -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" route-info
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" doctor -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" clone-project -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" prepare-write-session -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" export-blocks --project "D:\path\to\project" --language LAD --output "D:\path\to\project\PLC_Code\exports\lad"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" verify-lad-change -ProjectPath "D:\path\to\project" -InputXml "D:\path\to\project\PLC_Code\changes\my-change\outputs\my-change.generated.xml" -PlcName "PLC_1"
 ```
+
+## Openness readiness gate
+
+For live TIA reads or writes, treat `probe` or `doctor` as a hard gate:
+
+- if `ConfiguredInSiemensTiaOpennessGroup` is `false`, add the user to the local Windows group first
+- if `ActiveInCurrentLogonToken` is `false`, a new console is not enough; fully sign out of Windows and sign in again
+- if `ReadyForOpennessSession` is `false`, do not start clone/import/compile loops yet
+
+When the session gate is closed, keep moving with source-only LAD XML, SCL, summaries, templates, and release-package preparation instead of waiting on a stuck Openness run.
 
 ## Two working modes
 

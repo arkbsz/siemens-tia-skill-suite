@@ -24,7 +24,7 @@ This skill is project-agnostic. It is designed for:
 Treat PLC work like software work:
 
 1. Back up the project.
-2. Probe the local TIA/Openness environment.
+2. Probe the local TIA/Openness environment and stop live Openness work if the current logon token is not ready.
 3. Initialize a `PLC_Code` workspace next to the project.
 4. Export blocks to text/XML.
 5. Review or edit exported artifacts.
@@ -44,6 +44,7 @@ Use the wrapper scripts in this skill to stay generic:
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\bootstrap-siemens-plc-dev.ps1" -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\refresh-plc-libraries.ps1" -ProjectPath "D:\path\to\project"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" doctor -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" list-blocks --project "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" clone-project -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" verify-lad-change -ProjectPath "D:\path\to\project" -InputXml "D:\path\to\generated.xml" -PlcName "PLC_1"
@@ -56,6 +57,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex
 ```
 
 For how the generic skill maps to the local V17 implementation, read `references/version-routing.md`.
+
+If `doctor` or `probe` reports `ActiveInCurrentLogonToken = false`, do not keep retrying live Openness commands. Switch to source-only XML/SCL work for now and tell the user to fully sign out of Windows and sign in again before the next live TIA session.
 
 ## Read and write paths
 
@@ -93,6 +96,8 @@ For the official-source baseline behind this route, read `references/official-op
 Use LAD exports as structured XML, not as casual free text.
 
 For ladder-specific reading, summaries, template generation, and import preview, read `references/lad-and-templates.md`.
+For how to cover most Siemens instruction families without forcing every case through one fragile LAD syntax, read `references/instruction-routing.md`.
+For how to retrieve official and community knowledge during authoring, read `references/knowledge-retrieval.md`.
 For naming and comment style, read `references/naming-and-comments.md`.
 For training notes and the latest ladder-writing lessons, read `references/lad-training-notes.md`.
 
@@ -129,10 +134,10 @@ Current supported free-write subset:
 - compare conditions `EQ`, `NE`, `GE`, `GT`, `LE`, `LT` with symbol or constant operands
 - `conditionGroups` for parallel OR branches that merge through one `O` part
 - shared-prefix `branches` where one upstream signal fans out into several downstream condition chains with per-branch actions
-- one signal path with optional `TON`
-- `TON.pt` as either a time string such as `T#1s` or a symbol/components operand that resolves to a `TIME` variable
+- one signal path with optional `TON`, `TOF`, or `TP`
+- timer `pt` as either a time string such as `T#1s` or a symbol/components operand that resolves to a `TIME` variable
 - one or more output actions per network
-- `COIL`, `SET`, `RESET`, `TON`, `MOVE`, `CTU`, and generic `CALL`
+- `COIL`, `SET`, `RESET`, `TON`, `TOF`, `TP`, `MOVE`, `CTU`, `CTD`, `CTUD`, and generic `CALL`
 - named `CALL` inputs and outputs with optional `open` connections
 - `powerRail` on `CALL` and `MOVE`, and `signalTarget` on `CALL`
 - `signalSource` on `MOVE` for action-to-action chaining such as `eno -> en`
@@ -141,6 +146,15 @@ Current supported free-write subset:
 - `components` paths for array-style or nested variable access
 - network title and comment
 - `scope` support for `GlobalVariable` and `LocalVariable`
+
+Current practical route for "most instructions":
+
+- maintenance-facing bit logic, compares, timers, and counters: free-write LAD JSON
+- motion, communication, drive, and technology/library blocks: generic `CALL` from exported interfaces
+- arithmetic, scaling, conversion, string, word-packing, array, and bulk data handling: SCL source import by default
+- unsupported LAD box shapes: export one donor network, then patch `NetworkSource` / `FlgNet`
+
+For newly added timer/counter shapes such as `TOF`, `TP`, `CTD`, and `CTUD`, keep the normal clone compile gate until a project-specific validation has been recorded.
 
 Current validated edge:
 
@@ -185,7 +199,11 @@ The skill now includes small reusable source examples under:
 - `examples/classic-scl/dual-starter-cell-fb`
 - `examples/classic-scl/station-supervisor-fb`
 - `examples/classic-scl/material-handling-cell`
+- `examples/classic-scl/analog-scaling-fc`
+- `examples/classic-scl/status-word-builder-fc`
 - `examples/classic-lad/start-stop-single-coil`
+- `examples/classic-lad/tp-pulse-output`
+- `examples/classic-lad/tof-delayed-dropout`
 - `examples/classic-lad/ton-set-alarm`
 - `examples/classic-lad/reset-fanout`
 - `examples/classic-lad/batch-reset-plus-ton`
@@ -194,6 +212,8 @@ The skill now includes small reusable source examples under:
 - `examples/classic-lad/eq-move-step`
 - `examples/classic-lad/set-move-step`
 - `examples/classic-lad/ctu-reset-step`
+- `examples/classic-lad/ctd-load-step`
+- `examples/classic-lad/ctud-bidirectional-counter`
 - `examples/classic-lad/mc-power-call`
 - `examples/classic-lad/mb-comm-load-call`
 - `examples/classic-lad/mb-master-readfreq`
@@ -211,6 +231,7 @@ The skill now includes small reusable source examples under:
 - Do not run multiple TIA project-open actions in parallel.
 - Save after compile when the workflow depends on consistency state being persisted.
 - On Windows PowerShell, REST requests with non-ASCII project paths can be fragile. Use `prepare-write-session` and then reuse the returned `BridgeProjectPath` for REST calls when needed.
+- If `probe` or `doctor` shows `ReadyForOpennessSession = false`, stop before clone/import/compile and recover the session prerequisites first.
 
 ## References
 
@@ -219,9 +240,12 @@ The skill now includes small reusable source examples under:
 - Release workflow: `references/release-workflow.md`
 - Version and routing: `references/version-routing.md`
 - LAD and template library: `references/lad-and-templates.md`
+- Knowledge retrieval: `references/knowledge-retrieval.md`
 - Classic control patterns: `references/classic-control-patterns.md`
 - Ecosystem and next routes: `references/ecosystem-and-next-routes.md`
 - Official Openness sources: `references/official-openness-sources.md`
+- Official instruction-family sources: `references/official-instruction-sources.md`
+- Instruction routing: `references/instruction-routing.md`
 - Community Openness notes: `references/community-openness-notes-cnblogs-aifen.md`
 - REST bridge: `references/rest-bridge.md`
 - VS Code client template: `references/vscode-client-template.md`

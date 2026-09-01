@@ -1016,21 +1016,22 @@ function Emit-ActionsFromList {
                 Add-WireNode -Document $Document -WiresNode $wiresNode -WireUid (Get-NextUid) -FromIdentUid $accessUid -ToPartUid $partUid -ToName "operand"
                 $pendingActionPartUids.Add($partUid)
             }
-            "TON" {
-                Assert-SignalPathAvailable -SignalSourcePartUid $signalSourcePartUid -Context "TON action"
+            { $_ -in @("TON", "TOF", "TP") } {
+                $timerKind = $kind
+                Assert-SignalPathAvailable -SignalSourcePartUid $signalSourcePartUid -Context "$timerKind action"
                 if ($pendingActionPartUids.Count -gt 0) {
                     Add-FanoutWire -Document $Document -WiresNode $wiresNode -WireUid (Get-NextUid) -FromPartUid $signalSourcePartUid -FromName $signalSourceName -TargetPartUids @($pendingActionPartUids.ToArray()) -ToName "in"
                     $pendingActionPartUids.Clear()
                 }
-                if (-not $action.instance) { throw "TON action requires instance." }
-                if (-not $action.pt) { throw "TON action requires pt." }
+                if (-not $action.instance) { throw "$timerKind action requires instance." }
+                if (-not $action.pt) { throw "$timerKind action requires pt." }
 
                 $ptAccessUid = Get-NextUid
                 if ($action.pt -is [string]) {
                     $ptAccess = New-AccessNode -Document $Document -Scope "TypedConstant" -Uid $ptAccessUid -ConstantValue ([string]$action.pt)
                 }
                 else {
-                    $ptSpec = Resolve-AccessSpec -Operand $action.pt -Role "pt" -ConditionKind "TON"
+                    $ptSpec = Resolve-AccessSpec -Operand $action.pt -Role "pt" -ConditionKind $timerKind
                     $ptScope = [string]$ptSpec.Scope
                     $ptConstantType = [string]$ptSpec.ConstantType
 
@@ -1045,9 +1046,9 @@ function Emit-ActionsFromList {
                 }
                 $null = $partsNode.AppendChild($ptAccess)
 
-                $tonPartUid = Get-NextUid
-                $tonPart = New-PartNode -Document $Document -Name "TON" -Uid $tonPartUid
-                $tonPart.SetAttribute("Version", "1.0")
+                $timerPartUid = Get-NextUid
+                $timerPart = New-PartNode -Document $Document -Name $timerKind -Uid $timerPartUid
+                $timerPart.SetAttribute("Version", "1.0")
                 $instanceNode = New-FlgElement -Document $Document -Name "Instance"
                 $instanceNode.SetAttribute("Scope", "GlobalVariable")
                 $instanceNode.SetAttribute("UId", [string](Get-NextUid))
@@ -1056,25 +1057,31 @@ function Emit-ActionsFromList {
                     $component.SetAttribute("Name", $componentName)
                     $null = $instanceNode.AppendChild($component)
                 }
-                $null = $tonPart.AppendChild($instanceNode)
-                Add-TemplateValueNode -Document $Document -Parent $tonPart -Name "time_type" -Type "Type" -Value "Time"
-                $null = $partsNode.AppendChild($tonPart)
+                $null = $timerPart.AppendChild($instanceNode)
+                Add-TemplateValueNode -Document $Document -Parent $timerPart -Name "time_type" -Type "Type" -Value "Time"
+                $null = $partsNode.AppendChild($timerPart)
+                $actionPartRefs.Add([pscustomobject]@{
+                    ActionIndex = $currentActionIndex
+                    Kind = $timerKind
+                    PartUid = $timerPartUid
+                    DefaultSignalName = "Q"
+                })
 
-                Add-LinkWire -Document $Document -WiresNode $wiresNode -WireUid (Get-NextUid) -FromPartUid $signalSourcePartUid -FromName $signalSourceName -ToPartUid $tonPartUid -ToName "IN"
-                Add-WireNode -Document $Document -WiresNode $wiresNode -WireUid (Get-NextUid) -FromIdentUid $ptAccessUid -ToPartUid $tonPartUid -ToName "PT"
+                Add-LinkWire -Document $Document -WiresNode $wiresNode -WireUid (Get-NextUid) -FromPartUid $signalSourcePartUid -FromName $signalSourceName -ToPartUid $timerPartUid -ToName "IN"
+                Add-WireNode -Document $Document -WiresNode $wiresNode -WireUid (Get-NextUid) -FromIdentUid $ptAccessUid -ToPartUid $timerPartUid -ToName "PT"
 
                 $openCon = New-FlgElement -Document $Document -Name "OpenCon"
                 $openCon.SetAttribute("UId", [string](Get-NextUid))
                 $wireEt = New-FlgElement -Document $Document -Name "Wire"
                 $wireEt.SetAttribute("UId", [string](Get-NextUid))
                 $fromEt = New-FlgElement -Document $Document -Name "NameCon"
-                $fromEt.SetAttribute("UId", [string]$tonPartUid)
+                $fromEt.SetAttribute("UId", [string]$timerPartUid)
                 $fromEt.SetAttribute("Name", "ET")
                 $null = $wireEt.AppendChild($fromEt)
                 $null = $wireEt.AppendChild($openCon)
                 $null = $wiresNode.AppendChild($wireEt)
 
-                $signalSourcePartUid = $tonPartUid
+                $signalSourcePartUid = $timerPartUid
                 $signalSourceName = "Q"
             }
             "MOVE" {
@@ -1148,25 +1155,26 @@ function Emit-ActionsFromList {
                 Add-WireNode -Document $Document -WiresNode $wiresNode -WireUid (Get-NextUid) -FromIdentUid $sourceAccessUid -ToPartUid $movePartUid -ToName "in"
                 Add-PartToIdentWire -Document $Document -WiresNode $wiresNode -WireUid (Get-NextUid) -FromPartUid $movePartUid -FromName "out1" -ToIdentUid $targetAccessUid
             }
-            "CTU" {
-                Assert-SignalPathAvailable -SignalSourcePartUid $signalSourcePartUid -Context "CTU action"
+            { $_ -in @("CTU", "CTD", "CTUD") } {
+                $counterKind = $kind
+                Assert-SignalPathAvailable -SignalSourcePartUid $signalSourcePartUid -Context "$counterKind action"
                 if ($pendingActionPartUids.Count -gt 0) {
                     Add-FanoutWire -Document $Document -WiresNode $wiresNode -WireUid (Get-NextUid) -FromPartUid $signalSourcePartUid -FromName $signalSourceName -TargetPartUids @($pendingActionPartUids.ToArray()) -ToName "in"
                     $pendingActionPartUids.Clear()
                 }
 
-                if (-not $action.instance) { throw "CTU action requires instance." }
-                if (-not $action.valueType) { throw "CTU action requires valueType." }
-                if (-not ($action.PSObject.Properties.Name -contains "pv")) { throw "CTU action requires pv." }
+                if (-not $action.instance) { throw "$counterKind action requires instance." }
+                if (-not $action.valueType) { throw "$counterKind action requires valueType." }
+                if (-not ($action.PSObject.Properties.Name -contains "pv")) { throw "$counterKind action requires pv." }
 
-                $pvSpec = Resolve-AccessSpec -Operand $action.pv -Role "pv" -ConditionKind "CTU"
+                $pvSpec = Resolve-AccessSpec -Operand $action.pv -Role "pv" -ConditionKind $counterKind
                 $pvAccessUid = Get-NextUid
                 $pvAccess = New-AccessNode -Document $Document -Scope $pvSpec.Scope -Uid $pvAccessUid -Symbol $pvSpec.Symbol -Components $pvSpec.Components -ConstantValue $pvSpec.ConstantValue -ConstantType $pvSpec.ConstantType
                 $null = $partsNode.AppendChild($pvAccess)
 
-                $ctuPartUid = Get-NextUid
-                $ctuPart = New-PartNode -Document $Document -Name "CTU" -Uid $ctuPartUid
-                $ctuPart.SetAttribute("Version", "1.0")
+                $counterPartUid = Get-NextUid
+                $counterPart = New-PartNode -Document $Document -Name $counterKind -Uid $counterPartUid
+                $counterPart.SetAttribute("Version", "1.0")
                 $instanceNode = New-FlgElement -Document $Document -Name "Instance"
                 $instanceNode.SetAttribute("Scope", "GlobalVariable")
                 $instanceNode.SetAttribute("UId", [string](Get-NextUid))
@@ -1175,30 +1183,61 @@ function Emit-ActionsFromList {
                     $component.SetAttribute("Name", $componentName)
                     $null = $instanceNode.AppendChild($component)
                 }
-                $null = $ctuPart.AppendChild($instanceNode)
-                Add-TemplateValueNode -Document $Document -Parent $ctuPart -Name "value_type" -Type "Type" -Value ([string]$action.valueType)
-                $null = $partsNode.AppendChild($ctuPart)
+                $null = $counterPart.AppendChild($instanceNode)
+                Add-TemplateValueNode -Document $Document -Parent $counterPart -Name "value_type" -Type "Type" -Value ([string]$action.valueType)
+                $null = $partsNode.AppendChild($counterPart)
+                $actionPartRefs.Add([pscustomobject]@{
+                    ActionIndex = $currentActionIndex
+                    Kind = $counterKind
+                    PartUid = $counterPartUid
+                    DefaultSignalName = if ($counterKind -eq "CTUD") { "QU" } else { "Q" }
+                })
 
-                Add-LinkWire -Document $Document -WiresNode $wiresNode -WireUid (Get-NextUid) -FromPartUid $signalSourcePartUid -FromName $signalSourceName -ToPartUid $ctuPartUid -ToName "CU"
+                $primaryInputName = switch ($counterKind) {
+                    "CTU" { "CU" }
+                    "CTD" { "CD" }
+                    "CTUD" { "CU" }
+                }
+                Add-LinkWire -Document $Document -WiresNode $wiresNode -WireUid (Get-NextUid) -FromPartUid $signalSourcePartUid -FromName $signalSourceName -ToPartUid $counterPartUid -ToName $primaryInputName
 
                 $hasResetGroups = $false
                 if (($action.PSObject.Properties.Name -contains "resetConditionGroups" -and $action.resetConditionGroups) -or ($action.PSObject.Properties.Name -contains "resetConditions" -and $action.resetConditions)) {
                     $hasResetGroups = $true
                 }
-                if ($hasResetGroups) {
-                    $resetGroups = @(Get-ConditionGroupsFromContainer -Container $action -GroupsProperty "resetConditionGroups" -ConditionsProperty "resetConditions" -Label "CTU action")
+                if ($hasResetGroups -and $counterKind -in @("CTU", "CTUD")) {
+                    $resetGroups = @(Get-ConditionGroupsFromContainer -Container $action -GroupsProperty "resetConditionGroups" -ConditionsProperty "resetConditions" -Label "$counterKind action")
                     $resetSignal = Build-SignalPathFromConditionGroups -Document $Document -PartsNode $partsNode -WiresNode $wiresNode -ConditionGroups $resetGroups -RootTargets $rootTargets
-                    Add-LinkWire -Document $Document -WiresNode $wiresNode -WireUid (Get-NextUid) -FromPartUid $resetSignal.SignalSourcePartUid -FromName $resetSignal.SignalSourceName -ToPartUid $ctuPartUid -ToName "R"
+                    Add-LinkWire -Document $Document -WiresNode $wiresNode -WireUid (Get-NextUid) -FromPartUid $resetSignal.SignalSourcePartUid -FromName $resetSignal.SignalSourceName -ToPartUid $counterPartUid -ToName "R"
                 }
 
-                Add-WireNode -Document $Document -WiresNode $wiresNode -WireUid (Get-NextUid) -FromIdentUid $pvAccessUid -ToPartUid $ctuPartUid -ToName "PV"
+                $hasLoadGroups = $false
+                if (($action.PSObject.Properties.Name -contains "loadConditionGroups" -and $action.loadConditionGroups) -or ($action.PSObject.Properties.Name -contains "loadConditions" -and $action.loadConditions)) {
+                    $hasLoadGroups = $true
+                }
+                if ($hasLoadGroups -and $counterKind -in @("CTD", "CTUD")) {
+                    $loadGroups = @(Get-ConditionGroupsFromContainer -Container $action -GroupsProperty "loadConditionGroups" -ConditionsProperty "loadConditions" -Label "$counterKind action")
+                    $loadSignal = Build-SignalPathFromConditionGroups -Document $Document -PartsNode $partsNode -WiresNode $wiresNode -ConditionGroups $loadGroups -RootTargets $rootTargets
+                    Add-LinkWire -Document $Document -WiresNode $wiresNode -WireUid (Get-NextUid) -FromPartUid $loadSignal.SignalSourcePartUid -FromName $loadSignal.SignalSourceName -ToPartUid $counterPartUid -ToName "LD"
+                }
+
+                $hasDownGroups = $false
+                if (($action.PSObject.Properties.Name -contains "downConditionGroups" -and $action.downConditionGroups) -or ($action.PSObject.Properties.Name -contains "downConditions" -and $action.downConditions)) {
+                    $hasDownGroups = $true
+                }
+                if ($hasDownGroups -and $counterKind -eq "CTUD") {
+                    $downGroups = @(Get-ConditionGroupsFromContainer -Container $action -GroupsProperty "downConditionGroups" -ConditionsProperty "downConditions" -Label "CTUD action")
+                    $downSignal = Build-SignalPathFromConditionGroups -Document $Document -PartsNode $partsNode -WiresNode $wiresNode -ConditionGroups $downGroups -RootTargets $rootTargets
+                    Add-LinkWire -Document $Document -WiresNode $wiresNode -WireUid (Get-NextUid) -FromPartUid $downSignal.SignalSourcePartUid -FromName $downSignal.SignalSourceName -ToPartUid $counterPartUid -ToName "CD"
+                }
+
+                Add-WireNode -Document $Document -WiresNode $wiresNode -WireUid (Get-NextUid) -FromIdentUid $pvAccessUid -ToPartUid $counterPartUid -ToName "PV"
 
                 $openCon = New-FlgElement -Document $Document -Name "OpenCon"
                 $openCon.SetAttribute("UId", [string](Get-NextUid))
                 $wireCv = New-FlgElement -Document $Document -Name "Wire"
                 $wireCv.SetAttribute("UId", [string](Get-NextUid))
                 $fromCv = New-FlgElement -Document $Document -Name "NameCon"
-                $fromCv.SetAttribute("UId", [string]$ctuPartUid)
+                $fromCv.SetAttribute("UId", [string]$counterPartUid)
                 $fromCv.SetAttribute("Name", "CV")
                 $null = $wireCv.AppendChild($fromCv)
                 $null = $wireCv.AppendChild($openCon)
@@ -1295,7 +1334,7 @@ function Emit-ActionsFromList {
                 }
             }
             default {
-                throw "Unsupported action kind '$kind'. Supported: COIL, SET, RESET, TON, MOVE, CTU, CALL."
+                throw "Unsupported action kind '$kind'. Supported: COIL, SET, RESET, TON, TOF, TP, MOVE, CTU, CTD, CTUD, CALL."
             }
         }
     }
@@ -1461,21 +1500,36 @@ foreach ($path in @(Get-InstancePathsFromDocument -Document $targetDoc)) {
     $null = $knownInstancePaths.Add($path)
 }
 
-$tonInstances = New-Object System.Collections.Generic.List[string]
+$timerInstances = New-Object System.Collections.Generic.List[string]
+$instanceBackedActions = New-Object System.Collections.Generic.List[string]
 foreach ($action in @($allActions.ToArray())) {
-    if ($action.kind -eq "TON" -and $action.instance) {
-        $tonInstances.Add([string]$action.instance)
+    if ($action.kind -in @("TON", "TOF", "TP") -and $action.instance) {
+        $timerInstances.Add([string]$action.instance)
+    }
+    if ($action.kind -in @("TON", "TOF", "TP", "CTU", "CTD", "CTUD") -and $action.instance) {
+        $instanceBackedActions.Add([string]$action.instance)
     }
 }
 
-$tonInstancesSeen = New-Object System.Collections.Generic.List[string]
-$tonInstancesMissing = New-Object System.Collections.Generic.List[string]
-foreach ($instancePath in @($tonInstances.ToArray())) {
+$timerInstancesSeen = New-Object System.Collections.Generic.List[string]
+$timerInstancesMissing = New-Object System.Collections.Generic.List[string]
+foreach ($instancePath in @($timerInstances.ToArray())) {
     if ($knownInstancePaths.Contains($instancePath)) {
-        $tonInstancesSeen.Add($instancePath)
+        $timerInstancesSeen.Add($instancePath)
     }
     else {
-        $tonInstancesMissing.Add($instancePath)
+        $timerInstancesMissing.Add($instancePath)
+    }
+}
+
+$instancePathsSeen = New-Object System.Collections.Generic.List[string]
+$instancePathsMissing = New-Object System.Collections.Generic.List[string]
+foreach ($instancePath in @($instanceBackedActions.ToArray())) {
+    if ($knownInstancePaths.Contains($instancePath)) {
+        $instancePathsSeen.Add($instancePath)
+    }
+    else {
+        $instancePathsMissing.Add($instancePath)
     }
 }
 
@@ -1522,9 +1576,13 @@ $writer.Close()
     ConditionGroupCount = $allConditionGroups.Count
     ActionCount = $allActions.Count
     BranchCount = $branches.Count
-    SupportedSubset = "contacts-edge-comparisons-or-branches-plus-ton-move-ctu-call-and-shared-prefix-branches"
-    TonInstanceCount = $tonInstances.Count
-    TonInstances = @($tonInstances.ToArray())
-    TonInstancesSeenInTargetXml = @($tonInstancesSeen.ToArray())
-    TonInstancesMissingFromTargetXml = @($tonInstancesMissing.ToArray())
+    SupportedSubset = "contacts-edge-comparisons-or-branches-plus-ton-tof-tp-move-ctu-ctd-ctud-call-and-shared-prefix-branches"
+    TonInstanceCount = $timerInstances.Count
+    TonInstances = @($timerInstances.ToArray())
+    TonInstancesSeenInTargetXml = @($timerInstancesSeen.ToArray())
+    TonInstancesMissingFromTargetXml = @($timerInstancesMissing.ToArray())
+    StatefulInstanceCount = $instanceBackedActions.Count
+    StatefulInstances = @($instanceBackedActions.ToArray())
+    StatefulInstancesSeenInTargetXml = @($instancePathsSeen.ToArray())
+    StatefulInstancesMissingFromTargetXml = @($instancePathsMissing.ToArray())
 } | ConvertTo-Json -Depth 5

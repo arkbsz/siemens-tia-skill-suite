@@ -62,9 +62,9 @@ This first subset currently supports:
 - compare conditions `EQ`, `NE`, `GE`, `GT`, `LE`, `LT`
 - one or more `conditionGroups` for OR branches
 - shared-prefix `branches` for split downstream logic after one common condition path
-- one signal path with optional `TON`
+- one signal path with optional `TON`, `TOF`, or `TP`
 - one or more output actions
-- output kinds `COIL`, `SET`, `RESET`, `TON`, `MOVE`, `CTU`, and generic `CALL`
+- output kinds `COIL`, `SET`, `RESET`, `TON`, `TOF`, `TP`, `MOVE`, `CTU`, `CTD`, `CTUD`, and generic `CALL`
 - action-only `CALL` networks driven by `powerRail`
 - `powerRail` on `MOVE` for an independent root branch in the same network
 - `signalSource` on `MOVE` for chaining from an earlier action output such as `eno`
@@ -72,6 +72,14 @@ This first subset currently supports:
 - `components` paths for array-style variable access
 - title and comment text
 - `scope` on symbols when the block uses local interface members
+
+For the broader "most instructions" route, also read `references/instruction-routing.md`.
+The practical rule is:
+
+- simple ladder parts stay in direct JSON
+- block-like instruction surfaces use generic `CALL`
+- arithmetic and data-heavy logic prefer SCL source import
+- unsupported ladder box shapes should be copied from one real exported donor network
 
 When `conditionGroups` is used, `write-lad-network` builds a real `O` part with the required `Card` value and branch wires such as `in1`, `in2`, and a powerrail fanout.
 
@@ -236,6 +244,46 @@ CTU action shape:
 ```
 
 For `CTU`, the current signal path feeds `CU`, while `resetConditionGroups` or `resetConditions` build a second signal path that feeds `R`. Use one shared network `Powerrail` source across both paths.
+
+CTD action shape:
+
+```json
+{
+  "kind": "CTD",
+  "instance": "StepDownCounterDb",
+  "valueType": "Int",
+  "pv": { "scope": "LiteralConstant", "constantType": "Int", "value": "10" },
+  "loadConditionGroups": [
+    { "conditions": [ { "kind": "NO", "symbol": "LoadPresetCmd" } ] }
+  ]
+}
+```
+
+For `CTD`, the current signal path feeds `CD`, while `loadConditionGroups` or `loadConditions` feed `LD`.
+
+CTUD action shape:
+
+```json
+{
+  "kind": "CTUD",
+  "instance": "BidirectionalCounterDb",
+  "valueType": "Int",
+  "pv": { "scope": "LiteralConstant", "constantType": "Int", "value": "20" },
+  "downConditionGroups": [
+    { "conditions": [ { "kind": "P_EDGE", "symbol": "CountDownCmd", "bitSymbol": "CountDownEdgeMem" } ] }
+  ],
+  "resetConditionGroups": [
+    { "conditions": [ { "kind": "NO", "symbol": "ResetCounterCmd" } ] }
+  ],
+  "loadConditionGroups": [
+    { "conditions": [ { "kind": "NO", "symbol": "LoadCounterPreset" } ] }
+  ]
+}
+```
+
+For `CTUD`, the current signal path feeds `CU`, `downConditionGroups` feed `CD`, `resetConditionGroups` feed `R`, and `loadConditionGroups` feed `LD`.
+
+`TOF` and `TP` use the same `instance + pt` shape as `TON`; only the instruction `kind` changes.
 
 Validated call patterns:
 

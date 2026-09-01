@@ -1,0 +1,11 @@
+{
+  "title": "运行保持延时断开 / Run Hold Off Delay",
+  "comment": "运行反馈消失后保持输出一小段时间，适合风机延停、输送尾扫或真空释放缓冲。 / Hold the output briefly after the run feedback drops for off-delay behavior.",
+  "conditions": [
+    { "kind": "NO", "symbol": "RunFeedback_运行反馈" }
+  ],
+  "actions": [
+    { "kind": "TOF", "instance": "IEC_Timer_RunHold_DB", "pt": "T#3s" },
+    { "kind": "COIL", "symbol": "RunHoldCmd_运行保持命令" }
+  ]
+}

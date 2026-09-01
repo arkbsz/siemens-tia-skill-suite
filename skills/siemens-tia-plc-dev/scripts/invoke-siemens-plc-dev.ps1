@@ -90,6 +90,7 @@ function Show-Help {
 Siemens TIA PLC Dev
 Commands:
   route-info
+  doctor [-ProjectPath <projectDir|ap17>]
   create-project --name <projectName> [--directory <dir>] [--device-type <typeIdentifier>] [--device-item-type <typeIdentifier>] [--item-name <name>] [--device-name <name>]
   hold-project --project <projectDir|ap17> [--ui] [--lease-file <path>] [--poll-ms <ms>]
   probe [-ProjectPath <projectDir|ap17>]
@@ -206,6 +207,10 @@ switch ($Command.ToLowerInvariant()) {
         break
     }
     "probe" {
+        Invoke-PowerShellFile -Path $probeScript -Arguments $CommandArgs
+        break
+    }
+    "doctor" {
         Invoke-PowerShellFile -Path $probeScript -Arguments $CommandArgs
         break
     }

@@ -1,0 +1,55 @@
+FUNCTION "FC_StatusWordBuilder" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+BEGIN
+    // Select the active run request from the local or remote source.
+    "DB_StatusWord".RunRequestSelected :=
+        SEL(
+            G := "DB_StatusWord".RemoteControlSelected,
+            IN0 := "DB_StatusWord".LocalRunRequest,
+            IN1 := "DB_StatusWord".RemoteRunRequest
+        );
+
+    // Keep the recipe index inside a four-bit range before packing it into the status word.
+    "DB_StatusWord".RecipeIndexLimited :=
+        LIMIT(
+            MN := USINT#0,
+            IN := "DB_StatusWord".RecipeIndex,
+            MX := USINT#15
+        );
+
+    // Rebuild the outgoing status word from symbolic state bits every scan.
+    "DB_StatusWord".StatusWord := WORD#16#0000;
+
+    IF "DB_StatusWord".SafetyOk THEN
+        "DB_StatusWord".StatusWord := "DB_StatusWord".StatusWord OR SHL(IN := WORD#16#0001, N := 0);
+    END_IF;
+
+    IF "DB_StatusWord".Ready THEN
+        "DB_StatusWord".StatusWord := "DB_StatusWord".StatusWord OR SHL(IN := WORD#16#0001, N := 1);
+    END_IF;
+
+    IF "DB_StatusWord".Running THEN
+        "DB_StatusWord".StatusWord := "DB_StatusWord".StatusWord OR SHL(IN := WORD#16#0001, N := 2);
+    END_IF;
+
+    IF "DB_StatusWord".FaultActive THEN
+        "DB_StatusWord".StatusWord := "DB_StatusWord".StatusWord OR SHL(IN := WORD#16#0001, N := 3);
+    END_IF;
+
+    IF "DB_StatusWord".RunRequestSelected THEN
+        "DB_StatusWord".StatusWord := "DB_StatusWord".StatusWord OR SHL(IN := WORD#16#0001, N := 4);
+    END_IF;
+
+    "DB_StatusWord".RecipeNibble := SHL(IN := USINT_TO_WORD("DB_StatusWord".RecipeIndexLimited), N := 8);
+    "DB_StatusWord".StatusWord := "DB_StatusWord".StatusWord OR "DB_StatusWord".RecipeNibble;
+
+    // Decode the inbound command word with symbolic masks instead of raw absolute addresses.
+    "DB_StatusWord".StartCmd := ("DB_StatusWord".CommandWord AND SHL(IN := WORD#16#0001, N := 0)) <> WORD#16#0000;
+    "DB_StatusWord".StopCmd := ("DB_StatusWord".CommandWord AND SHL(IN := WORD#16#0001, N := 1)) <> WORD#16#0000;
+    "DB_StatusWord".ResetCmd := ("DB_StatusWord".CommandWord AND SHL(IN := WORD#16#0001, N := 2)) <> WORD#16#0000;
+
+    // Extract the requested recipe nibble from the received command word.
+    "DB_StatusWord".CommandRecipeWord := SHR(IN := "DB_StatusWord".CommandWord, N := 8);
+    "DB_StatusWord".RequestedRecipe := WORD_TO_USINT("DB_StatusWord".CommandRecipeWord AND WORD#16#000F);
+END_FUNCTION

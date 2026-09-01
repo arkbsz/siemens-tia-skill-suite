@@ -1,0 +1,11 @@
+{
+  "title": "启动脉冲 / Start Pulse",
+  "comment": "启动命令有效时产生一个固定宽度脉冲，适合单次推料、蜂鸣提示或按钮整形。 / Generate a fixed-width pulse from the start command for one-shot actions or pulse shaping.",
+  "conditions": [
+    { "kind": "NO", "symbol": "StartCmd_启动命令" }
+  ],
+  "actions": [
+    { "kind": "TP", "instance": "IEC_Timer_StartPulse_DB", "pt": "T#500ms" },
+    { "kind": "COIL", "symbol": "StartPulseOut_启动脉冲输出" }
+  ]
+}

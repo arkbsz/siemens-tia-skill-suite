@@ -12,6 +12,8 @@ param(
 
     [string]$CloneName,
 
+    [string]$CloneRoot,
+
     [string]$SupportingSourceDir
 )
 
@@ -65,6 +67,63 @@ function Invoke-PowerShellStep {
     }
 }
 
+function Assert-OpennessSessionReady {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$InvokeScript,
+
+        [Parameter(Mandatory = $true)]
+        [string]$ProjectPath
+    )
+
+    $probeStep = Invoke-PowerShellStep -ScriptPath $InvokeScript -Arguments @(
+        "probe",
+        "-ProjectPath", $ProjectPath
+    )
+
+    $probeText = ($probeStep.Output -join [Environment]::NewLine).Trim()
+    try {
+        $probe = $probeText | ConvertFrom-Json
+    }
+    catch {
+        throw "Openness probe returned unreadable JSON before clone verification.`n$probeText"
+    }
+
+    $ready = if ($probe.PSObject.Properties.Name -contains "ReadyForOpennessSession") {
+        [bool]$probe.ReadyForOpennessSession
+    }
+    else {
+        [bool]$probe.ConfiguredInSiemensTiaOpennessGroup -and [bool]$probe.ActiveInCurrentLogonToken
+    }
+
+    if (-not $ready) {
+        $issues = @($probe.ReadinessIssues | Where-Object { $_ })
+        if ($issues.Count -eq 0) {
+            if (-not [bool]$probe.ConfiguredInSiemensTiaOpennessGroup) {
+                $issues = @("Current Windows user is not configured in the 'Siemens TIA Openness' local group.")
+            }
+            elseif (-not [bool]$probe.ActiveInCurrentLogonToken) {
+                $issues = @("Current Windows logon session does not yet contain the 'Siemens TIA Openness' group.")
+            }
+            else {
+                $issues = @("Unknown Openness readiness problem.")
+            }
+        }
+
+        $issueText = ($issues | ForEach-Object { "- $_" }) -join [Environment]::NewLine
+        $recommended = if ($probe.PSObject.Properties.Name -contains "RecommendedNextStep" -and $probe.RecommendedNextStep) {
+            $probe.RecommendedNextStep
+        }
+        else {
+            "Fix the Openness prerequisites first, then rerun verify-lad-change."
+        }
+
+        throw "Openness preflight failed before clone/import/compile.`n$issueText`nRecommended next step: $recommended"
+    }
+
+    return $probe
+}
+
 if (-not (Test-Path -LiteralPath $InputXml)) {
     throw "Input XML not found: $InputXml"
 }
@@ -95,6 +154,15 @@ $workspacePath = Join-Path $projectDir "PLC_Code"
 $verificationRoot = Join-Path $workspacePath "verification"
 New-Item -ItemType Directory -Path $verificationRoot -Force | Out-Null
 
+if (-not $CloneRoot) {
+    $CloneRoot = Join-Path $verificationRoot "_clones"
+}
+
+New-Item -ItemType Directory -Path $CloneRoot -Force | Out-Null
+
+Write-Host "[verify-lad-change] probing Openness readiness"
+$opennessProbe = Assert-OpennessSessionReady -InvokeScript $invokeScript -ProjectPath $ProjectPath
+
 $blockName = Get-BlockNameFromXml -Path $InputXml
 $resolvedChangeName = if ($ChangeName) { $ChangeName } else { [System.IO.Path]::GetFileNameWithoutExtension($InputXml) }
 $safeChangeName = (($resolvedChangeName -replace '[\\/:*?"<>| ]+', "-").Trim("-"))
@@ -113,8 +181,12 @@ New-Item -ItemType Directory -Path $exportDir -Force | Out-Null
 
 $resolvedCloneName = if ($CloneName) { $CloneName } else { "codex_verify_" + $safeChangeName + "_" + $timestamp }
 
+Write-Host "[verify-lad-change] clone-root: $CloneRoot"
+Write-Host "[verify-lad-change] verification-dir: $verificationDir"
+Write-Host "[verify-lad-change] cloning project as: $resolvedCloneName"
 $cloneStep = Invoke-PowerShellStep -ScriptPath $cloneScript -Arguments @(
     "-ProjectPath", $ProjectPath,
+    "-CloneRoot", $CloneRoot,
     "-CloneName", $resolvedCloneName
 )
 
@@ -123,6 +195,7 @@ $clonePath = $cloneInfo.ClonePath
 
 $supportingSourceStep = $null
 if ($SupportingSourceDir) {
+    Write-Host "[verify-lad-change] importing supporting sources from: $SupportingSourceDir"
     $supportingSourceStep = Invoke-PowerShellStep -ScriptPath $invokeScript -Arguments @(
         "import-sources",
         "--project", $clonePath,
@@ -132,6 +205,7 @@ if ($SupportingSourceDir) {
     )
 }
 
+Write-Host "[verify-lad-change] importing block XML: $InputXml"
 $importStep = Invoke-PowerShellStep -ScriptPath $invokeScript -Arguments @(
     "import-blocks",
     "--project", $clonePath,
@@ -140,6 +214,7 @@ $importStep = Invoke-PowerShellStep -ScriptPath $invokeScript -Arguments @(
     "--apply"
 )
 
+Write-Host "[verify-lad-change] compiling PLC: $PlcName"
 $compileStep = Invoke-PowerShellStep -ScriptPath $invokeScript -Arguments @(
     "compile-plc",
     "--project", $clonePath,
@@ -147,6 +222,7 @@ $compileStep = Invoke-PowerShellStep -ScriptPath $invokeScript -Arguments @(
     "--save"
 ) -AllowedExitCodes @(0, 1)
 
+Write-Host "[verify-lad-change] exporting block: $blockName"
 $exportStep = Invoke-PowerShellStep -ScriptPath $invokeScript -Arguments @(
     "export-blocks",
     "--project", $clonePath,
@@ -173,9 +249,12 @@ $report = [ordered]@{
     PlcName = $PlcName
     BlockName = $blockName
     VerificationDirectory = $verificationDir
+    CloneRoot = $CloneRoot
     ClonePath = $clonePath
     ExportedXml = $exportedXml[0]
     SummaryPath = $summaryPath
+    ProbeReady = if ($opennessProbe.PSObject.Properties.Name -contains "ReadyForOpennessSession") { $opennessProbe.ReadyForOpennessSession } else { $null }
+    ProbeRecommendedNextStep = if ($opennessProbe.PSObject.Properties.Name -contains "RecommendedNextStep") { $opennessProbe.RecommendedNextStep } else { "" }
     SupportingSourceDir = if ($SupportingSourceDir) { (Get-Item -LiteralPath $SupportingSourceDir).FullName } else { "" }
     SupportingSourceExitCode = if ($supportingSourceStep) { $supportingSourceStep.ExitCode } else { $null }
     ImportExitCode = $importStep.ExitCode
@@ -190,6 +269,7 @@ $report = [ordered]@{
 } | ConvertTo-Json -Depth 6
 
 Set-Content -LiteralPath $reportPath -Value $report -Encoding UTF8
+Write-Host "[verify-lad-change] report written: $reportPath"
 
 [pscustomobject]@{
     VerificationDirectory = $verificationDir

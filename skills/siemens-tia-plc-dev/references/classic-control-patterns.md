@@ -218,6 +218,44 @@ Checklist:
 - use one parent `FB` to aggregate manual behavior, automatic sequence behavior, and grouped alarms
 - when the pattern grows wider than a simple ladder edit, prefer `SCL + Openness import` and keep LAD focused on maintenance-facing surfaces
 
+### Analog scaling and alarm conditioning
+
+Intent:
+Normalize one raw analog value, scale it into engineering units, clamp it, and generate readable alarm thresholds and control deviations.
+
+Minimum state split:
+
+- raw range: `RawInputCount`, `RawMinCount`, `RawMaxCount`
+- engineering range: `EngMinValue`, `EngMaxValue`
+- control target: `AutoSetpoint`, `MaintenanceSetpoint`, `ActiveSetpoint`
+- condition outputs: `HighAlarm`, `LowAlarm`, `DeviationWarning`
+
+Checklist:
+
+- normalize first, then clamp, then scale
+- clamp operator-facing setpoints to the same engineering range as the process value
+- keep a substitute value path for unhealthy sensors
+- keep alarm thresholds symbolic and easy to retune
+
+### Status-word and command-word packing
+
+Intent:
+Pack symbolic machine state into one status word and decode one received command word without falling back to scattered absolute-bit logic.
+
+Minimum state split:
+
+- state bits: `SafetyOk`, `Ready`, `Running`, `FaultActive`
+- command source selection: `LocalRunRequest`, `RemoteRunRequest`, `RemoteControlSelected`
+- packed words: `StatusWord`, `CommandWord`
+- decoded commands: `StartCmd`, `StopCmd`, `ResetCmd`
+
+Checklist:
+
+- rebuild the outgoing word from symbolic states every scan
+- keep recipe or mode nibbles range-limited before packing
+- use symbolic masks and shifts instead of hard-coded memory addresses
+- decode inbound command bits into named booleans before using them in sequence logic
+
 ## Pattern selection guide
 
 - Choose `SCL source + Openness import` for new logic blocks, demos, algorithmic edits, and anything wider than a tiny ladder rung.
@@ -237,6 +275,8 @@ The skill now carries four small source-backed examples:
 - `examples/classic-scl/dual-starter-cell-fb`
 - `examples/classic-scl/station-supervisor-fb`
 - `examples/classic-scl/material-handling-cell`
+- `examples/classic-scl/analog-scaling-fc`
+- `examples/classic-scl/status-word-builder-fc`
 
 Treat these as seed patterns. They are intentionally compact, compile-friendly, and easy to adapt before being promoted to library-grade `FB` patterns.
 

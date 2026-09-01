@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 
 $packageRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $sourceRoot = Join-Path $packageRoot "skills"
-$skillNames = @("siemens-tia-plc-dev", "tia-portal-v17", "codex-tia-client")
+$skillNames = @("siemens-tia-plc-dev", "tia-portal-v17", "codex-tia-client", "siemens-wincc-hmi-dev")
 
 if (-not (Test-Path -LiteralPath $sourceRoot)) {
     throw "Missing packaged skills directory: $sourceRoot"

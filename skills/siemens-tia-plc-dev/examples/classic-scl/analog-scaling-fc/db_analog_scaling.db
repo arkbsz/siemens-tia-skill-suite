@@ -1,0 +1,34 @@
+DATA_BLOCK "DB_AnalogScaling"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+NON_RETAIN
+VAR
+    RawInputCount           : Int;
+    RawMinCount             : Int := 0;
+    RawMaxCount             : Int := 27648;
+    EngMinValue             : Real := 0.0;
+    EngMaxValue             : Real := 100.0;
+    AutoSetpoint            : Real := 55.0;
+    MaintenanceSetpoint     : Real := 25.0;
+    SubstituteValue         : Real := 0.0;
+    HighAlarmLimit          : Real := 90.0;
+    LowAlarmLimit           : Real := 10.0;
+    DeviationWarnBand       : Real := 5.0;
+    FilterGain              : Real := 0.20;
+    UseMaintenanceSetpoint  : Bool;
+    SensorHealthy           : Bool := TRUE;
+    NormalizedValue         : Real;
+    NormalizedLimited       : Real;
+    EngineeringValue        : Real;
+    ActiveSetpoint          : Real;
+    ActiveSetpointLimited   : Real;
+    ValueForControl         : Real;
+    FilteredValue           : Real;
+    DeviationAbs            : Real;
+    HighAlarm               : Bool;
+    LowAlarm                : Bool;
+    DeviationWarning        : Bool;
+END_VAR
+
+BEGIN
+END_DATA_BLOCK

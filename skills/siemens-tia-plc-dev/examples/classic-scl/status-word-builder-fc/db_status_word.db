@@ -1,0 +1,27 @@
+DATA_BLOCK "DB_StatusWord"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+NON_RETAIN
+VAR
+    SafetyOk              : Bool := TRUE;
+    Ready                 : Bool;
+    Running               : Bool;
+    FaultActive           : Bool;
+    LocalRunRequest       : Bool;
+    RemoteRunRequest      : Bool;
+    RemoteControlSelected : Bool;
+    RunRequestSelected    : Bool;
+    RecipeIndex           : USInt;
+    RecipeIndexLimited    : USInt;
+    RequestedRecipe       : USInt;
+    StatusWord            : Word;
+    CommandWord           : Word;
+    RecipeNibble          : Word;
+    CommandRecipeWord     : Word;
+    StartCmd              : Bool;
+    StopCmd               : Bool;
+    ResetCmd              : Bool;
+END_VAR
+
+BEGIN
+END_DATA_BLOCK

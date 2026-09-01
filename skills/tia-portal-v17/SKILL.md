@@ -79,6 +79,8 @@ To verify the local environment, run:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\tia-portal-v17\scripts\probe-tia-v17.ps1"
 ```
 
+Treat `ReadyForOpennessSession` as the live-work gate. If `ConfiguredInSiemensTiaOpennessGroup` is `true` but `ActiveInCurrentLogonToken` is `false`, the user likely needs a full Windows sign-out and sign-in before Openness can connect. A new terminal window is usually not enough.
+
 Downloaded local references are tracked in `references/downloaded-tools.md`.
 
 ## Routing
@@ -124,6 +126,12 @@ Prefer this path for:
 - scripted engineering tasks
 
 Use Siemens official Openness snippets as the behavioral baseline. Prefer read-only inspection first, then narrow the exact write operation. On this V17 machine, use `scripts/invoke-tia-openness.ps1` for the verified helper commands.
+
+If the helper reports an Openness preflight failure, stop retrying the same live command and switch to one of these next steps:
+
+- recover the Windows group/logon-session prerequisites
+- keep working source-only from exported XML or SCL
+- use GUI fallback only when a structured route is unavailable
 
 ### 3. MCP path
 
@@ -201,6 +209,7 @@ For nontrivial project work, follow this order:
 - Never modify a TIA project without either a fresh backup or explicit user approval to proceed without one.
 - Prefer exported text or XML artifacts over blind binary project manipulation.
 - Do not assume Openness write access is working just because the DLLs exist.
+- Do not assume Windows group membership is active in the current session just because the user was added earlier; `ActiveInCurrentLogonToken` must also be `true`.
 - Treat Safety, motion, drives, and online/download operations as high risk; explain before changing.
 - When the project is only partially readable, state that clearly and work from confirmed facts only.
 - If TIA files are locked, do not force destructive recovery. Use backup snapshot mode and tell the user what was locked.
