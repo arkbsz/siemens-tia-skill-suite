@@ -1,13 +1,13 @@
-# Siemens TIA Skill Suite
+# 西门子 TIA 自动化开发技能套件
 
-Version: `1.0.0`  
-Release date: `2026-08-10`
+版本：`1.0.0`  
+发布日期：`2026-08-10`
 
 面向 Siemens TIA Portal 的多平台技能套件，兼容 Codex、Claude Code 与 Cursor，支持 TIA Portal `V17-V21`，主打 PLC-as-code 与 HMI/WinCC 自动化工作流。适合做项目备份、块导出、LAD/XML 编辑、WinCC 画面与标签自动化、源码导入、编译验证，以及本地 Openness / REST 桥接自动化。
 
 ## 项目简介
 
-这套仓库把 Siemens PLC 开发里常见、重复、容易出错的流程打包成可复用技能，目标是让 PLC 编程更接近普通代码开发体验。
+这套仓库把西门子 PLC 与 WinCC 开发里常见、重复、容易出错的流程打包成可复用技能，目标是让博图工程开发更接近普通代码开发体验。它不是替代 TIA Portal，而是把备份、读取、生成、导入、编译验证、回读比对这些步骤标准化，让 AI 助手可以围绕工程文件、导出源码和 Openness 接口协同工作。
 
 ## 多平台支持
 
@@ -17,19 +17,19 @@ Release date: `2026-08-10`
 
 三者共用同一套 TIA / Openness / LAD / SCL 资源。
 
-## Included Skills
+## 内置技能
 
-- `siemens-tia-plc-dev`: generic Siemens PLC workflow wrapper
-- `tia-portal-v17`: local TIA Portal V17 bridge and Openness helper surface
-- `codex-tia-client`: Codex-first entrypoint for backup, export, write, import, and compile loops
-- `siemens-wincc-hmi-dev`: WinCC HMI automation entrypoint for screen, tag, alarm, and runtime workflows
+- `siemens-tia-plc-dev`：通用西门子 PLC 开发入口，负责项目备份、版本路由、LAD/SCL/XML 工作流、导入验证和发布包准备。
+- `tia-portal-v17`：本机 TIA Portal `V17-V21` Openness 桥接层，保留旧名称以兼容历史调用，同时支持 `.ap17` 到 `.ap21` 项目识别。
+- `codex-tia-client`：面向 Codex 的主入口，用于替代独立 AI 助手，完成备份、导出、编写、导入和编译闭环。
+- `siemens-wincc-hmi-dev`：WinCC HMI 自动化入口，用于画面、变量、报警、Faceplate、导航和运行时通信工作流。
 
 ## 功能
 
 - 项目备份优先，先复制再改
-- 导出/导入 FC、FB、DB、LAD XML、SCL
-- LAD 模板化生成与网络批量写入
-- WinCC 画面、标签、报警、面板与 runtime 联动自动化
+- 导出和导入 FC、FB、DB、LAD XML、SCL
+- LAD 梯形图模板化生成与网络批量写入
+- WinCC 画面、变量、报警、面板与运行时联动自动化
 - 本地 Openness 自动化和 REST 桥接
 - `V17-V21` 版本探测、项目后缀识别、程序集路径路由
 - 编译验证与回读比对
@@ -45,7 +45,7 @@ Release date: `2026-08-10`
 - WinCC Unified 运行时读写、订阅和诊断联动
 - SiVArc 规则驱动的界面生成和批量配置
 
-## What Is Intentionally Excluded
+## 不随仓库分发的内容
 
 - `Siemens.Engineering.dll`
 - `Siemens.Engineering.Hmi.dll`
@@ -55,13 +55,13 @@ Release date: `2026-08-10`
 - prebuilt `TiaPlcTool.exe`
 - session caches and Python bytecode
 
-These binaries are excluded so the package can bind to the target machine's own TIA Portal `V17-V21` PublicAPI installation and rebuild local helper binaries when needed.
+这些 Siemens 二进制文件、预编译工具和临时缓存不会随仓库分发。这样可以避免携带受限运行库，并让工具在目标机器上绑定本机已安装的 TIA Portal `V17-V21` PublicAPI，必要时再本地重新生成辅助程序。
 
-## Install
+## 安装方式
 
-1. Download or extract this repository.
-2. Run `install-skills.ps1`.
-3. Restart Codex if it is already open.
+1. 下载或解压本仓库。
+2. 在仓库根目录运行 `install-skills.ps1`。
+3. 如果 Codex 已经打开，安装后重启 Codex，让新技能重新加载。
 
 ## 一键部署
 
@@ -69,7 +69,7 @@ These binaries are excluded so the package can bind to the target machine's own 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install-skills.ps1
 ```
 
-Default install target:
+默认安装位置：
 
 - `%USERPROFILE%\.codex\skills`
 
@@ -85,36 +85,36 @@ Default install target:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1 doctor -ProjectPath "D:\path\to\project"
 ```
 
-## Target Machine Prerequisites
+## 目标机器要求
 
-- TIA Portal V17, V18, V19, V20, or V21
-- Openness PublicAPI available under the local TIA installation
-- .NET Framework 4.8 or compatible local build environment
-- A Windows user configured for `Siemens TIA Openness` when write workflows are required
+- 已安装 TIA Portal `V17`、`V18`、`V19`、`V20` 或 `V21`
+- 本机 TIA 安装目录下存在 Openness PublicAPI
+- 已安装 .NET Framework 4.8 或兼容的本地构建环境
+- 需要写入工程时，当前 Windows 用户应加入 `Siemens TIA Openness` 用户组，并完成重新登录使权限生效
 
-## Repository Layout
+## 仓库结构
 
-- `skills/`: packaged Codex skills
-- `install-skills.ps1`: local installer for the skill suite
-- `release-manifest.json`: packaged metadata and validation record
-- `LICENSE`: MIT license for the repository
+- `skills/`：可安装的 Codex 技能目录
+- `install-skills.ps1`：本地一键安装脚本
+- `release-manifest.json`：发布元数据和验证记录
+- `LICENSE`：仓库的 MIT 开源许可证
 
-## Validation Basis
+## 验证依据
 
-- The packaged skills were used to complete offline `backup -> source import -> block import -> compile -> LAD export/readback` loops.
-- The validated ladder workflow includes timer-backed LAD changes, batch network rewrites, and support-source import for helper DB artifacts.
-- The recent industrialization and simulation overlay validated `DB_7SimulationPanel`, `FC7_SimulationIO`, and `TON.PT` bound to a DB `TIME` variable.
+- 已使用本套技能完成离线 `备份 -> 源码导入 -> 块导入 -> 编译 -> LAD 导出和回读` 闭环。
+- 已验证的梯形图流程包括定时器相关 LAD 修改、网络批量重写，以及辅助 DB 源码的配套导入。
+- 最近的工业化和仿真增强已验证 `DB_7SimulationPanel`、`FC7_SimulationIO`，以及绑定到 DB `TIME` 变量的 `TON.PT`。
 
-## Knowledge Sources
+## 知识来源
 
-- Siemens official instruction-family pages on `docs.tia.siemens.cloud`
-- Siemens support manuals and Openness documents on `support.industry.siemens.com`
-- Siemens official GitHub Openness snippets
-- community case studies and open-source tooling
-- the active project's exported LAD XML, summaries, SCL sources, and DB structures
+- Siemens 官方指令族文档：`docs.tia.siemens.cloud`
+- Siemens 支持手册与 Openness 文档：`support.industry.siemens.com`
+- Siemens 官方 GitHub Openness 示例代码
+- 社区案例、开源工具和工程实践文章
+- 当前项目导出的 LAD XML、摘要、SCL 源码和 DB 结构
 
-## Notes
+## 使用建议
 
-- Prefer working on a backup or clone before importing changes into a main project.
-- Use exported XML and SCL artifacts as the reviewable source of truth whenever possible.
-- Treat this repository as a distributable skill suite, not as a bundle of Siemens runtime binaries.
+- 导入主工程前，优先在备份或克隆工程上验证。
+- 尽量把导出的 XML 和 SCL 作为可审查、可回溯的源码依据。
+- 本仓库定位为可发行的技能套件，不是 Siemens 运行库或工程二进制文件合集。
