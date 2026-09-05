@@ -31,13 +31,38 @@ function Get-ToolOptionValue {
     return $null
 }
 
+$commandName = if ($ToolArgs.Count -gt 0) { $ToolArgs[0].ToLowerInvariant() } else { "help" }
+
+function Show-Help {
+    @"
+TIA Portal V16-V21 Openness helper
+Commands:
+  help
+  list-plcs --project <projectDir|ap16..ap21>
+  list-blocks --project <projectDir|ap16..ap21> [--plc <name>]
+  export-blocks --project <projectDir|ap16..ap21> [--plc <name>] [--block <name>] [--language LAD|FBD|SCL] [--output <dir>]
+  import-blocks --project <projectDir|ap16..ap21> --input <xml|dir> [--plc <name>] [--group <path>] [--apply] [--no-save]
+  import-sources --project <projectDir|ap16..ap21> [--plc <name>] --source-dir <dir> [--compile] [--save]
+  compile-plc --project <projectDir|ap16..ap21> [--plc <name>] [--save]
+
+Notes:
+  - This wrapper builds and runs a local Openness helper when the required Siemens assemblies are available.
+  - If help is all you need, you do not need a complete TIA Openness installation.
+  - If live commands fail with a missing PublicAPI assembly, repair the local TIA installation or switch to source-only XML/SCL workflows.
+"@
+}
+
+if ($commandName -eq "help" -or $commandName -eq "--help" -or $commandName -eq "-h") {
+    Show-Help
+    exit 0
+}
+
 if (-not (Test-Path -LiteralPath $csc)) {
     throw ".NET Framework C# compiler not found: $csc"
 }
 
 New-Item -ItemType Directory -Path $buildDir -Force | Out-Null
 
-$commandName = if ($ToolArgs.Count -gt 0) { $ToolArgs[0].ToLowerInvariant() } else { "help" }
 $projectForProbe = Get-ToolOptionValue -Arguments $ToolArgs -Name "--project"
 $preferredVersionHint = $env:CODEX_TIA_PREFERRED_VERSION
 $locationHint = Get-TiaLocationHint `
