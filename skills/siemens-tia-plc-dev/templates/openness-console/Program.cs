@@ -148,7 +148,7 @@ namespace __PROJECT_NAME__
                 return @"C:\Program Files\Siemens\Automation\Portal " + versionTag;
             }
 
-            return @"C:\Program Files\Siemens\Automation\Portal V17";
+            return @"C:\Program Files\Siemens\Automation\Portal V16";
         }
 
         private static string GetTiaPortalPublicApiRoot()
@@ -177,7 +177,7 @@ namespace __PROJECT_NAME__
                 return Path.Combine(root, "PublicAPI", versionTag);
             }
 
-            return Path.Combine(root, "PublicAPI", "V17");
+            return Path.Combine(root, "PublicAPI", "V16");
         }
 
         private static string GetTiaPortalVersionTag()
@@ -194,7 +194,7 @@ namespace __PROJECT_NAME__
                     continue;
                 }
 
-                Match match = Regex.Match(value, @"(?i)V(1[7-9]|2[0-1])");
+                Match match = Regex.Match(value, @"(?i)V(1[6-9]|2[0-1])");
                 if (match.Success)
                 {
                     return "V" + match.Groups[1].Value;
@@ -347,7 +347,7 @@ namespace __PROJECT_NAME__
             List<string> supported = new List<string>();
             foreach (string file in files)
             {
-                if (Regex.IsMatch(file, @"\.ap(1[7-9]|2[0-1])$", RegexOptions.IgnoreCase))
+                if (Regex.IsMatch(file, @"\.ap(1[6-9]|2[0-1])$", RegexOptions.IgnoreCase))
                 {
                     supported.Add(file);
                 }
@@ -355,7 +355,7 @@ namespace __PROJECT_NAME__
 
             if (supported.Count == 0)
             {
-                throw new FileNotFoundException("No supported TIA project file (.ap17 through .ap21) found in " + path);
+                throw new FileNotFoundException("No supported TIA project file (.ap16 through .ap21) found in " + path);
             }
             if (supported.Count > 1)
             {
@@ -368,9 +368,9 @@ namespace __PROJECT_NAME__
         {
             Console.WriteLine("__PROJECT_NAME__");
             Console.WriteLine("Commands:");
-            Console.WriteLine("  list-plcs --project <projectDir|ap17..ap21>");
-            Console.WriteLine("  list-blocks --project <projectDir|ap17..ap21> [--plc <name>]");
-            Console.WriteLine("  compile-plc --project <projectDir|ap17..ap21> [--plc <name>] [--save]");
+            Console.WriteLine("  list-plcs --project <projectDir|ap16..ap21>");
+            Console.WriteLine("  list-blocks --project <projectDir|ap16..ap21> [--plc <name>]");
+            Console.WriteLine("  compile-plc --project <projectDir|ap16..ap21> [--plc <name>] [--save]");
         }
     }
 

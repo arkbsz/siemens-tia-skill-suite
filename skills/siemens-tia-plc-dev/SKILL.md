@@ -37,7 +37,7 @@ For the generic workflow, read `references/workflow.md`.
 
 ## Local bridge
 
-This release keeps the legacy sibling skill name `tia-portal-v17`, but the packaged bridge now routes TIA Portal `V17` through `V21`.
+This release keeps the legacy sibling skill name `tia-portal-v17`, but the packaged bridge now routes TIA Portal `V16` through `V21`.
 
 Use the wrapper scripts in this skill to stay generic:
 
@@ -56,8 +56,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\scaffold-openness-console.ps1" -TargetDirectory "D:\path\to\OpennessConsole" -ProjectName "MyTiaTool"
 ```
 
-For how the generic skill maps to the local `V17-V21` implementation, read `references/version-routing.md`.
-For the version-by-version differences that affect assemblies, project suffixes, and document workflows, read `references/version-compatibility-v17-v21.md`.
+For how the generic skill maps to the local `V16-V21` implementation, read `references/version-routing.md`.
+For the version-by-version differences that affect assemblies, project suffixes, and document workflows, read `references/version-compatibility-v16-v21.md`.
 
 If `doctor` or `probe` reports `ActiveInCurrentLogonToken = false`, do not keep retrying live Openness commands. Switch to source-only XML/SCL work for now and tell the user to fully sign out of Windows and sign in again before the next live TIA session.
 
@@ -240,7 +240,7 @@ The skill now includes small reusable source examples under:
 - Project onboarding: `references/project-onboarding.md`
 - Release workflow: `references/release-workflow.md`
 - Version and routing: `references/version-routing.md`
-- Version compatibility: `references/version-compatibility-v17-v21.md`
+- Version compatibility: `references/version-compatibility-v16-v21.md`
 - LAD and template library: `references/lad-and-templates.md`
 - Knowledge retrieval: `references/knowledge-retrieval.md`
 - Classic control patterns: `references/classic-control-patterns.md`

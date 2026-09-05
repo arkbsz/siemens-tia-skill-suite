@@ -16,30 +16,30 @@ function Show-Help {
 Siemens TIA PLC Dev
 Commands:
   route-info
-  doctor [-ProjectPath <projectDir|ap17..ap21>]
+  doctor [-ProjectPath <projectDir|ap16..ap21>]
   create-project --name <projectName> [--directory <dir>] [--device-type <typeIdentifier>] [--device-item-type <typeIdentifier>] [--item-name <name>] [--device-name <name>]
-  hold-project --project <projectDir|ap17..ap21> [--ui] [--lease-file <path>] [--poll-ms <ms>]
-  probe [-ProjectPath <projectDir|ap17..ap21>]
-  backup-project -ProjectPath <projectDir|ap17..ap21>
-  clone-project -ProjectPath <projectDir|ap17..ap21> [-CloneRoot <dir>] [-CloneName <name>]
-  bootstrap -ProjectPath <projectDir|ap17..ap21>
-  refresh -ProjectPath <projectDir|ap17..ap21>
-  init-workspace -ProjectPath <projectDir|ap17..ap21>
-  prepare-write-session -ProjectPath <projectDir|ap17..ap21> [-BaseUrl <url>] [-StartupTimeoutSeconds <n>] [-Ui] [-SkipBridgeStart]
-  scaffold-lad-change -ProjectPath <projectDir|ap17..ap21> -SourceXml <path> -ChangeName <name> [-NetworkIndex <n>] [-CreateTemplate]
-  verify-lad-change -ProjectPath <projectDir|ap17..ap21> -InputXml <path> -PlcName <name> [-ChangeName <name>] [-CloneName <name>]
-  prepare-release -ProjectPath <projectDir|ap17..ap21> -InputXml <path> -ReleaseName <name> [-ReadableSummaryPath <path>] [-VerificationReportPath <path>]
-  apply-release -ProjectPath <projectDir|ap17..ap21> -InputXml <path> -PlcName <name> [-BlockName <name>] [-ReleaseLabel <name>] [-SkipBackup] [-DryRunOnly]
+  hold-project --project <projectDir|ap16..ap21> [--ui] [--lease-file <path>] [--poll-ms <ms>]
+  probe [-ProjectPath <projectDir|ap16..ap21>]
+  backup-project -ProjectPath <projectDir|ap16..ap21>
+  clone-project -ProjectPath <projectDir|ap16..ap21> [-CloneRoot <dir>] [-CloneName <name>]
+  bootstrap -ProjectPath <projectDir|ap16..ap21>
+  refresh -ProjectPath <projectDir|ap16..ap21>
+  init-workspace -ProjectPath <projectDir|ap16..ap21>
+  prepare-write-session -ProjectPath <projectDir|ap16..ap21> [-BaseUrl <url>] [-StartupTimeoutSeconds <n>] [-Ui] [-SkipBridgeStart]
+  scaffold-lad-change -ProjectPath <projectDir|ap16..ap21> -SourceXml <path> -ChangeName <name> [-NetworkIndex <n>] [-CreateTemplate]
+  verify-lad-change -ProjectPath <projectDir|ap16..ap21> -InputXml <path> -PlcName <name> [-ChangeName <name>] [-CloneName <name>]
+  prepare-release -ProjectPath <projectDir|ap16..ap21> -InputXml <path> -ReleaseName <name> [-ReadableSummaryPath <path>] [-VerificationReportPath <path>]
+  apply-release -ProjectPath <projectDir|ap16..ap21> -InputXml <path> -PlcName <name> [-BlockName <name>] [-ReleaseLabel <name>] [-SkipBackup] [-DryRunOnly]
 
 TIA project commands:
-  hold-project --project <projectDir|ap17..ap21> [--ui] [--lease-file <path>] [--poll-ms <ms>]
-  list-devices --project <projectDir|ap17..ap21>
-  list-plcs --project <projectDir|ap17..ap21>
-  list-blocks --project <projectDir|ap17..ap21> [--plc <name>]
-  export-blocks --project <projectDir|ap17..ap21> [--plc <name>] [--block <name>] [--language LAD|FBD|SCL] [--output <dir>]
-  import-blocks --project <projectDir|ap17..ap21> --input <xml|dir> [--plc <name>] [--group <path>] [--apply] [--no-save]
-  import-sources --project <projectDir|ap17..ap21> [--plc <name>] --source-dir <dir> [--compile] [--save]
-  compile-plc --project <projectDir|ap17..ap21> [--plc <name>] [--save]
+  hold-project --project <projectDir|ap16..ap21> [--ui] [--lease-file <path>] [--poll-ms <ms>]
+  list-devices --project <projectDir|ap16..ap21>
+  list-plcs --project <projectDir|ap16..ap21>
+  list-blocks --project <projectDir|ap16..ap21> [--plc <name>]
+  export-blocks --project <projectDir|ap16..ap21> [--plc <name>] [--block <name>] [--language LAD|FBD|SCL] [--output <dir>]
+  import-blocks --project <projectDir|ap16..ap21> --input <xml|dir> [--plc <name>] [--group <path>] [--apply] [--no-save]
+  import-sources --project <projectDir|ap16..ap21> [--plc <name>] --source-dir <dir> [--compile] [--save]
+  compile-plc --project <projectDir|ap16..ap21> [--plc <name>] [--save]
 
 LAD helper commands:
   inspect-lad -Path <xml>
@@ -56,7 +56,7 @@ LAD helper commands:
 
 Notes:
   - This generic wrapper routes to the best local tia-portal-vXX sibling skill on the machine.
-  - This release is prepared to route TIA Portal V17 through V21 projects.
+  - This release is prepared to route TIA Portal V16 through V21 projects.
 "@
 }
 

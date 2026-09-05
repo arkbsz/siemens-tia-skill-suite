@@ -26,7 +26,7 @@ SoftwareContainer sc = deviceItem.GetService<SoftwareContainer>();
 PlcSoftware plcSoftware = sc?.Software as PlcSoftware;
 ```
 
-For regular block XML export/import on `V17-V20` and as the fallback route on `V21`:
+For regular block XML export/import on `V16-V20` and as the fallback route on `V21`:
 
 ```csharp
 plcBlock.Export(new FileInfo(outputXml), ExportOptions.WithDefaults);
@@ -48,7 +48,7 @@ plcSoftware.TypeGroup.Types.Import(new FileInfo(inputXml), ImportOptions.Overrid
 
 ## Version notes
 
-This package now routes TIA Portal V17 through V21. `V17-V20` commonly expose `Siemens.Engineering.dll`, while `V21` uses modular assemblies. Probe local DLLs before compiling helpers.
+This package now routes TIA Portal V16 through V21. `V16-V20` commonly expose `Siemens.Engineering.dll`, while `V21` uses modular assemblies. Probe local DLLs before compiling helpers.
 
 ## Failure handling
 

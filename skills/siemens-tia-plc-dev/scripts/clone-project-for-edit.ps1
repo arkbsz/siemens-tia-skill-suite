@@ -44,7 +44,7 @@ if ($robocopyCode -ge 8) {
 
 $projectFiles = @(
     Get-ChildItem -LiteralPath $clonePath -File -Force -ErrorAction SilentlyContinue |
-        Where-Object { $_.Extension -match '^\.ap(1[7-9]|2[0-1])$' } |
+        Where-Object { $_.Extension -match '^\.ap(1[6-9]|2[0-1])$' } |
         Select-Object -ExpandProperty FullName
 )
 

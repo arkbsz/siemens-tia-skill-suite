@@ -1,4 +1,4 @@
-$script:TiaSupportedVersionMajors = @(17, 18, 19, 20, 21)
+$script:TiaSupportedVersionMajors = @(16, 17, 18, 19, 20, 21)
 
 function Get-TiaSupportedVersionMajors {
     return @($script:TiaSupportedVersionMajors)
@@ -13,7 +13,7 @@ function ConvertTo-TiaMajorVersion {
         return $null
     }
 
-    if ($Value -match '(?i)(?:^|[^0-9])V?(?<Version>1[7-9]|2[0-1])(?:$|[^0-9])') {
+    if ($Value -match '(?i)(?:^|[^0-9])V?(?<Version>1[6-9]|2[0-1])(?:$|[^0-9])') {
         return [int]$Matches.Version
     }
 
@@ -40,7 +40,7 @@ function Get-TiaProjectFiles {
 
     $item = Get-Item -LiteralPath $ProjectPath
     if (-not $item.PSIsContainer) {
-        if ($item.Extension -match '^\.ap(1[7-9]|2[0-1])$') {
+        if ($item.Extension -match '^\.ap(1[6-9]|2[0-1])$') {
             return @($item)
         }
 
@@ -49,7 +49,7 @@ function Get-TiaProjectFiles {
 
     return @(
         Get-ChildItem -LiteralPath $item.FullName -File -Force -ErrorAction SilentlyContinue |
-            Where-Object { $_.Extension -match '^\.ap(1[7-9]|2[0-1])$' } |
+            Where-Object { $_.Extension -match '^\.ap(1[6-9]|2[0-1])$' } |
             Sort-Object Name
     )
 }
@@ -165,6 +165,10 @@ function Get-TiaCompatibilityNotes {
     $notes = [System.Collections.Generic.List[string]]::new()
 
     switch ($VersionMajor) {
+        16 {
+            $notes.Add("V16 uses the classic monolithic Openness layout that uses Siemens.Engineering.dll.")
+            $notes.Add("Treat XML/LAD export-import as the stable route; newer SIMATIC SD document workflows are not available in this package for V16.")
+        }
         17 {
             $notes.Add("V17 is the legacy monolithic Openness layout that uses Siemens.Engineering.dll.")
             $notes.Add("Use XML and exported LAD/FBD artifacts as the main reviewable surface.")
@@ -333,7 +337,7 @@ function Resolve-TiaPortalEnvironment {
             $TiaPortalLocation
         }
 
-        $publicApiCandidates = Get-TiaPublicApiCandidates -VersionMajor $major -TiaRoot $root -ExplicitPublicApiPath $TiaPortalPublicApiPath
+        $publicApiCandidates = @(Get-TiaPublicApiCandidates -VersionMajor $major -TiaRoot $root -ExplicitPublicApiPath $TiaPortalPublicApiPath)
         $publicApiRoot = $null
         foreach ($candidate in $publicApiCandidates) {
             if (Test-Path -LiteralPath $candidate) {
@@ -345,7 +349,7 @@ function Resolve-TiaPortalEnvironment {
             $publicApiRoot = $publicApiCandidates[0]
         }
 
-        $schemaRootCandidates = Get-TiaSchemaRootCandidates -PublicApiRoot $publicApiRoot
+        $schemaRootCandidates = @(Get-TiaSchemaRootCandidates -PublicApiRoot $publicApiRoot)
         $schemaRoot = $null
         foreach ($candidate in $schemaRootCandidates) {
             if (Test-Path -LiteralPath $candidate) {
@@ -413,7 +417,7 @@ function Resolve-TiaPortalEnvironment {
     }
 
     if (-not $resolvedVersion) {
-        throw "Unable to resolve a supported TIA Portal environment for V17 through V21."
+        throw "Unable to resolve a supported TIA Portal environment for V16 through V21."
     }
 
     return $resolvedVersion

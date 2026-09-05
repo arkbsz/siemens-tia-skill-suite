@@ -1,13 +1,13 @@
 ---
 name: tia-portal-v17
-description: "Use for Siemens TIA Portal V17-V21 work on this Windows machine: backing up projects, checking local Openness prerequisites, generating or reviewing SCL/LAD/FBD logic, planning safe project edits, and choosing between source-only work, Openness automation, MCP integration, PLCopen XML interchange, or GUI fallback for S7-1200/1500 projects."
+description: "Use for Siemens TIA Portal V16-V21 work on this Windows machine: backing up projects, checking local Openness prerequisites, generating or reviewing SCL/LAD/FBD logic, planning safe project edits, and choosing between source-only work, Openness automation, MCP integration, PLCopen XML interchange, or GUI fallback for S7-1200/1500 projects."
 ---
 
-# TIA Portal V17-V21
+# TIA Portal V16-V21
 
 Use this skill for Siemens PLC engineering tasks on this machine, especially when the user has a local TIA Portal project and wants safe, practical help rather than generic PLC advice.
 
-Prefer the sibling skill `siemens-tia-plc-dev` as the top-level entry when the task should stay version-agnostic. This skill keeps the legacy name `tia-portal-v17`, but the packaged bridge now routes projects and Openness layouts across `V17` through `V21`.
+Prefer the sibling skill `siemens-tia-plc-dev` as the top-level entry when the task should stay version-agnostic. This skill keeps the legacy name `tia-portal-v17`, but the packaged bridge now routes projects and Openness layouts across `V16` through `V21`.
 
 This skill is a router plus local playbook. It combines:
 
@@ -69,9 +69,9 @@ If the user already confirmed a backup in this session, you do not need to repea
 
 This skill is tuned for a machine where one or more of these versions may be installed:
 
-- `V17-V20`: `C:\Program Files\Siemens\Automation\Portal VXX\PublicAPI\VXX`
+- `V16-V20`: `C:\Program Files\Siemens\Automation\Portal VXX\PublicAPI\VXX`
 - `V21`: `C:\Program Files\Siemens\Automation\Portal V21\PublicAPI\V21\net48`
-- typical project formats such as `.ap17` through `.ap21`
+- typical project formats such as `.ap16` through `.ap21`
 
 To verify the local environment, run:
 
@@ -187,7 +187,7 @@ Keep GUI work conservative:
 For nontrivial project work, follow this order:
 
 1. Back up the project.
-2. Identify the artifact type: live `.ap17` through `.ap21`, exported source, XML, screenshots, or mixed.
+2. Identify the artifact type: live `.ap16` through `.ap21`, exported source, XML, screenshots, or mixed.
 3. Identify the goal: inspect, review, generate, import, refactor, debug, or document.
 4. Choose one primary path from the routing section.
 5. Gather exact project facts before proposing edits:

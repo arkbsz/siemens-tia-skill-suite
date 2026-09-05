@@ -1,18 +1,26 @@
-# TIA Portal Version Compatibility: V17-V21
+# TIA Portal Version Compatibility: V16-V21
 
 This note captures the version differences that matter most for the packaged Siemens skill suite.
 
 ## Supported scope
 
-- project files: `.ap17` through `.ap21`
-- Openness routing: `V17` through `V21`
-- XML/LAD offline workflow: `V17` through `V21`
+- project files: `.ap16` through `.ap21`
+- Openness routing: `V16` through `V21`
+- XML/LAD offline workflow: `V16` through `V21`
 - SIMATIC SD document workflow:
-  - `V17-V19`: not a primary route in this package
+  - `V16-V19`: not a primary route in this package
   - `V20`: available for the first text-based graphical-document workflows
   - `V21`: expanded and preferred when the installed toolchain supports it
 
 ## Practical differences by version
+
+### V16
+
+- classic monolithic Openness layout under `PublicAPI\V16`
+- main compile-time assembly is typically `Siemens.Engineering.dll`
+- project extension is `.ap16`
+- use exported XML and LAD/FBD graph artifacts as the default code-like surface
+- treat newer SIMATIC SD document workflows as unavailable unless a target installation proves otherwise
 
 ### V17
 
@@ -49,7 +57,7 @@ This note captures the version differences that matter most for the packaged Sie
 
 ## How the packaged skill routes across versions
 
-1. Detect project version from `.ap17` to `.ap21` when possible.
+1. Detect project version from `.ap16` to `.ap21` when possible.
 2. Resolve the matching local TIA installation and `PublicAPI` root.
 3. Use `V21` modular references only when the resolved environment is `V21`.
 4. Use XML/LAD fallback when document-style import/export is unavailable or unverified.
@@ -58,7 +66,7 @@ This note captures the version differences that matter most for the packaged Sie
 ## Implementation rules
 
 - prefer `invoke-siemens-plc-dev.ps1 doctor` before any live write workflow
-- prefer exact-version local installs for `.ap17` through `.ap21` projects
+- prefer exact-version local installs for `.ap16` through `.ap21` projects
 - do not assume `V21` can safely replace every older live workflow without an intentional migration step
 - for LAD authoring, keep exported XML as the stable reviewable surface across all supported versions
 - treat `SIMATIC SD` as an additive route, not a replacement for XML validation

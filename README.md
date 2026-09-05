@@ -3,7 +3,7 @@
 版本：`1.0.0`  
 发布日期：`2026-08-10`
 
-面向 Siemens TIA Portal 的多平台技能套件，兼容 Codex、Claude Code 与 Cursor，支持 TIA Portal `V17-V21`，主打 PLC-as-code 与 HMI/WinCC 自动化工作流。适合做项目备份、块导出、LAD/XML 编辑、WinCC 画面与标签自动化、源码导入、编译验证，以及本地 Openness / REST 桥接自动化。
+面向 Siemens TIA Portal 的多平台技能套件，兼容 Codex、Claude Code 与 Cursor，支持 TIA Portal `V16-V21`，主打 PLC-as-code 与 HMI/WinCC 自动化工作流。适合做项目备份、块导出、LAD/XML 编辑、WinCC 画面与标签自动化、源码导入、编译验证，以及本地 Openness / REST 桥接自动化。
 
 ## 项目简介
 
@@ -20,7 +20,7 @@
 ## 内置技能
 
 - `siemens-tia-plc-dev`：通用西门子 PLC 开发入口，负责项目备份、版本路由、LAD/SCL/XML 工作流、导入验证和发布包准备。
-- `tia-portal-v17`：本机 TIA Portal `V17-V21` Openness 桥接层，保留旧名称以兼容历史调用，同时支持 `.ap17` 到 `.ap21` 项目识别。
+- `tia-portal-v17`：本机 TIA Portal `V16-V21` Openness 桥接层，保留旧名称以兼容历史调用，同时支持 `.ap16` 到 `.ap21` 项目识别。
 - `codex-tia-client`：面向 Codex 的主入口，用于替代独立 AI 助手，完成备份、导出、编写、导入和编译闭环。
 - `siemens-wincc-hmi-dev`：WinCC HMI 自动化入口，用于画面、变量、报警、Faceplate、导航和运行时通信工作流。
 
@@ -29,9 +29,9 @@
 - 项目备份优先，先复制再改
 - 导出和导入 FC、FB、DB、LAD XML、SCL
 - LAD 梯形图模板化生成与网络批量写入
-- WinCC 画面、变量、报警、面板与运行时联动自动化
+- WinCC 画面、变量、报警、Faceplate、导航、版式与运行时联动自动化
 - 本地 Openness 自动化和 REST 桥接
-- `V17-V21` 版本探测、项目后缀识别、程序集路径路由
+- `V16-V21` 版本探测、项目后缀识别、程序集路径路由
 - 编译验证与回读比对
 - 可复用的工业项目示例与命名规范
 - 官方文档优先、社区案例补充、结合当前项目结构的知识检索路线
@@ -42,6 +42,7 @@
 
 - HMI 画面、Faceplate、报警、文本和导航结构生成
 - PLC 数据块与 HMI 变量映射
+- 工业风格画面规范：总览、工位、手动、报警、趋势、参数、维护分层
 - WinCC Unified 运行时读写、订阅和诊断联动
 - SiVArc 规则驱动的界面生成和批量配置
 
@@ -55,7 +56,7 @@
 - prebuilt `TiaPlcTool.exe`
 - session caches and Python bytecode
 
-这些 Siemens 二进制文件、预编译工具和临时缓存不会随仓库分发。这样可以避免携带受限运行库，并让工具在目标机器上绑定本机已安装的 TIA Portal `V17-V21` PublicAPI，必要时再本地重新生成辅助程序。
+这些 Siemens 二进制文件、预编译工具和临时缓存不会随仓库分发。这样可以避免携带受限运行库，并让工具在目标机器上绑定本机已安装的 TIA Portal `V16-V21` PublicAPI，必要时再本地重新生成辅助程序。
 
 ## 安装方式
 
@@ -87,7 +88,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc
 
 ## 目标机器要求
 
-- 已安装 TIA Portal `V17`、`V18`、`V19`、`V20` 或 `V21`
+- 已安装 TIA Portal `V16`、`V17`、`V18`、`V19`、`V20` 或 `V21`
 - 本机 TIA 安装目录下存在 Openness PublicAPI
 - 已安装 .NET Framework 4.8 或兼容的本地构建环境
 - 需要写入工程时，当前 Windows 用户应加入 `Siemens TIA Openness` 用户组，并完成重新登录使权限生效

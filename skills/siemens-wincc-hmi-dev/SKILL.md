@@ -13,8 +13,23 @@ Prefer these routes:
 - SiVArc Openness for rule-based generation of WinCC content
 - WinCC Unified GraphQL or Open Pipe when the task is runtime read/write/subscribe against a Unified runtime
 
+## Screen quality target
+
+Treat HMI work as an operator workstation design task, not just a tag binding task.
+
+For new or refactored screens:
+
+- start from a screen map: Overview, Manual, Automatic, Alarm, Trend, Parameter, Maintenance, and Diagnostics
+- put equipment state, mode, interlocks, faults, and current step in the first scanning area
+- keep navigation stable across screens and reserve one consistent alarm/status strip
+- group controls by physical station or process flow instead of by PLC block order
+- use a restrained industrial palette with clear state colors: normal, running, warning, fault, disabled, and manual override
+- make command buttons visually distinct from indicators and require confirmation for reset, homing, recipe write, or force-like actions
+- keep tag names, faceplate names, and screen object names aligned with PLC DB/UDT contracts
+- add comments or design notes for generated screens so future engineers know which PLC contract drives each area
+
 Before any write-like action, back up the project or work on a clone.
 When PLC and HMI data must align, stabilize the PLC tag/DB contract first, then mirror it in the HMI.
 If the exact WinCC flavor or installed API version is unclear, inspect the local TIA installation before assuming a DLL or method exists.
 
-Read `references/official-sources.md` for the capability boundaries and `references/workflow.md` for the recommended edit loop.
+Read `references/official-sources.md` for the capability boundaries, `references/workflow.md` for the recommended edit loop, and `references/screen-design.md` for layout, navigation, and visual quality rules.

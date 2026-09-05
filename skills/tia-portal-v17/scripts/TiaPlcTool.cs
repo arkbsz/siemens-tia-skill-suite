@@ -917,13 +917,13 @@ namespace CodexTiaPortalV17
             List<string> supported = new List<string>();
             foreach (string file in files)
             {
-                if (Regex.IsMatch(file, @"\.ap(1[7-9]|2[0-1])$", RegexOptions.IgnoreCase))
+                if (Regex.IsMatch(file, @"\.ap(1[6-9]|2[0-1])$", RegexOptions.IgnoreCase))
                 {
                     supported.Add(file);
                 }
             }
 
-            if (supported.Count == 0) throw new FileNotFoundException("No supported TIA project file (.ap17 through .ap21) found in " + path);
+            if (supported.Count == 0) throw new FileNotFoundException("No supported TIA project file (.ap16 through .ap21) found in " + path);
             if (supported.Count > 1) throw new InvalidOperationException("Multiple supported TIA project files found. Pass the exact --project file.");
             return new FileInfo(supported[0]);
         }
@@ -1055,17 +1055,17 @@ namespace CodexTiaPortalV17
 
         private static void Usage()
         {
-            Console.WriteLine("TIA Portal V17-V21 PLC tool");
+            Console.WriteLine("TIA Portal V16-V21 PLC tool");
             Console.WriteLine("Commands:");
             Console.WriteLine("  create-project --name <projectName> [--directory <dir>] [--device-type <typeIdentifier>] [--device-item-type <typeIdentifier>] [--item-name <name>] [--device-name <name>]");
-            Console.WriteLine("  hold-project --project <projectDir|ap17..ap21> [--ui] [--lease-file <path>] [--poll-ms <ms>]");
-            Console.WriteLine("  list-devices --project <projectDir|ap17..ap21>");
-            Console.WriteLine("  list-plcs --project <projectDir|ap17..ap21>");
-            Console.WriteLine("  list-blocks --project <projectDir|ap17..ap21> [--plc <name>]");
-            Console.WriteLine("  export-blocks --project <projectDir|ap17..ap21> [--plc <name>] [--block <name>] [--language LAD|FBD|SCL] [--output <dir>]");
-            Console.WriteLine("  import-blocks --project <projectDir|ap17..ap21> --input <xml|dir> [--plc <name>] [--group <path>] [--apply] [--no-save]");
-            Console.WriteLine("  compile-plc --project <projectDir|ap17..ap21> [--plc <name>] [--save]");
-            Console.WriteLine("  import-sources --project <projectDir|ap17..ap21> [--plc <name>] --source-dir <dir> [--compile] [--save]");
+            Console.WriteLine("  hold-project --project <projectDir|ap16..ap21> [--ui] [--lease-file <path>] [--poll-ms <ms>]");
+            Console.WriteLine("  list-devices --project <projectDir|ap16..ap21>");
+            Console.WriteLine("  list-plcs --project <projectDir|ap16..ap21>");
+            Console.WriteLine("  list-blocks --project <projectDir|ap16..ap21> [--plc <name>]");
+            Console.WriteLine("  export-blocks --project <projectDir|ap16..ap21> [--plc <name>] [--block <name>] [--language LAD|FBD|SCL] [--output <dir>]");
+            Console.WriteLine("  import-blocks --project <projectDir|ap16..ap21> --input <xml|dir> [--plc <name>] [--group <path>] [--apply] [--no-save]");
+            Console.WriteLine("  compile-plc --project <projectDir|ap16..ap21> [--plc <name>] [--save]");
+            Console.WriteLine("  import-sources --project <projectDir|ap16..ap21> [--plc <name>] --source-dir <dir> [--compile] [--save]");
             Console.WriteLine("Common options:");
             Console.WriteLine("  --ui      Start TIA Portal with user interface for projects that need visible prompts.");
             Console.WriteLine("  --attach  Attach to an already running TIA Portal session instead of starting a new one.");
