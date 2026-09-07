@@ -12,6 +12,10 @@
 - Added direct LAD JSON generation support for `TOF`, `TP`, `CTD`, and `CTUD`, plus new reusable example specs.
 - Updated `summarize-lad-xml.ps1` to read back `TOF`, `TP`, `CTD`, and `CTUD` networks into human-readable summaries.
 - Hardened the Openness workflow with structured readiness fields in `probe-tia-v17.ps1`, a `doctor` alias in the generic wrapper, and fail-fast preflight checks before live Openness commands or clone-based LAD verification.
+- Added `read-cycle` as the standard project intake command for probe, PLC/block listing, LAD/FBD/SCL export, LAD summaries, template catalog, and workflow reports.
+- Added `write-cycle` as the standard generated-LAD safety gate: clone verification, import, compile, post-import export, readable summary, and release-package preparation only after successful compile.
+- Hardened `write-cycle` observability with `current-step.json`, stdout/stderr temp logs, and `-StepTimeoutSeconds` to avoid black-box live Openness waits.
+- Validated the installed skill path after TIA/Openness reinstall on 2026-09-07: `read-cycle -ProjectPath "D:\plc\手动程序" -Attach -SkipExport` detected `V17` and `PLC_1`.
 - Added a reusable knowledge-retrieval reference plus broader official instruction-family links for math, conversion, string, word-logic, and shift/rotate routes.
 - Added new source-backed training examples for analog scaling/conditioning and status-word packing/decoding.
 - Added root-level `CLAUDE.md` and `.cursorrules` files so the same repository instructions work in Claude Code and Cursor.

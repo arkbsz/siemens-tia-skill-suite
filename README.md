@@ -33,6 +33,7 @@
 - 本地 Openness 自动化和 REST 桥接
 - `V16-V21` 版本探测、项目后缀识别、程序集路径路由
 - 编译验证与回读比对
+- 一键 `read-cycle` 读取工程，一键 `write-cycle` 在克隆工程中验证生成的 LAD XML 并准备发布包
 - 可复用的工业项目示例与命名规范
 - 官方文档优先、社区案例补充、结合当前项目结构的知识检索路线
 
@@ -77,14 +78,21 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install-skills.ps1
 ## 推荐使用顺序
 
 1. 先运行 `doctor` 检查本机 Openness 会话是否就绪
-2. 就绪后再做 `list-plcs`、`export-blocks`、`verify-lad-change`
-3. 如果会话未就绪，先走离线 XML / SCL / 模板化开发路线，不要反复卡在 live Openness
+2. 首次重装或修复 Openness 后，先用 `read-cycle -UseUi` 完成 Siemens Openness 信任握手
+3. 就绪后先用 `read-cycle -Attach` 读取工程、导出块、生成 LAD 摘要和目录
+4. 生成或修改 LAD XML 后，用 `write-cycle` 在克隆工程中导入、编译、回读并准备发布包
+5. 最后人工确认验证报告后，再使用 `apply-release` 写入主工程
+6. 如果会话未就绪，先走离线 XML / SCL / 模板化开发路线，不要反复卡在 live Openness
 
 示例：
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1 doctor -ProjectPath "D:\path\to\project"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1 read-cycle -ProjectPath "D:\path\to\project" -UseUi
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1 write-cycle -ProjectPath "D:\path\to\project" -InputXml "D:\path\to\generated.xml" -PlcName "PLC_1"
 ```
+
+`write-cycle` 运行时间通常比读取长，因为它会复制克隆工程并调用 TIA 编译。运行中可查看 `PLC_Code\runs\write-cycle-*\current-step.json` 和 `logs` 下的临时输出文件；需要限制单步等待时间时可加 `-StepTimeoutSeconds 300`。
 
 ## 目标机器要求
 
@@ -92,6 +100,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc
 - 本机 TIA 安装目录下存在 Openness PublicAPI
 - 已安装 .NET Framework 4.8 或兼容的本地构建环境
 - 需要写入工程时，当前 Windows 用户应加入 `Siemens TIA Openness` 用户组，并完成重新登录使权限生效
+- 首次使用 Openness 自动化时，如果遇到安全超时，请使用 `-UseUi` 运行一次并接受 Siemens 信任提示
 
 ## 仓库结构
 

@@ -23,10 +23,12 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\refresh-plc-libraries.ps1" -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" route-info
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" doctor -ProjectPath "D:\path\to\project"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" read-cycle -ProjectPath "D:\path\to\project" -UseUi
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" clone-project -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" prepare-write-session -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" export-blocks --project "D:\path\to\project" --language LAD --output "D:\path\to\project\PLC_Code\exports\lad"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" verify-lad-change -ProjectPath "D:\path\to\project" -InputXml "D:\path\to\project\PLC_Code\changes\my-change\outputs\my-change.generated.xml" -PlcName "PLC_1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" write-cycle -ProjectPath "D:\path\to\project" -InputXml "D:\path\to\project\PLC_Code\changes\my-change\outputs\my-change.generated.xml" -PlcName "PLC_1"
 ```
 
 ## Openness readiness gate
@@ -38,6 +40,28 @@ For live TIA reads or writes, treat `probe` or `doctor` as a hard gate:
 - if `ReadyForOpennessSession` is `false`, do not start clone/import/compile loops yet
 
 When the session gate is closed, keep moving with source-only LAD XML, SCL, summaries, templates, and release-package preparation instead of waiting on a stuck Openness run.
+
+If a live command fails with `EngineeringSecurityException`, `Security error`, or a timeout immediately after a fresh install, treat it as a first-run Openness trust handshake problem. Run the same read once with `-UseUi` or open the project manually in TIA Portal and rerun with `-Attach`; do not keep retrying no-UI commands.
+
+## Read-cycle entry point
+
+Use `read-cycle` when starting work on any existing project:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" read-cycle -ProjectPath "D:\path\to\project" -UseUi
+```
+
+It performs the standard read-first pass:
+
+- probe Openness readiness
+- list PLCs and pick the first PLC when `-PlcName` is omitted
+- list blocks
+- export LAD, FBD, and SCL blocks
+- summarize exported LAD XML into Markdown
+- build a LAD template catalog
+- write logs and `workflow-report.json` under `PLC_Code\runs\<timestamp>`
+
+Use `-UseUi` for the first run after installing TIA/Openness. Use `-Attach` when the project is already open in TIA Portal. Use `-SkipExport` when you only want readiness, PLC list, and block list.
 
 ## Two working modes
 
@@ -62,8 +86,12 @@ Keep network titles short, keep signal names human-readable, and add one comment
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" scaffold-lad-change -ProjectPath "D:\path\to\project" -SourceXml "D:\path\to\block.xml" -ChangeName "alarm-cleanup"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" patch-lad-network -TargetXml "D:\path\to\project\PLC_Code\changes\alarm-cleanup\outputs\alarm-cleanup.generated.xml" -DonorXml "D:\path\to\library\reuse.xml" -OutputXml "D:\path\to\project\PLC_Code\changes\alarm-cleanup\outputs\alarm-cleanup.generated.xml" -TargetNetworkIndex 3 -DonorNetworkIndex 1
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" verify-lad-change -ProjectPath "D:\path\to\project" -InputXml "D:\path\to\project\PLC_Code\changes\alarm-cleanup\outputs\alarm-cleanup.generated.xml" -PlcName "PLC_1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" write-cycle -ProjectPath "D:\path\to\project" -InputXml "D:\path\to\project\PLC_Code\changes\alarm-cleanup\outputs\alarm-cleanup.generated.xml" -PlcName "PLC_1" -ReleaseName "alarm-cleanup"
 ```
+
+`write-cycle` runs clone import, compile, post-import export, readable LAD summary, and release-package preparation as one safe gate. It does not modify the production project. If compile fails, it keeps the verification folder and logs but skips release packaging.
+
+During long write verification, check `PLC_Code\runs\write-cycle-*\current-step.json` for the active stage. The child PowerShell process writes live stdout/stderr temp logs under `logs`, so inspect those files before assuming the workflow is stuck. Use `-StepTimeoutSeconds <n>` when a site needs a stricter no-hang limit.
 
 For interactive import and export loops through REST, call `prepare-write-session` first. If the returned JSON contains a different `BridgeProjectPath`, use that path in later REST requests on Windows PowerShell.
 

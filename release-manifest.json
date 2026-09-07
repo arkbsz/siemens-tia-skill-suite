@@ -70,6 +70,18 @@
                                "Output":  "Skill is valid!"
                            }
                        ],
+    "workflowValidation":  [
+                               {
+                                   "Workflow":  "read-cycle",
+                                   "Status":  "passed",
+                                   "ValidatedAt":  "2026-09-07T13:45:24",
+                                   "ProjectPath":  "D:\\plc\\手动程序",
+                                   "Command":  "read-cycle -ProjectPath \"D:\\plc\\手动程序\" -Attach -SkipExport",
+                                   "DetectedVersion":  "V17",
+                                   "PlcName":  "PLC_1",
+                                   "RunRoot":  "D:\\plc\\手动程序\\PLC_Code\\runs\\read-cycle-20260907-134502"
+                               }
+                           ],
     "residualLocalPathHits":  [
 
                               ],
@@ -80,6 +92,9 @@
                   "WinCC HMI automation content is packaged as a separate skill and resolved from the local TIA installation.",
                   "WinCC HMI guidance now includes screen hierarchy, navigation, visual style, controls, and bilingual naming rules.",
                   "Claude Code and Cursor compatibility files are included at the repository root for shared project instructions.",
-                  "V21 helper builds switch to modular Openness assemblies under PublicAPI\\V21\\net48 while V16-V20 keep the classic Siemens.Engineering.dll route."
+                  "V21 helper builds switch to modular Openness assemblies under PublicAPI\\V21\\net48 while V16-V20 keep the classic Siemens.Engineering.dll route.",
+                  "read-cycle is the preferred first project intake command after Openness readiness is confirmed.",
+                  "write-cycle is the preferred generated LAD XML safety gate before applying any release to a production project.",
+                  "write-cycle writes current-step.json plus stdout/stderr temp logs and supports StepTimeoutSeconds for no-hang live Openness operation."
               ]
 }

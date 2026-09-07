@@ -45,9 +45,11 @@ Use the wrapper scripts in this skill to stay generic:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\bootstrap-siemens-plc-dev.ps1" -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\refresh-plc-libraries.ps1" -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" doctor -ProjectPath "D:\path\to\project"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" read-cycle -ProjectPath "D:\path\to\project" -UseUi
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" list-blocks --project "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" clone-project -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" verify-lad-change -ProjectPath "D:\path\to\project" -InputXml "D:\path\to\generated.xml" -PlcName "PLC_1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" write-cycle -ProjectPath "D:\path\to\project" -InputXml "D:\path\to\generated.xml" -PlcName "PLC_1"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" prepare-release -ProjectPath "D:\path\to\project" -InputXml "D:\path\to\generated.xml" -ReleaseName "my-change"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" apply-release -ProjectPath "D:\path\to\project" -InputXml "D:\path\to\release.xml" -PlcName "PLC_1"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" prepare-write-session -ProjectPath "D:\path\to\project"
@@ -61,10 +63,13 @@ For the version-by-version differences that affect assemblies, project suffixes,
 
 If `doctor` or `probe` reports `ActiveInCurrentLogonToken = false`, do not keep retrying live Openness commands. Switch to source-only XML/SCL work for now and tell the user to fully sign out of Windows and sign in again before the next live TIA session.
 
+After a fresh TIA Portal or Openness install, run the first live read with `read-cycle -UseUi` or `list-plcs --ui`. This lets Siemens show and complete any Openness trust/security prompt. After the first successful UI-backed read, use normal no-UI `read-cycle`, exports, imports, and compile loops.
+
 ## Read and write paths
 
 Choose the narrowest path that fits the task:
 
+- `read-cycle` for the standard read-first project snapshot: probe, list PLCs, list blocks, export LAD/FBD/SCL, summarize LAD, build a catalog, and write `PLC_Code\runs\<run>\workflow-report.json`
 - exported XML and SCL for code-like review
 - Openness for block traversal, export, import, and compile
 - template manifests for reusable network patterns
@@ -154,6 +159,10 @@ Current practical route for "most instructions":
 - motion, communication, drive, and technology/library blocks: generic `CALL` from exported interfaces
 - arithmetic, scaling, conversion, string, word-packing, array, and bulk data handling: SCL source import by default
 - unsupported LAD box shapes: export one donor network, then patch `NetworkSource` / `FlgNet`
+
+For a generated LAD XML block, prefer `write-cycle` as the safe default before any real import. It verifies the block on a cloned project, compiles, re-exports, writes a readable summary, and prepares a release package only when compile succeeds. It does not write directly to the production project.
+
+If a live write verification takes longer than expected, inspect `PLC_Code\runs\write-cycle-*\current-step.json` and the matching `logs\*.stdout.tmp` / `logs\*.stderr.tmp` files before retrying. Do not start a second live TIA write/import command while the first one is still running.
 
 For newly added timer/counter shapes such as `TOF`, `TP`, `CTD`, and `CTUD`, keep the normal clone compile gate until a project-specific validation has been recorded.
 
