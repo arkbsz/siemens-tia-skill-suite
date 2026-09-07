@@ -76,8 +76,18 @@ namespace SiemensTiaSkillSuite
         private readonly Label projectBadge = new Label();
         private readonly ComboBox modelBox = new ComboBox();
         private readonly ComboBox workflowSelectBox = new ComboBox();
+        private readonly ComboBox apiProviderBox = new ComboBox();
+        private readonly ComboBox imageWorkflowBox = new ComboBox();
+        private readonly ComboBox imageModelBox = new ComboBox();
+        private readonly ComboBox imageQualityBox = new ComboBox();
+        private readonly ComboBox imageSizeBox = new ComboBox();
+        private readonly ComboBox componentStrategyBox = new ComboBox();
         private readonly ComboBox fontBox = new ComboBox();
         private readonly ComboBox fontSizeBox = new ComboBox();
+        private readonly TextBox apiBaseBox = new TextBox();
+        private readonly TextBox apiKeyEnvBox = new TextBox();
+        private readonly TextBox referenceImageBox = new TextBox();
+        private readonly PictureBox referencePreviewBox = new PictureBox();
         private readonly TabControl mainTabs = new TabControl();
         private readonly System.Windows.Forms.Timer tailTimer = new System.Windows.Forms.Timer();
         private readonly string invokeScript;
@@ -98,6 +108,7 @@ namespace SiemensTiaSkillSuite
         private string currentStdoutPath = "";
         private string currentStderrPath = "";
         private Process currentProcess;
+        private bool applyingWorkflowDefaults;
 
         public MainForm(string projectPath, string invokeScriptArg)
         {
@@ -342,6 +353,11 @@ namespace SiemensTiaSkillSuite
             chatBox.Font = new Font("Microsoft YaHei UI", 9.4F);
             chatBox.Text = "AI 对话主界面\n\n这里会记录你提交的任务草稿、模型和工作流选择。真正的程序生成、LAD修改和克隆验证仍由 Codex 主对话或 workflow 脚本执行。\n";
 
+            referencePreviewBox.Dock = DockStyle.Fill;
+            referencePreviewBox.BackColor = Color.FromArgb(28, 47, 48);
+            referencePreviewBox.BorderStyle = BorderStyle.None;
+            referencePreviewBox.SizeMode = PictureBoxSizeMode.Zoom;
+
             mainTabs.Dock = DockStyle.Fill;
             mainTabs.Font = new Font("Microsoft YaHei UI", 9.6F, FontStyle.Bold);
             mainTabs.Appearance = TabAppearance.Normal;
@@ -349,6 +365,7 @@ namespace SiemensTiaSkillSuite
             mainTabs.Controls.Add(NewTab("日志输出", jobBox));
             mainTabs.Controls.Add(NewTab("文件预览", previewBox));
             mainTabs.Controls.Add(NewTab("Runs", runList));
+            mainTabs.Controls.Add(NewTab("参考图", referencePreviewBox));
             mainLayout.Controls.Add(mainTabs, 0, 1);
 
             GroupBox aiInputBox = NewGroup("AI交互与工作流");
@@ -357,9 +374,10 @@ namespace SiemensTiaSkillSuite
 
             TableLayoutPanel aiLayout = new TableLayoutPanel();
             aiLayout.Dock = DockStyle.Fill;
-            aiLayout.RowCount = 2;
+            aiLayout.RowCount = 3;
             aiLayout.ColumnCount = 1;
             aiLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
+            aiLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 82));
             aiLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             aiInputBox.Controls.Add(aiLayout);
 
@@ -371,7 +389,7 @@ namespace SiemensTiaSkillSuite
             ConfigureCombo(modelBox, new string[] { "gpt-5-codex", "gpt-5", "gpt-5-mini", "本地/手动" }, "gpt-5-codex", 128);
             aiOptions.Controls.Add(modelBox);
             aiOptions.Controls.Add(NewSmallLabel("工作流"));
-            ConfigureCombo(workflowSelectBox, new string[] { "读取项目并总结", "LAD编写与验证", "DB+程序块协同", "WinCC画面生成", "故障诊断", "工业化重构" }, "LAD编写与验证", 150);
+            ConfigureCombo(workflowSelectBox, new string[] { "自动选择", "读取项目并总结", "LAD编写与验证", "DB+程序块协同", "WinCC画面生成", "WinCC参考图复刻", "故障诊断", "工业化重构" }, "自动选择", 150);
             aiOptions.Controls.Add(workflowSelectBox);
             aiOptions.Controls.Add(NewSmallLabel("字体"));
             PopulateFontOptions();
@@ -386,19 +404,64 @@ namespace SiemensTiaSkillSuite
             aiOptions.Controls.Add(applyFont);
             aiLayout.Controls.Add(aiOptions, 0, 0);
 
+            FlowLayoutPanel visionOptions = new FlowLayoutPanel();
+            visionOptions.Dock = DockStyle.Fill;
+            visionOptions.Padding = new Padding(8, 4, 8, 2);
+            visionOptions.BackColor = Color.FromArgb(246, 249, 242);
+            visionOptions.Controls.Add(NewSmallLabel("API"));
+            ConfigureCombo(apiProviderBox, new string[] { "Codex内置", "OpenAI API", "Azure OpenAI", "本地/手动" }, "Codex内置", 112);
+            visionOptions.Controls.Add(apiProviderBox);
+            visionOptions.Controls.Add(NewSmallLabel("图像"));
+            ConfigureCombo(imageWorkflowBox, new string[] { "自动", "无图像", "文生图", "图生图/参考图" }, "自动", 112);
+            visionOptions.Controls.Add(imageWorkflowBox);
+            visionOptions.Controls.Add(NewSmallLabel("模型"));
+            ConfigureCombo(imageModelBox, new string[] { "内置imagegen", "gpt-image-2", "gpt-image-1.5", "自定义" }, "内置imagegen", 118);
+            visionOptions.Controls.Add(imageModelBox);
+            visionOptions.Controls.Add(NewSmallLabel("质量"));
+            ConfigureCombo(imageQualityBox, new string[] { "auto", "high", "medium", "low" }, "auto", 78);
+            visionOptions.Controls.Add(imageQualityBox);
+            visionOptions.Controls.Add(NewSmallLabel("尺寸"));
+            ConfigureCombo(imageSizeBox, new string[] { "auto", "1536x1024", "1024x1024", "1920x1080", "3840x2160" }, "1536x1024", 104);
+            visionOptions.Controls.Add(imageSizeBox);
+            visionOptions.Controls.Add(NewSmallLabel("组件"));
+            ConfigureCombo(componentStrategyBox, new string[] { "自动匹配+自定义", "标准WinCC组件", "Faceplate优先", "自定义组件优先", "SiVArc规则生成" }, "自动匹配+自定义", 142);
+            visionOptions.Controls.Add(componentStrategyBox);
+
+            visionOptions.SetFlowBreak(componentStrategyBox, true);
+            visionOptions.Controls.Add(NewWideLabel("API Base"));
+            apiBaseBox.Width = 208;
+            apiBaseBox.Text = "";
+            StyleInput(apiBaseBox);
+            visionOptions.Controls.Add(apiBaseBox);
+            visionOptions.Controls.Add(NewWideLabel("Key Env"));
+            apiKeyEnvBox.Width = 126;
+            apiKeyEnvBox.Text = "OPENAI_API_KEY";
+            StyleInput(apiKeyEnvBox);
+            visionOptions.Controls.Add(apiKeyEnvBox);
+            visionOptions.Controls.Add(NewWideLabel("参考图"));
+            referenceImageBox.Width = 280;
+            StyleInput(referenceImageBox);
+            visionOptions.Controls.Add(referenceImageBox);
+            Button imageButton = NewButton("上传/预览", Orange);
+            imageButton.Width = 98;
+            imageButton.Height = 30;
+            imageButton.Click += delegate { BrowseReferenceImage(); };
+            visionOptions.Controls.Add(imageButton);
+            aiLayout.Controls.Add(visionOptions, 0, 1);
+
             TableLayoutPanel inputLayout = new TableLayoutPanel();
             inputLayout.Dock = DockStyle.Fill;
             inputLayout.ColumnCount = 2;
             inputLayout.RowCount = 1;
             inputLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             inputLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 168));
-            aiLayout.Controls.Add(inputLayout, 0, 1);
+            aiLayout.Controls.Add(inputLayout, 0, 2);
 
             requestBox.Dock = DockStyle.Fill;
             requestBox.Multiline = true;
             requestBox.ScrollBars = ScrollBars.Vertical;
             StyleInput(requestBox);
-            requestBox.Text = "例如：把FC5自动流程增加取料超时报警，用LAD写入并在克隆工程中编译验证。";
+            requestBox.Text = "例如：参考上传的画面截图，生成一个 WinCC 总览+手动+报警界面方案，自动匹配电机/气缸/报警组件，并输出可导入的画面设计任务。";
             inputLayout.Controls.Add(requestBox, 0, 0);
 
             Button promptButton = NewButton("生成 Codex 任务草稿", Teal);
@@ -426,7 +489,7 @@ namespace SiemensTiaSkillSuite
             Shown += delegate
             {
                 SafeConfigureSplitter(outer, 240, 560, 360);
-                SafeConfigureSplitter(center, 300, 150, Math.Max(360, center.Height - 230));
+                SafeConfigureSplitter(center, 300, 240, Math.Max(340, center.Height - 310));
             };
         }
 
@@ -463,6 +526,15 @@ namespace SiemensTiaSkillSuite
 
             fontSizeBox.SelectedIndexChanged += delegate { ApplySelectedFont(); };
             fontBox.SelectedIndexChanged += delegate { ApplySelectedFont(); };
+            workflowSelectBox.SelectedIndexChanged += delegate { ApplyWorkflowDefaults(false); };
+            requestBox.TextChanged += delegate { ApplyWorkflowDefaults(true); };
+            referenceImageBox.TextChanged += delegate
+            {
+                if (File.Exists(referenceImageBox.Text))
+                {
+                    LoadReferencePreview(referenceImageBox.Text);
+                }
+            };
         }
 
         private static GroupBox NewGroup(string title)
@@ -531,6 +603,20 @@ namespace SiemensTiaSkillSuite
             };
         }
 
+        private static Label NewWideLabel(string text)
+        {
+            return new Label
+            {
+                Text = text,
+                AutoSize = false,
+                Width = 62,
+                Height = 28,
+                TextAlign = ContentAlignment.MiddleRight,
+                ForeColor = MutedInk,
+                Margin = new Padding(8, 2, 2, 2)
+            };
+        }
+
         private static void ConfigureCombo(ComboBox combo, string[] values, string selected, int width)
         {
             combo.DropDownStyle = ComboBoxStyle.DropDownList;
@@ -584,6 +670,155 @@ namespace SiemensTiaSkillSuite
                 }
             }
             return false;
+        }
+
+        private void BrowseReferenceImage()
+        {
+            OpenFileDialog dialog = new OpenFileDialog();
+            dialog.Title = "选择 WinCC 参考图或界面截图";
+            dialog.Filter = "Image files (*.png;*.jpg;*.jpeg;*.bmp;*.gif)|*.png;*.jpg;*.jpeg;*.bmp;*.gif|All files (*.*)|*.*";
+            dialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+            if (dialog.ShowDialog(this) == DialogResult.OK)
+            {
+                referenceImageBox.Text = dialog.FileName;
+                LoadReferencePreview(dialog.FileName);
+                SelectCombo(imageWorkflowBox, "图生图/参考图");
+                SelectCombo(workflowSelectBox, "WinCC参考图复刻");
+                ApplyWorkflowDefaults(false);
+            }
+        }
+
+        private void LoadReferencePreview(string path)
+        {
+            try
+            {
+                if (referencePreviewBox.Image != null)
+                {
+                    Image old = referencePreviewBox.Image;
+                    referencePreviewBox.Image = null;
+                    old.Dispose();
+                }
+
+                using (FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (Image loaded = Image.FromStream(stream))
+                {
+                    referencePreviewBox.Image = new Bitmap(loaded);
+                }
+
+                if (mainTabs.TabPages.Count >= 5)
+                {
+                    mainTabs.SelectedIndex = 4;
+                }
+                statusLabel.Text = "参考图已加载";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "参考图加载失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void ApplyWorkflowDefaults(bool inferFromTextOnly)
+        {
+            if (applyingWorkflowDefaults)
+            {
+                return;
+            }
+
+            try
+            {
+                applyingWorkflowDefaults = true;
+                string request = requestBox.Text ?? "";
+                string workflow = Convert.ToString(workflowSelectBox.SelectedItem);
+                string inferred = InferWorkflow(request, workflow);
+
+                if (!inferFromTextOnly || workflow == "自动选择")
+                {
+                    SelectCombo(workflowSelectBox, inferred);
+                }
+
+                bool hasReferenceImage = File.Exists(referenceImageBox.Text);
+                bool winccVisual = inferred.IndexOf("WinCC", StringComparison.OrdinalIgnoreCase) >= 0 || ContainsAny(request, new string[] { "画面", "界面", "hmi", "wincc", "参考图", "截图", "复刻" });
+                bool lad = inferred.IndexOf("LAD", StringComparison.OrdinalIgnoreCase) >= 0 || ContainsAny(request, new string[] { "lad", "梯形图", "程序块", "db", "变量块" });
+
+                if (winccVisual)
+                {
+                    SelectCombo(modelBox, "gpt-5");
+                    SelectCombo(apiProviderBox, "Codex内置");
+                    SelectCombo(imageWorkflowBox, hasReferenceImage ? "图生图/参考图" : "文生图");
+                    SelectCombo(imageModelBox, "内置imagegen");
+                    SelectCombo(imageQualityBox, "high");
+                    SelectCombo(imageSizeBox, "1536x1024");
+                    SelectCombo(componentStrategyBox, hasReferenceImage ? "自动匹配+自定义" : "Faceplate优先");
+                    statusLabel.Text = hasReferenceImage ? "已按参考图复刻任务推荐模型" : "已按WinCC画面设计推荐模型";
+                }
+                else if (lad)
+                {
+                    SelectCombo(modelBox, "gpt-5-codex");
+                    SelectCombo(imageWorkflowBox, "无图像");
+                    SelectCombo(componentStrategyBox, "标准WinCC组件");
+                    statusLabel.Text = "已按PLC/LAD任务推荐模型";
+                }
+                else if (ContainsAny(request, new string[] { "故障", "报错", "诊断", "openness" }))
+                {
+                    SelectCombo(modelBox, "gpt-5-codex");
+                    SelectCombo(imageWorkflowBox, "无图像");
+                    statusLabel.Text = "已按诊断任务推荐模型";
+                }
+            }
+            finally
+            {
+                applyingWorkflowDefaults = false;
+            }
+        }
+
+        private static string InferWorkflow(string request, string currentWorkflow)
+        {
+            if (!string.IsNullOrWhiteSpace(currentWorkflow) && currentWorkflow != "自动选择")
+            {
+                return currentWorkflow;
+            }
+            if (ContainsAny(request, new string[] { "参考图", "截图", "复刻", "图生图" }))
+            {
+                return "WinCC参考图复刻";
+            }
+            if (ContainsAny(request, new string[] { "wincc", "hmi", "画面", "界面", "faceplate", "报警画面", "趋势" }))
+            {
+                return "WinCC画面生成";
+            }
+            if (ContainsAny(request, new string[] { "lad", "梯形图", "程序块", "导入", "编译验证" }))
+            {
+                return "LAD编写与验证";
+            }
+            if (ContainsAny(request, new string[] { "db", "变量块", "数据块" }))
+            {
+                return "DB+程序块协同";
+            }
+            if (ContainsAny(request, new string[] { "故障", "报错", "诊断", "异常" }))
+            {
+                return "故障诊断";
+            }
+            return "读取项目并总结";
+        }
+
+        private static bool ContainsAny(string text, string[] needles)
+        {
+            string value = (text ?? "").ToLowerInvariant();
+            foreach (string needle in needles)
+            {
+                if (value.IndexOf(needle.ToLowerInvariant(), StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static void SelectCombo(ComboBox combo, string value)
+        {
+            if (combo.Items.Contains(value))
+            {
+                combo.SelectedItem = value;
+            }
         }
 
         private void ApplySelectedFont()
@@ -1379,17 +1614,52 @@ namespace SiemensTiaSkillSuite
                 Directory.CreateDirectory(outputDir);
                 string path = Path.Combine(outputDir, "codex-task-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".md");
                 string blockList = FindLatestBlockList(root);
+                ApplyWorkflowDefaults(false);
+                string workflow = Convert.ToString(workflowSelectBox.SelectedItem);
+                string referenceImage = referenceImageBox.Text.Trim();
+                bool hasReferenceImage = File.Exists(referenceImage);
                 StringBuilder content = new StringBuilder();
                 content.AppendLine("# Codex PLC Task");
                 content.AppendLine();
                 content.AppendLine("Created: " + DateTime.Now.ToString("s"));
                 content.AppendLine("Project: `" + root + "`");
                 content.AppendLine("Model: `" + Convert.ToString(modelBox.SelectedItem) + "`");
-                content.AppendLine("Workflow: `" + Convert.ToString(workflowSelectBox.SelectedItem) + "`");
+                content.AppendLine("Workflow: `" + workflow + "`");
+                content.AppendLine();
+                content.AppendLine("## Model And API Routing");
+                content.AppendLine();
+                content.AppendLine("- Code model: `" + Convert.ToString(modelBox.SelectedItem) + "`");
+                content.AppendLine("- API provider: `" + Convert.ToString(apiProviderBox.SelectedItem) + "`");
+                content.AppendLine("- API base: `" + EmptyAsDefault(apiBaseBox.Text.Trim(), "default") + "`");
+                content.AppendLine("- API key environment variable: `" + EmptyAsDefault(apiKeyEnvBox.Text.Trim(), "OPENAI_API_KEY") + "`");
+                content.AppendLine("- Image workflow: `" + Convert.ToString(imageWorkflowBox.SelectedItem) + "`");
+                content.AppendLine("- Image model: `" + Convert.ToString(imageModelBox.SelectedItem) + "`");
+                content.AppendLine("- Image quality: `" + Convert.ToString(imageQualityBox.SelectedItem) + "`");
+                content.AppendLine("- Image size: `" + Convert.ToString(imageSizeBox.SelectedItem) + "`");
+                content.AppendLine("- Component strategy: `" + Convert.ToString(componentStrategyBox.SelectedItem) + "`");
+                content.AppendLine("- Reference image: `" + (hasReferenceImage ? referenceImage : "none") + "`");
                 content.AppendLine();
                 content.AppendLine("## User Request");
                 content.AppendLine();
                 content.AppendLine(requestBox.Text.Trim());
+                content.AppendLine();
+                if (workflow.IndexOf("WinCC", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    content.AppendLine("## WinCC Visual Design Workflow");
+                    content.AppendLine();
+                    content.AppendLine(BuildWinccVisualWorkflow(hasReferenceImage));
+                    content.AppendLine();
+                    content.AppendLine("## Image Prompt Spec");
+                    content.AppendLine();
+                    content.AppendLine("```text");
+                    content.AppendLine(BuildImagePromptSpec(hasReferenceImage));
+                    content.AppendLine("```");
+                    content.AppendLine();
+                    content.AppendLine("## Component Mapping Plan");
+                    content.AppendLine();
+                    content.AppendLine(BuildComponentMappingPlan());
+                    content.AppendLine();
+                }
                 content.AppendLine();
                 content.AppendLine("## Latest Block List");
                 content.AppendLine();
@@ -1401,10 +1671,15 @@ namespace SiemensTiaSkillSuite
                 content.AppendLine();
                 content.AppendLine("1. Run `read-cycle -Attach -SkipExport` if the project structure is stale.");
                 content.AppendLine("2. Edit exported LAD XML, LAD JSON specs, SCL sources, or DB sources.");
-                content.AppendLine("3. Use `write-cycle` on a cloned project before applying to the real project.");
+                content.AppendLine("3. For WinCC visual tasks, first produce a screen map and component/tag contract, then generate or update screens through Openness/SiVArc where available.");
+                content.AppendLine("4. Use `write-cycle` on a cloned project before applying PLC-side generated LAD XML to the real project.");
                 File.WriteAllText(path, content.ToString(), Encoding.UTF8);
                 chatBox.AppendText(Environment.NewLine + "用户任务：" + requestBox.Text.Trim() + Environment.NewLine);
-                chatBox.AppendText("模型：" + Convert.ToString(modelBox.SelectedItem) + "    工作流：" + Convert.ToString(workflowSelectBox.SelectedItem) + Environment.NewLine);
+                chatBox.AppendText("模型：" + Convert.ToString(modelBox.SelectedItem) + "    工作流：" + workflow + "    图像：" + Convert.ToString(imageWorkflowBox.SelectedItem) + Environment.NewLine);
+                if (hasReferenceImage)
+                {
+                    chatBox.AppendText("参考图：" + referenceImage + Environment.NewLine);
+                }
                 chatBox.AppendText("已生成任务草稿：" + path + Environment.NewLine);
                 previewBox.Text = ReadText(path);
                 if (mainTabs.TabPages.Count > 0)
@@ -1416,6 +1691,64 @@ namespace SiemensTiaSkillSuite
             {
                 MessageBox.Show(ex.Message, "生成失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private static string EmptyAsDefault(string value, string fallback)
+        {
+            return string.IsNullOrWhiteSpace(value) ? fallback : value;
+        }
+
+        private string BuildWinccVisualWorkflow(bool hasReferenceImage)
+        {
+            StringBuilder builder = new StringBuilder();
+            builder.AppendLine("1. Identify WinCC flavor: Advanced, Unified engineering, Unified runtime, or SiVArc.");
+            builder.AppendLine("2. Read PLC/HMI contracts first: DB names, HMI tags, alarms, faceplates, and existing screen map.");
+            if (hasReferenceImage)
+            {
+                builder.AppendLine("3. Analyze the reference image for layout zones, palette, typography, navigation style, state colors, and component density.");
+                builder.AppendLine("4. Recreate the operator-facing composition as WinCC-native screens and faceplates, keeping the reference image as the visual target.");
+            }
+            else
+            {
+                builder.AppendLine("3. Generate a visual concept from the text description, then convert it into a WinCC-native screen map.");
+                builder.AppendLine("4. Use image output as design proof, not as the final HMI implementation.");
+            }
+            builder.AppendLine("5. Map visual elements to WinCC components: indicators, command buttons, alarm strips, trends, recipe fields, faceplates, and station panels.");
+            builder.AppendLine("6. Prefer Openness or SiVArc for screen/tag generation; keep manual fallback notes if an API surface is unavailable.");
+            builder.AppendLine("7. Review safety: command confirmation, disabled reasons, alarm visibility, user level, and PLC connection state.");
+            builder.AppendLine("8. Compile or smoke-test the HMI project on a backup/clone before applying to the main project.");
+            return builder.ToString();
+        }
+
+        private string BuildImagePromptSpec(bool hasReferenceImage)
+        {
+            StringBuilder builder = new StringBuilder();
+            builder.AppendLine("Use case: ui-mockup");
+            builder.AppendLine("Asset type: WinCC HMI screen design reference");
+            builder.AppendLine("Primary request: " + requestBox.Text.Trim());
+            builder.AppendLine("Input images: " + (hasReferenceImage ? "Image 1 is the visual reference to match for layout, spacing, color, and component hierarchy." : "none"));
+            builder.AppendLine("Screen map: Overview, Manual, Automatic, Alarm, Trend, Parameter, Maintenance, Diagnostics as needed.");
+            builder.AppendLine("Style/medium: clean industrial HMI, soft gradient shell, clear card panels, restrained state colors.");
+            builder.AppendLine("Composition/framing: operator-first scan, stable header, stable alarm/navigation strip, process flow matching the real machine.");
+            builder.AppendLine("Color palette: neutral blue-gray/green-gray base, cyan or green running, amber warning, red fault, muted disabled state.");
+            builder.AppendLine("Typography: readable Chinese + English labels, consistent title and object sizes.");
+            builder.AppendLine("Constraints: final implementation must use WinCC-native components, tags, faceplates, alarms, and navigation objects rather than a static screenshot.");
+            builder.AppendLine("Avoid: decorative-only dashboards, unreadable tiny text, color-only status, unsafe reset/home/recipe buttons without confirmation.");
+            return builder.ToString();
+        }
+
+        private string BuildComponentMappingPlan()
+        {
+            StringBuilder builder = new StringBuilder();
+            builder.AppendLine("- Screen shell: header with machine name, mode, PLC connection, user level, and time.");
+            builder.AppendLine("- Navigation: Overview, Manual, Automatic, Alarm, Trend, Parameter, Maintenance, Diagnostics.");
+            builder.AppendLine("- Station cards: state, command, feedback, interlock, fault, maintenance note.");
+            builder.AppendLine("- Device components: `FP_Motor_电机`, `FP_Cylinder_气缸`, `FP_Drive_变频器`, `FP_Station_工位` when the PLC tags support them.");
+            builder.AppendLine("- Alarm strip: active alarm, warning, first-out hint, acknowledgement/reset guidance.");
+            builder.AppendLine("- Trends and parameters: bind only to reviewed DB members; show engineering limits and write authority.");
+            builder.AppendLine("- Custom design components: create only when standard WinCC components or faceplates cannot match the reference layout cleanly.");
+            builder.AppendLine("- Naming: bilingual screen/object/tag names aligned with PLC DB and UDT contracts.");
+            return builder.ToString();
         }
 
         private static string FindLatestBlockList(string root)

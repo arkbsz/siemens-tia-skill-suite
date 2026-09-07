@@ -19,6 +19,8 @@
 - Kept the earlier browser console as the explicit `console-web` fallback while making `console` / `console-exe` open the native executable.
 - Refined the native console visual design with an industrial gradient header, card-style sections, rounded action buttons, styled project tree, clearer run list, and terminal-like log preview areas.
 - Upgraded the native console into a resizable desktop cockpit with automatic TIA project detection, browse/open actions, draggable left project tree, switchable AI/log/preview pages, bottom model/workflow task input, and Windows font-library selection.
+- Added WinCC visual AI routing to the native console: task-aware model defaults, API/image parameter controls, reference-image upload and preview, and generated component-mapping/design prompts for text-to-image or image-to-image HMI workflows.
+- Added a WinCC visual AI workflow reference for turning uploaded screenshots or text descriptions into WinCC-native screens, faceplates, tags, alarms, navigation, and SiVArc/Openess implementation plans.
 - Validated the installed skill path after TIA/Openness reinstall on 2026-09-07: `read-cycle -ProjectPath "D:\plc\手动程序" -Attach -SkipExport` detected `V17` and `PLC_1`.
 - Added a reusable knowledge-retrieval reference plus broader official instruction-family links for math, conversion, string, word-logic, and shift/rotate routes.
 - Added new source-backed training examples for analog scaling/conditioning and status-word packing/decoding.

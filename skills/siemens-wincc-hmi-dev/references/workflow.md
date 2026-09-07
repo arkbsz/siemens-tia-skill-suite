@@ -10,3 +10,13 @@
 8. If the required license is missing, keep the task read-only and only browse existing objects.
 9. Keep PLC DB names, HMI tag names, and screen names aligned, then compile and do a minimal runtime smoke test.
 10. Review layout quality with `references/screen-design.md` before calling the HMI package done.
+
+## Visual AI Loop
+
+Use `references/visual-ai-workflow.md` when the task starts from a reference image, screenshot, sketch, or visual description.
+
+1. Classify the request: text-to-image concept, image-to-image/reference remake, component mapping, Openness implementation, or SiVArc generation.
+2. Choose models per step: code/reasoning model for contracts and implementation, image model for visual concept or reference matching.
+3. Capture visible design rules from the reference: zones, navigation, cards, state colors, typography, spacing, and component hierarchy.
+4. Convert the design into WinCC-native objects, faceplates, tags, alarms, and navigation.
+5. Save the model/API settings, reference image path, component map, and verification checklist with the task package.

@@ -12,6 +12,7 @@ Prefer these routes:
 - TIA Portal Openness for HMI project traversal, screen/tag/alarm editing, and export/import style work
 - SiVArc Openness for rule-based generation of WinCC content
 - WinCC Unified GraphQL or Open Pipe when the task is runtime read/write/subscribe against a Unified runtime
+- visual AI routing for text-to-image or image-to-image screen concepts, then conversion into WinCC-native components
 
 ## Screen quality target
 
@@ -27,9 +28,10 @@ For new or refactored screens:
 - make command buttons visually distinct from indicators and require confirmation for reset, homing, recipe write, or force-like actions
 - keep tag names, faceplate names, and screen object names aligned with PLC DB/UDT contracts
 - add comments or design notes for generated screens so future engineers know which PLC contract drives each area
+- when a reference image is uploaded, analyze layout, palette, typography, component hierarchy, and state colors before choosing WinCC standard controls, faceplates, SiVArc rules, or custom components
 
 Before any write-like action, back up the project or work on a clone.
 When PLC and HMI data must align, stabilize the PLC tag/DB contract first, then mirror it in the HMI.
 If the exact WinCC flavor or installed API version is unclear, inspect the local TIA installation before assuming a DLL or method exists.
 
-Read `references/official-sources.md` for the capability boundaries, `references/workflow.md` for the recommended edit loop, and `references/screen-design.md` for layout, navigation, and visual quality rules.
+Read `references/official-sources.md` for the capability boundaries, `references/workflow.md` for the recommended edit loop, `references/screen-design.md` for layout, navigation, and visual quality rules, and `references/visual-ai-workflow.md` when the task uses text descriptions or uploaded reference images to drive WinCC screen design.

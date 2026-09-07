@@ -43,6 +43,7 @@ Use the local visual console when the user wants a better interaction surface th
 - a draggable left project tree for TIA projects, exported XML/SCL/DB/UDT, reports, and logs
 - switchable center pages for AI chat, command logs, file preview, and runs
 - a bottom AI task box with model/workflow selection and configurable Windows-font UI settings
+- visual WinCC task controls for API provider, image workflow, image model, quality, size, component strategy, and uploaded reference image preview
 - common workflow buttons for `doctor`, `read-cycle`, `list-blocks`, and `write-cycle`
 - run and log preview panels for `PLC_Code\runs` and `PLC_Code\console-jobs`
 - a Codex-ready prompt file writer under `PLC_Code\ai-prompts`
