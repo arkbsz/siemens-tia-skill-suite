@@ -202,12 +202,24 @@ namespace SiemensTiaSkillSuite
             scrollHost.Controls.Add(scrollContent);
             scrollHost.Resize += delegate { LayoutScrollableContent(); };
 
+            TableLayoutPanel workspaceLayout = new TableLayoutPanel();
+            workspaceLayout.Dock = DockStyle.Fill;
+            workspaceLayout.Margin = new Padding(0);
+            workspaceLayout.Padding = new Padding(0);
+            workspaceLayout.ColumnCount = 1;
+            workspaceLayout.RowCount = 2;
+            workspaceLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            workspaceLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 76));
+            workspaceLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            scrollContent.Controls.Add(workspaceLayout);
+
             Panel top = new BannerPanel();
-            top.Dock = DockStyle.Top;
-            top.Height = 68;
+            top.Dock = DockStyle.Fill;
+            top.Margin = new Padding(0);
+            top.MinimumSize = new Size(0, 76);
             top.Padding = new Padding(18, 10, 18, 8);
             top.BackColor = Rail;
-            scrollContent.Controls.Add(top);
+            workspaceLayout.Controls.Add(top, 0, 0);
 
             Label title = new Label();
             title.Text = "TIA PLC Dev";
@@ -255,9 +267,10 @@ namespace SiemensTiaSkillSuite
             projectBadge.Size = new Size(82, 28);
             top.Controls.Add(projectBadge);
 
-            statusLabel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            statusLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             statusLabel.ForeColor = Color.FromArgb(244, 202, 145);
-            statusLabel.AutoSize = true;
+            statusLabel.AutoSize = false;
+            statusLabel.AutoEllipsis = true;
             statusLabel.Location = new Point(1252, 22);
             statusLabel.BackColor = Color.Transparent;
             top.Controls.Add(statusLabel);
@@ -272,7 +285,8 @@ namespace SiemensTiaSkillSuite
             outer.BackColor = Canvas;
             outer.Panel1.Padding = new Padding(12, 14, 6, 14);
             outer.Panel2.Padding = new Padding(6, 14, 12, 14);
-            scrollContent.Controls.Add(outer);
+            outer.Margin = new Padding(0);
+            workspaceLayout.Controls.Add(outer, 0, 1);
 
             GroupBox leftBox = NewGroup("项目结构");
             leftBox.Dock = DockStyle.Fill;
@@ -530,8 +544,9 @@ namespace SiemensTiaSkillSuite
             pathBox.Location = new Point(pathLeft, 18);
             pathBox.Size = new Size(pathRight - pathLeft, 28);
 
-            status.Location = new Point(Math.Max(pathLeft, autoButton.Left), 48);
-            status.MaximumSize = new Size(Math.Max(160, right - status.Left), 18);
+            int statusWidth = Math.Max(160, autoButton.Left - pathLeft - 18);
+            status.Location = new Point(pathLeft, 50);
+            status.Size = new Size(statusWidth, 18);
         }
 
         private void ConfigureSettingsControls()
