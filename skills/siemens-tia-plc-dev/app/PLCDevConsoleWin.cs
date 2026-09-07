@@ -74,6 +74,7 @@ namespace SiemensTiaSkillSuite
         private readonly TextBox requestBox = new TextBox();
         private readonly Label statusLabel = new Label();
         private readonly Label projectBadge = new Label();
+        private readonly MenuStrip mainMenu = new MenuStrip();
         private readonly ComboBox modelBox = new ComboBox();
         private readonly ComboBox workflowSelectBox = new ComboBox();
         private readonly ComboBox apiProviderBox = new ComboBox();
@@ -91,6 +92,8 @@ namespace SiemensTiaSkillSuite
         private readonly TabControl mainTabs = new TabControl();
         private readonly System.Windows.Forms.Timer tailTimer = new System.Windows.Forms.Timer();
         private readonly string invokeScript;
+        private SplitContainer outerSplitter;
+        private SplitContainer centerSplitter;
 
         private static readonly Color Ink = Color.FromArgb(20, 34, 36);
         private static readonly Color MutedInk = Color.FromArgb(88, 105, 105);
@@ -161,12 +164,18 @@ namespace SiemensTiaSkillSuite
         {
             BackColor = Canvas;
 
+            ConfigureSettingsControls();
+            BuildMainMenu();
+            Controls.Add(mainMenu);
+            MainMenuStrip = mainMenu;
+
             Panel top = new BannerPanel();
             top.Dock = DockStyle.Top;
             top.Height = 104;
             top.Padding = new Padding(18, 14, 18, 14);
             top.BackColor = Rail;
             Controls.Add(top);
+            mainMenu.BringToFront();
 
             Label title = new Label();
             title.Text = "Siemens TIA PLC Dev Console";
@@ -244,6 +253,7 @@ namespace SiemensTiaSkillSuite
             top.Controls.Add(statusLabel);
 
             SplitContainer outer = new SplitContainer();
+            outerSplitter = outer;
             outer.Dock = DockStyle.Fill;
             outer.SplitterWidth = 6;
             outer.Panel1MinSize = 1;
@@ -267,6 +277,7 @@ namespace SiemensTiaSkillSuite
             leftBox.Controls.Add(projectTree);
 
             SplitContainer center = new SplitContainer();
+            centerSplitter = center;
             center.Dock = DockStyle.Fill;
             center.Orientation = Orientation.Horizontal;
             center.SplitterWidth = 7;
@@ -374,80 +385,10 @@ namespace SiemensTiaSkillSuite
 
             TableLayoutPanel aiLayout = new TableLayoutPanel();
             aiLayout.Dock = DockStyle.Fill;
-            aiLayout.RowCount = 3;
+            aiLayout.RowCount = 1;
             aiLayout.ColumnCount = 1;
-            aiLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
-            aiLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 82));
             aiLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             aiInputBox.Controls.Add(aiLayout);
-
-            FlowLayoutPanel aiOptions = new FlowLayoutPanel();
-            aiOptions.Dock = DockStyle.Fill;
-            aiOptions.Padding = new Padding(8, 3, 8, 2);
-            aiOptions.BackColor = Card;
-            aiOptions.Controls.Add(NewSmallLabel("模型"));
-            ConfigureCombo(modelBox, new string[] { "gpt-5-codex", "gpt-5", "gpt-5-mini", "本地/手动" }, "gpt-5-codex", 128);
-            aiOptions.Controls.Add(modelBox);
-            aiOptions.Controls.Add(NewSmallLabel("工作流"));
-            ConfigureCombo(workflowSelectBox, new string[] { "自动选择", "读取项目并总结", "LAD编写与验证", "DB+程序块协同", "WinCC画面生成", "WinCC参考图复刻", "故障诊断", "工业化重构" }, "自动选择", 150);
-            aiOptions.Controls.Add(workflowSelectBox);
-            aiOptions.Controls.Add(NewSmallLabel("字体"));
-            PopulateFontOptions();
-            fontBox.Width = 170;
-            aiOptions.Controls.Add(fontBox);
-            aiOptions.Controls.Add(NewSmallLabel("字号"));
-            ConfigureCombo(fontSizeBox, new string[] { "9", "10", "11", "12", "14", "16", "18" }, "10", 62);
-            aiOptions.Controls.Add(fontSizeBox);
-            Button applyFont = NewButton("应用字体", Ink);
-            applyFont.Width = 92;
-            applyFont.Click += delegate { ApplySelectedFont(); };
-            aiOptions.Controls.Add(applyFont);
-            aiLayout.Controls.Add(aiOptions, 0, 0);
-
-            FlowLayoutPanel visionOptions = new FlowLayoutPanel();
-            visionOptions.Dock = DockStyle.Fill;
-            visionOptions.Padding = new Padding(8, 4, 8, 2);
-            visionOptions.BackColor = Color.FromArgb(246, 249, 242);
-            visionOptions.Controls.Add(NewSmallLabel("API"));
-            ConfigureCombo(apiProviderBox, new string[] { "Codex内置", "OpenAI API", "Azure OpenAI", "本地/手动" }, "Codex内置", 112);
-            visionOptions.Controls.Add(apiProviderBox);
-            visionOptions.Controls.Add(NewSmallLabel("图像"));
-            ConfigureCombo(imageWorkflowBox, new string[] { "自动", "无图像", "文生图", "图生图/参考图" }, "自动", 112);
-            visionOptions.Controls.Add(imageWorkflowBox);
-            visionOptions.Controls.Add(NewSmallLabel("模型"));
-            ConfigureCombo(imageModelBox, new string[] { "内置imagegen", "gpt-image-2", "gpt-image-1.5", "自定义" }, "内置imagegen", 118);
-            visionOptions.Controls.Add(imageModelBox);
-            visionOptions.Controls.Add(NewSmallLabel("质量"));
-            ConfigureCombo(imageQualityBox, new string[] { "auto", "high", "medium", "low" }, "auto", 78);
-            visionOptions.Controls.Add(imageQualityBox);
-            visionOptions.Controls.Add(NewSmallLabel("尺寸"));
-            ConfigureCombo(imageSizeBox, new string[] { "auto", "1536x1024", "1024x1024", "1920x1080", "3840x2160" }, "1536x1024", 104);
-            visionOptions.Controls.Add(imageSizeBox);
-            visionOptions.Controls.Add(NewSmallLabel("组件"));
-            ConfigureCombo(componentStrategyBox, new string[] { "自动匹配+自定义", "标准WinCC组件", "Faceplate优先", "自定义组件优先", "SiVArc规则生成" }, "自动匹配+自定义", 142);
-            visionOptions.Controls.Add(componentStrategyBox);
-
-            visionOptions.SetFlowBreak(componentStrategyBox, true);
-            visionOptions.Controls.Add(NewWideLabel("API Base"));
-            apiBaseBox.Width = 208;
-            apiBaseBox.Text = "";
-            StyleInput(apiBaseBox);
-            visionOptions.Controls.Add(apiBaseBox);
-            visionOptions.Controls.Add(NewWideLabel("Key Env"));
-            apiKeyEnvBox.Width = 126;
-            apiKeyEnvBox.Text = "OPENAI_API_KEY";
-            StyleInput(apiKeyEnvBox);
-            visionOptions.Controls.Add(apiKeyEnvBox);
-            visionOptions.Controls.Add(NewWideLabel("参考图"));
-            referenceImageBox.Width = 280;
-            StyleInput(referenceImageBox);
-            visionOptions.Controls.Add(referenceImageBox);
-            Button imageButton = NewButton("上传/预览", Orange);
-            imageButton.Width = 98;
-            imageButton.Height = 30;
-            imageButton.Click += delegate { BrowseReferenceImage(); };
-            visionOptions.Controls.Add(imageButton);
-            aiLayout.Controls.Add(visionOptions, 0, 1);
 
             TableLayoutPanel inputLayout = new TableLayoutPanel();
             inputLayout.Dock = DockStyle.Fill;
@@ -455,7 +396,7 @@ namespace SiemensTiaSkillSuite
             inputLayout.RowCount = 1;
             inputLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             inputLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 168));
-            aiLayout.Controls.Add(inputLayout, 0, 2);
+            aiLayout.Controls.Add(inputLayout, 0, 0);
 
             requestBox.Dock = DockStyle.Fill;
             requestBox.Multiline = true;
@@ -535,6 +476,298 @@ namespace SiemensTiaSkillSuite
                     LoadReferencePreview(referenceImageBox.Text);
                 }
             };
+        }
+
+        private void ConfigureSettingsControls()
+        {
+            ConfigureCombo(modelBox, new string[] { "gpt-5-codex", "gpt-5", "gpt-5-mini", "本地/手动" }, "gpt-5-codex", 150);
+            ConfigureCombo(workflowSelectBox, new string[] { "自动选择", "读取项目并总结", "LAD编写与验证", "DB+程序块协同", "WinCC画面生成", "WinCC参考图复刻", "故障诊断", "工业化重构" }, "自动选择", 168);
+            ConfigureCombo(apiProviderBox, new string[] { "Codex内置", "OpenAI API", "Azure OpenAI", "本地/手动" }, "Codex内置", 142);
+            ConfigureCombo(imageWorkflowBox, new string[] { "自动", "无图像", "文生图", "图生图/参考图" }, "自动", 142);
+            ConfigureCombo(imageModelBox, new string[] { "内置imagegen", "gpt-image-2", "gpt-image-1.5", "自定义" }, "内置imagegen", 142);
+            ConfigureCombo(imageQualityBox, new string[] { "auto", "high", "medium", "low" }, "auto", 96);
+            ConfigureCombo(imageSizeBox, new string[] { "auto", "1536x1024", "1024x1024", "1920x1080", "3840x2160" }, "1536x1024", 122);
+            ConfigureCombo(componentStrategyBox, new string[] { "自动匹配+自定义", "标准WinCC组件", "Faceplate优先", "自定义组件优先", "SiVArc规则生成" }, "自动匹配+自定义", 168);
+            PopulateFontOptions();
+            fontBox.Width = 178;
+            ConfigureCombo(fontSizeBox, new string[] { "9", "10", "11", "12", "14", "16", "18" }, "10", 72);
+            apiBaseBox.Width = 260;
+            apiBaseBox.Text = "";
+            StyleInput(apiBaseBox);
+            apiKeyEnvBox.Width = 160;
+            apiKeyEnvBox.Text = "OPENAI_API_KEY";
+            StyleInput(apiKeyEnvBox);
+            referenceImageBox.Width = 330;
+            StyleInput(referenceImageBox);
+        }
+
+        private void BuildMainMenu()
+        {
+            mainMenu.Dock = DockStyle.Top;
+            mainMenu.Height = 32;
+            mainMenu.Padding = new Padding(4, 3, 4, 2);
+            mainMenu.BackColor = Color.FromArgb(37, 39, 42);
+            mainMenu.ForeColor = Color.FromArgb(238, 241, 232);
+            mainMenu.Renderer = new DarkMenuRenderer();
+
+            mainMenu.Items.Clear();
+            mainMenu.Items.Add(BuildFileMenu());
+            mainMenu.Items.Add(BuildSimpleMenu("编辑(&E)", new string[] { "撤销", "重做", "-", "复制", "粘贴", "查找" }));
+            mainMenu.Items.Add(BuildViewMenu());
+            mainMenu.Items.Add(BuildSimpleMenu("导航(&N)", new string[] { "定位到项目树", "定位到日志", "定位到文件预览", "定位到AI输入" }));
+            mainMenu.Items.Add(BuildCodeMenu());
+            mainMenu.Items.Add(BuildSimpleMenu("重构(&R)", new string[] { "生成命名规范任务", "生成DB/块协同任务", "生成工业化重构任务" }));
+            mainMenu.Items.Add(BuildRunMenu());
+            mainMenu.Items.Add(BuildToolsMenu());
+            mainMenu.Items.Add(BuildSimpleMenu("Git(&G)", new string[] { "查看状态", "提交说明草稿", "同步仓库" }));
+            mainMenu.Items.Add(BuildWindowMenu());
+            mainMenu.Items.Add(BuildHelpMenu());
+        }
+
+        private ToolStripMenuItem BuildFileMenu()
+        {
+            ToolStripMenuItem file = NewMenu("文件(&F)");
+            file.DropDownItems.Add(NewMenuItem("新建项目...", delegate { requestBox.Text = "新建一个 TIA Portal 项目，并生成 PLC/HMI 基础结构。"; CreateAiPrompt(); }));
+            file.DropDownItems.Add(NewMenuItem("来自版本控制的项目...", delegate { requestBox.Text = "从 Git 仓库读取 Siemens TIA skill suite 或 PLC-as-code 项目，并初始化工作区。"; CreateAiPrompt(); }));
+            file.DropDownItems.Add(NewMenuItem("新建任务草稿(&N)...", delegate { CreateAiPrompt(); }, Keys.Alt | Keys.Insert));
+            file.DropDownItems.Add(NewMenuItem("打开(&O)...", delegate { BrowseProject(); }, Keys.Control | Keys.O));
+            file.DropDownItems.Add(NewMenuItem("读取当前 TIA 项目", delegate { AutoLoadCurrentTiaProject(); }));
+            file.DropDownItems.Add(NewMenuItem("用 TIA/默认程序打开", delegate { OpenProjectWithDefaultApp(); }));
+            file.DropDownItems.Add(NewMenuItem("打开项目文件夹", delegate { OpenProjectFolder(); }));
+            file.DropDownItems.Add(new ToolStripSeparator());
+            file.DropDownItems.Add(NewMenuItem("设置(&T)...", delegate { ShowSettingsTabHint(); }, Keys.Control | Keys.Alt | Keys.S));
+            file.DropDownItems.Add(NewMenuItem("上传 WinCC 参考图...", delegate { BrowseReferenceImage(); }));
+            file.DropDownItems.Add(new ToolStripSeparator());
+            file.DropDownItems.Add(NewMenuItem("全部保存(&S)", delegate { CreateAiPrompt(); }, Keys.Control | Keys.S));
+            file.DropDownItems.Add(NewMenuItem("从磁盘全部重新加载", delegate { LoadProject(projectPathBox.Text); }, Keys.Control | Keys.Alt | Keys.Y));
+            file.DropDownItems.Add(new ToolStripSeparator());
+            file.DropDownItems.Add(NewMenuItem("退出(&X)", delegate { Close(); }));
+            return file;
+        }
+
+        private ToolStripMenuItem BuildViewMenu()
+        {
+            ToolStripMenuItem view = NewMenu("视图(&V)");
+            view.DropDownItems.Add(NewMenuItem("AI 对话", delegate { SelectMainTab(0); }));
+            view.DropDownItems.Add(NewMenuItem("日志输出", delegate { SelectMainTab(1); }));
+            view.DropDownItems.Add(NewMenuItem("文件预览", delegate { SelectMainTab(2); }));
+            view.DropDownItems.Add(NewMenuItem("Runs 列表", delegate { SelectMainTab(3); }));
+            view.DropDownItems.Add(NewMenuItem("参考图", delegate { SelectMainTab(4); }));
+            view.DropDownItems.Add(new ToolStripSeparator());
+            view.DropDownItems.Add(NewMenuItem("恢复默认布局", delegate { RestoreDefaultLayout(); }));
+            return view;
+        }
+
+        private ToolStripMenuItem BuildCodeMenu()
+        {
+            ToolStripMenuItem code = NewMenu("代码(&C)");
+            code.DropDownItems.Add(NewMenuItem("LAD 编写与验证", delegate { SelectCombo(workflowSelectBox, "LAD编写与验证"); ApplyWorkflowDefaults(false); }));
+            code.DropDownItems.Add(NewMenuItem("DB + 程序块协同", delegate { SelectCombo(workflowSelectBox, "DB+程序块协同"); ApplyWorkflowDefaults(false); }));
+            code.DropDownItems.Add(NewMenuItem("WinCC 画面生成", delegate { SelectCombo(workflowSelectBox, "WinCC画面生成"); ApplyWorkflowDefaults(false); }));
+            code.DropDownItems.Add(NewMenuItem("WinCC 参考图复刻", delegate { SelectCombo(workflowSelectBox, "WinCC参考图复刻"); ApplyWorkflowDefaults(false); }));
+            return code;
+        }
+
+        private ToolStripMenuItem BuildRunMenu()
+        {
+            ToolStripMenuItem run = NewMenu("运行(&U)");
+            run.DropDownItems.Add(NewMenuItem("Doctor 检查", delegate { StartCommand("doctor"); }));
+            run.DropDownItems.Add(NewMenuItem("快速读取", delegate { StartCommand("read-cycle-skip"); }));
+            run.DropDownItems.Add(NewMenuItem("完整导出", delegate { StartCommand("read-cycle-full"); }));
+            run.DropDownItems.Add(NewMenuItem("列程序块", delegate { StartCommand("list-blocks"); }));
+            run.DropDownItems.Add(NewMenuItem("克隆验证 LAD", delegate { StartCommand("write-cycle"); }));
+            return run;
+        }
+
+        private ToolStripMenuItem BuildToolsMenu()
+        {
+            ToolStripMenuItem tools = NewMenu("工具(&T)");
+            tools.DropDownItems.Add(BuildSettingsPanelMenu("AI / API / 图像 / WinCC 设置"));
+            tools.DropDownItems.Add(new ToolStripSeparator());
+            tools.DropDownItems.Add(NewMenuItem("上传 WinCC 参考图...", delegate { BrowseReferenceImage(); }));
+            tools.DropDownItems.Add(NewMenuItem("应用字体设置", delegate { ApplySelectedFont(); }));
+            tools.DropDownItems.Add(NewMenuItem("按任务自动推荐模型", delegate { ApplyWorkflowDefaults(false); }));
+            return tools;
+        }
+
+        private ToolStripMenuItem BuildWindowMenu()
+        {
+            ToolStripMenuItem window = NewMenu("窗口(&W)");
+            window.DropDownItems.Add(NewMenuItem("左侧项目树加宽", delegate { ResizeProjectTree(420); }));
+            window.DropDownItems.Add(NewMenuItem("左侧项目树收窄", delegate { ResizeProjectTree(280); }));
+            window.DropDownItems.Add(NewMenuItem("底部 AI 区加高", delegate { ResizeAiPanel(320); }));
+            window.DropDownItems.Add(NewMenuItem("底部 AI 区收起", delegate { ResizeAiPanel(180); }));
+            window.DropDownItems.Add(new ToolStripSeparator());
+            window.DropDownItems.Add(NewMenuItem("恢复默认布局", delegate { RestoreDefaultLayout(); }));
+            return window;
+        }
+
+        private ToolStripMenuItem BuildHelpMenu()
+        {
+            ToolStripMenuItem help = NewMenu("帮助(&H)");
+            help.DropDownItems.Add(NewMenuItem("关于", delegate
+            {
+                MessageBox.Show("Siemens TIA PLC Dev Console\n\n本地 WinForms 工程座舱：项目读取、LAD/DB/WinCC 任务草稿、Openness 工作流和参考图设计入口。", "关于", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }));
+            return help;
+        }
+
+        private ToolStripMenuItem BuildSimpleMenu(string title, string[] labels)
+        {
+            ToolStripMenuItem menu = NewMenu(title);
+            foreach (string label in labels)
+            {
+                if (label == "-")
+                {
+                    menu.DropDownItems.Add(new ToolStripSeparator());
+                }
+                else
+                {
+                    menu.DropDownItems.Add(NewMenuItem(label, delegate { statusLabel.Text = "菜单功能待接入：" + label; }));
+                }
+            }
+            return menu;
+        }
+
+        private ToolStripMenuItem BuildSettingsPanelMenu(string title)
+        {
+            ToolStripMenuItem item = NewMenu(title);
+            Panel panel = new Panel();
+            panel.Width = 620;
+            panel.Height = 360;
+            panel.AutoScroll = true;
+            panel.BackColor = Color.FromArgb(35, 39, 43);
+
+            TableLayoutPanel grid = new TableLayoutPanel();
+            grid.Dock = DockStyle.Top;
+            grid.AutoSize = true;
+            grid.ColumnCount = 4;
+            grid.RowCount = 9;
+            grid.Padding = new Padding(12);
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 96));
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 96));
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+            panel.Controls.Add(grid);
+
+            AddSettingRow(grid, 0, "代码模型", modelBox, "工作流", workflowSelectBox);
+            AddSettingRow(grid, 1, "API 提供方", apiProviderBox, "API Base", apiBaseBox);
+            AddSettingRow(grid, 2, "Key 环境变量", apiKeyEnvBox, "图像工作流", imageWorkflowBox);
+            AddSettingRow(grid, 3, "图像模型", imageModelBox, "图像质量", imageQualityBox);
+            AddSettingRow(grid, 4, "图像尺寸", imageSizeBox, "组件策略", componentStrategyBox);
+            AddSettingRow(grid, 5, "界面字体", fontBox, "字号", fontSizeBox);
+            AddSettingRow(grid, 6, "参考图", referenceImageBox, "", NewMenuButton("上传/预览", delegate { BrowseReferenceImage(); }));
+            AddSettingRow(grid, 7, "应用", NewMenuButton("应用字体", delegate { ApplySelectedFont(); }), "推荐", NewMenuButton("自动推荐模型", delegate { ApplyWorkflowDefaults(false); }));
+            AddSettingRow(grid, 8, "生成", NewMenuButton("生成任务草稿", delegate { CreateAiPrompt(); }), "预览", NewMenuButton("查看参考图", delegate { SelectMainTab(4); }));
+
+            item.DropDownItems.Add(new ToolStripControlHost(panel)
+            {
+                Padding = new Padding(0),
+                Margin = new Padding(0)
+            });
+            return item;
+        }
+
+        private static void AddSettingRow(TableLayoutPanel grid, int row, string leftLabel, Control leftControl, string rightLabel, Control rightControl)
+        {
+            grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+            AddSettingCell(grid, leftLabel, 0, row);
+            grid.Controls.Add(leftControl, 1, row);
+            leftControl.Dock = DockStyle.Fill;
+            AddSettingCell(grid, rightLabel, 2, row);
+            grid.Controls.Add(rightControl, 3, row);
+            rightControl.Dock = DockStyle.Fill;
+        }
+
+        private static void AddSettingCell(TableLayoutPanel grid, string text, int col, int row)
+        {
+            Label label = new Label();
+            label.Text = text;
+            label.ForeColor = Color.FromArgb(216, 225, 221);
+            label.TextAlign = ContentAlignment.MiddleRight;
+            label.Dock = DockStyle.Fill;
+            label.Margin = new Padding(3, 5, 8, 5);
+            grid.Controls.Add(label, col, row);
+        }
+
+        private static Button NewMenuButton(string text, Action action)
+        {
+            Button button = new Button();
+            button.Text = text;
+            button.Height = 28;
+            button.FlatStyle = FlatStyle.Flat;
+            button.FlatAppearance.BorderColor = Color.FromArgb(84, 117, 113);
+            button.BackColor = Color.FromArgb(51, 74, 73);
+            button.ForeColor = Color.White;
+            button.Click += delegate { action(); };
+            return button;
+        }
+
+        private static ToolStripMenuItem NewMenu(string text)
+        {
+            ToolStripMenuItem item = new ToolStripMenuItem(text);
+            item.ForeColor = Color.FromArgb(239, 244, 238);
+            item.BackColor = Color.FromArgb(37, 39, 42);
+            return item;
+        }
+
+        private static ToolStripMenuItem NewMenuItem(string text, Action action)
+        {
+            return NewMenuItem(text, action, Keys.None);
+        }
+
+        private static ToolStripMenuItem NewMenuItem(string text, Action action, Keys shortcut)
+        {
+            ToolStripMenuItem item = new ToolStripMenuItem(text);
+            item.ForeColor = Color.FromArgb(238, 242, 235);
+            item.BackColor = Color.FromArgb(38, 42, 46);
+            item.ShortcutKeys = shortcut;
+            item.Click += delegate { action(); };
+            return item;
+        }
+
+        private void ShowSettingsTabHint()
+        {
+            statusLabel.Text = "设置位于 工具 > AI / API / 图像 / WinCC 设置";
+        }
+
+        private void SelectMainTab(int index)
+        {
+            if (index >= 0 && index < mainTabs.TabPages.Count)
+            {
+                mainTabs.SelectedIndex = index;
+            }
+        }
+
+        private void RestoreDefaultLayout()
+        {
+            if (outerSplitter != null)
+            {
+                SafeConfigureSplitter(outerSplitter, 240, 560, 360);
+            }
+            if (centerSplitter != null)
+            {
+                SafeConfigureSplitter(centerSplitter, 300, 240, Math.Max(340, centerSplitter.Height - 310));
+            }
+            statusLabel.Text = "已恢复默认布局";
+        }
+
+        private void ResizeProjectTree(int width)
+        {
+            if (outerSplitter != null)
+            {
+                SafeSetSplitterDistance(outerSplitter, width);
+                statusLabel.Text = "项目树宽度已调整";
+            }
+        }
+
+        private void ResizeAiPanel(int height)
+        {
+            if (centerSplitter != null && centerSplitter.Orientation == Orientation.Horizontal)
+            {
+                SafeSetSplitterDistance(centerSplitter, Math.Max(300, centerSplitter.Height - height));
+                statusLabel.Text = "底部AI区高度已调整";
+            }
         }
 
         private static GroupBox NewGroup(string title)
@@ -1824,6 +2057,54 @@ namespace SiemensTiaSkillSuite
                 e.Graphics.DrawLine(line, 0, rect.Height - 1, rect.Width, rect.Height - 1);
             }
         }
+    }
+
+    internal sealed class DarkMenuRenderer : ToolStripProfessionalRenderer
+    {
+        public DarkMenuRenderer() : base(new DarkMenuColorTable())
+        {
+        }
+
+        protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
+        {
+            Rectangle rect = new Rectangle(Point.Empty, e.Item.Size);
+            Color fill = e.Item.Selected ? Color.FromArgb(70, 56, 39) : Color.FromArgb(37, 39, 42);
+            using (SolidBrush brush = new SolidBrush(fill))
+            {
+                e.Graphics.FillRectangle(brush, rect);
+            }
+        }
+
+        protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e)
+        {
+            using (Pen pen = new Pen(Color.FromArgb(62, 67, 72)))
+            {
+                e.Graphics.DrawRectangle(pen, new Rectangle(0, 0, e.ToolStrip.Width - 1, e.ToolStrip.Height - 1));
+            }
+        }
+
+        protected override void OnRenderSeparator(ToolStripSeparatorRenderEventArgs e)
+        {
+            using (Pen pen = new Pen(Color.FromArgb(58, 63, 68)))
+            {
+                int y = e.Item.Height / 2;
+                e.Graphics.DrawLine(pen, 8, y, e.Item.Width - 8, y);
+            }
+        }
+    }
+
+    internal sealed class DarkMenuColorTable : ProfessionalColorTable
+    {
+        public override Color MenuItemSelected { get { return Color.FromArgb(70, 56, 39); } }
+        public override Color MenuItemBorder { get { return Color.FromArgb(110, 82, 46); } }
+        public override Color MenuBorder { get { return Color.FromArgb(62, 67, 72); } }
+        public override Color ToolStripDropDownBackground { get { return Color.FromArgb(38, 42, 46); } }
+        public override Color ImageMarginGradientBegin { get { return Color.FromArgb(38, 42, 46); } }
+        public override Color ImageMarginGradientMiddle { get { return Color.FromArgb(38, 42, 46); } }
+        public override Color ImageMarginGradientEnd { get { return Color.FromArgb(38, 42, 46); } }
+        public override Color ToolStripGradientBegin { get { return Color.FromArgb(37, 39, 42); } }
+        public override Color ToolStripGradientMiddle { get { return Color.FromArgb(37, 39, 42); } }
+        public override Color ToolStripGradientEnd { get { return Color.FromArgb(37, 39, 42); } }
     }
 
     internal sealed class ThemedGroupBox : GroupBox
