@@ -39,10 +39,13 @@ For the generic workflow, read `references/workflow.md`.
 
 Use the local visual console when the user wants a better interaction surface than terminal commands. The default `console` command builds and opens a native Windows Forms `PLCDevConsole.exe` window with:
 
-- project tree for `.ap16` through `.ap21`, exported XML/SCL/DB/UDT, reports, and logs
+- automatic current-TIA-project detection plus browse/open actions for `.ap16` through `.ap21`
+- a draggable left project tree for TIA projects, exported XML/SCL/DB/UDT, reports, and logs
+- switchable center pages for AI chat, command logs, file preview, and runs
+- a bottom AI task box with model/workflow selection and configurable Windows-font UI settings
 - common workflow buttons for `doctor`, `read-cycle`, `list-blocks`, and `write-cycle`
 - run and log preview panels for `PLC_Code\runs` and `PLC_Code\console-jobs`
-- an AI task box that creates a Codex-ready prompt file under `PLC_Code\ai-prompts`
+- a Codex-ready prompt file writer under `PLC_Code\ai-prompts`
 
 Start it with:
 

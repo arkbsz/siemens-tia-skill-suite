@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Text;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
 
@@ -32,7 +34,30 @@ namespace SiemensTiaSkillSuite
 
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+            Application.ThreadException += delegate (object sender, ThreadExceptionEventArgs eventArgs)
+            {
+                WriteCrashLog(eventArgs.Exception);
+                MessageBox.Show(eventArgs.Exception.Message, "PLCDevConsole 运行错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            };
+            AppDomain.CurrentDomain.UnhandledException += delegate (object sender, UnhandledExceptionEventArgs eventArgs)
+            {
+                WriteCrashLog(eventArgs.ExceptionObject as Exception);
+            };
             Application.Run(new MainForm(projectPath, invokeScript));
+        }
+
+        private static void WriteCrashLog(Exception exception)
+        {
+            try
+            {
+                string root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".codex", "logs");
+                Directory.CreateDirectory(root);
+                string path = Path.Combine(root, "PLCDevConsole.crash.log");
+                File.AppendAllText(path, DateTime.Now.ToString("s") + Environment.NewLine + Convert.ToString(exception) + Environment.NewLine + Environment.NewLine, Encoding.UTF8);
+            }
+            catch
+            {
+            }
         }
     }
 
@@ -49,6 +74,11 @@ namespace SiemensTiaSkillSuite
         private readonly TextBox requestBox = new TextBox();
         private readonly Label statusLabel = new Label();
         private readonly Label projectBadge = new Label();
+        private readonly ComboBox modelBox = new ComboBox();
+        private readonly ComboBox workflowSelectBox = new ComboBox();
+        private readonly ComboBox fontBox = new ComboBox();
+        private readonly ComboBox fontSizeBox = new ComboBox();
+        private readonly TabControl mainTabs = new TabControl();
         private readonly System.Windows.Forms.Timer tailTimer = new System.Windows.Forms.Timer();
         private readonly string invokeScript;
 
@@ -92,6 +122,10 @@ namespace SiemensTiaSkillSuite
             {
                 LoadProject(projectPath);
             }
+            else
+            {
+                BeginInvoke((Action)delegate { AutoLoadCurrentTiaProject(false); });
+            }
         }
 
         private static string ResolveInvokeScript(string explicitPath)
@@ -118,7 +152,7 @@ namespace SiemensTiaSkillSuite
 
             Panel top = new BannerPanel();
             top.Dock = DockStyle.Top;
-            top.Height = 92;
+            top.Height = 104;
             top.Padding = new Padding(18, 14, 18, 14);
             top.BackColor = Rail;
             Controls.Add(top);
@@ -141,17 +175,45 @@ namespace SiemensTiaSkillSuite
             top.Controls.Add(subtitle);
 
             projectPathBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            projectPathBox.Location = new Point(500, 18);
+            projectPathBox.Location = new Point(370, 16);
             projectPathBox.Width = 560;
             StyleInput(projectPathBox);
             top.Controls.Add(projectPathBox);
 
+            Button autoButton = NewButton("读取当前TIA", Teal);
+            autoButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            autoButton.Location = new Point(944, 14);
+            autoButton.Width = 120;
+            autoButton.Click += delegate { AutoLoadCurrentTiaProject(); };
+            top.Controls.Add(autoButton);
+
+            Button browseButton = NewButton("浏览打开", Ink);
+            browseButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            browseButton.Location = new Point(1072, 14);
+            browseButton.Width = 106;
+            browseButton.Click += delegate { BrowseProject(); };
+            top.Controls.Add(browseButton);
+
             Button loadButton = NewButton("加载项目", Teal);
             loadButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            loadButton.Location = new Point(1074, 15);
-            loadButton.Width = 108;
+            loadButton.Location = new Point(1186, 14);
+            loadButton.Width = 100;
             loadButton.Click += delegate { LoadProject(projectPathBox.Text); };
             top.Controls.Add(loadButton);
+
+            Button openProjectButton = NewButton("TIA打开", Orange);
+            openProjectButton.Location = new Point(370, 54);
+            openProjectButton.Width = 100;
+            openProjectButton.Height = 32;
+            openProjectButton.Click += delegate { OpenProjectWithDefaultApp(); };
+            top.Controls.Add(openProjectButton);
+
+            Button openFolderButton = NewButton("打开文件夹", Ink);
+            openFolderButton.Location = new Point(478, 54);
+            openFolderButton.Width = 112;
+            openFolderButton.Height = 32;
+            openFolderButton.Click += delegate { OpenProjectFolder(); };
+            top.Controls.Add(openFolderButton);
 
             projectBadge.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             projectBadge.Text = "V16-V21";
@@ -159,21 +221,22 @@ namespace SiemensTiaSkillSuite
             projectBadge.BackColor = Gold;
             projectBadge.Font = new Font(Font.FontFamily, 9F, FontStyle.Bold);
             projectBadge.TextAlign = ContentAlignment.MiddleCenter;
-            projectBadge.Location = new Point(1194, 16);
+            projectBadge.Location = new Point(1298, 17);
             projectBadge.Size = new Size(82, 28);
             top.Controls.Add(projectBadge);
 
             statusLabel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             statusLabel.ForeColor = Color.FromArgb(244, 202, 145);
             statusLabel.AutoSize = true;
-            statusLabel.Location = new Point(1290, 22);
+            statusLabel.Location = new Point(944, 58);
             statusLabel.BackColor = Color.Transparent;
             top.Controls.Add(statusLabel);
 
             SplitContainer outer = new SplitContainer();
             outer.Dock = DockStyle.Fill;
             outer.SplitterWidth = 6;
-            outer.SplitterDistance = 360;
+            outer.Panel1MinSize = 1;
+            outer.Panel2MinSize = 1;
             outer.BackColor = Canvas;
             outer.Panel1.Padding = new Padding(12, 14, 6, 14);
             outer.Panel2.Padding = new Padding(6, 14, 12, 14);
@@ -192,29 +255,26 @@ namespace SiemensTiaSkillSuite
             projectTree.ItemHeight = 24;
             leftBox.Controls.Add(projectTree);
 
-            SplitContainer right = new SplitContainer();
-            right.Dock = DockStyle.Fill;
-            right.SplitterWidth = 6;
-            right.SplitterDistance = 680;
-            right.BackColor = Canvas;
-            right.Panel1.Padding = new Padding(0, 0, 6, 0);
-            right.Panel2.Padding = new Padding(6, 0, 0, 0);
-            outer.Panel2.Controls.Add(right);
+            SplitContainer center = new SplitContainer();
+            center.Dock = DockStyle.Fill;
+            center.Orientation = Orientation.Horizontal;
+            center.SplitterWidth = 7;
+            center.Panel1MinSize = 1;
+            center.Panel2MinSize = 1;
+            center.BackColor = Canvas;
+            outer.Panel2.Controls.Add(center);
 
-            GroupBox workflowBox = NewGroup("工作流与日志");
-            workflowBox.Dock = DockStyle.Fill;
-            right.Panel1.Controls.Add(workflowBox);
+            GroupBox mainBox = NewGroup("主界面");
+            mainBox.Dock = DockStyle.Fill;
+            center.Panel1.Controls.Add(mainBox);
 
-            TableLayoutPanel workLayout = new TableLayoutPanel();
-            workLayout.Dock = DockStyle.Fill;
-            workLayout.RowCount = 5;
-            workLayout.ColumnCount = 1;
-            workLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 92));
-            workLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 74));
-            workLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 32));
-            workLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 34));
-            workLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 34));
-            workflowBox.Controls.Add(workLayout);
+            TableLayoutPanel mainLayout = new TableLayoutPanel();
+            mainLayout.Dock = DockStyle.Fill;
+            mainLayout.RowCount = 2;
+            mainLayout.ColumnCount = 1;
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 106));
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            mainBox.Controls.Add(mainLayout);
 
             FlowLayoutPanel actions = new FlowLayoutPanel();
             actions.Dock = DockStyle.Fill;
@@ -224,10 +284,11 @@ namespace SiemensTiaSkillSuite
             actions.Controls.Add(CommandButton("快速读取", "read-cycle-skip", Teal));
             actions.Controls.Add(CommandButton("完整导出", "read-cycle-full", Orange));
             actions.Controls.Add(CommandButton("列程序块", "list-blocks", Ink));
-            workLayout.Controls.Add(actions, 0, 0);
+            mainLayout.Controls.Add(actions, 0, 0);
 
             TableLayoutPanel writePanel = new TableLayoutPanel();
-            writePanel.Dock = DockStyle.Fill;
+            writePanel.Width = 590;
+            writePanel.Height = 86;
             writePanel.ColumnCount = 4;
             writePanel.RowCount = 2;
             writePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 74));
@@ -250,7 +311,7 @@ namespace SiemensTiaSkillSuite
             refresh.Dock = DockStyle.Fill;
             refresh.Click += delegate { RefreshRuns(); };
             writePanel.Controls.Add(refresh, 1, 1);
-            workLayout.Controls.Add(writePanel, 0, 1);
+            actions.Controls.Add(writePanel);
 
             runList.Dock = DockStyle.Fill;
             runList.BorderStyle = BorderStyle.None;
@@ -258,7 +319,6 @@ namespace SiemensTiaSkillSuite
             runList.ForeColor = Ink;
             runList.Font = new Font("Cascadia Mono", 9F);
             runList.ItemHeight = 22;
-            workLayout.Controls.Add(Wrap("最近 runs", runList), 0, 2);
 
             previewBox.Dock = DockStyle.Fill;
             previewBox.Font = new Font("Cascadia Code", 9F);
@@ -266,7 +326,6 @@ namespace SiemensTiaSkillSuite
             previewBox.BorderStyle = BorderStyle.None;
             previewBox.BackColor = CodeBack;
             previewBox.ForeColor = CodeFore;
-            workLayout.Controls.Add(Wrap("文件/报告预览", previewBox), 0, 3);
 
             jobBox.Dock = DockStyle.Fill;
             jobBox.Font = new Font("Cascadia Code", 9F);
@@ -274,19 +333,6 @@ namespace SiemensTiaSkillSuite
             jobBox.BorderStyle = BorderStyle.None;
             jobBox.BackColor = Color.FromArgb(248, 250, 244);
             jobBox.ForeColor = Ink;
-            workLayout.Controls.Add(Wrap("当前命令输出", jobBox), 0, 4);
-
-            GroupBox aiBox = NewGroup("AI任务草稿");
-            aiBox.Dock = DockStyle.Fill;
-            right.Panel2.Controls.Add(aiBox);
-
-            TableLayoutPanel aiLayout = new TableLayoutPanel();
-            aiLayout.Dock = DockStyle.Fill;
-            aiLayout.RowCount = 3;
-            aiLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 55));
-            aiLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 35));
-            aiLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
-            aiBox.Controls.Add(aiLayout);
 
             chatBox.Dock = DockStyle.Fill;
             chatBox.ReadOnly = true;
@@ -294,20 +340,71 @@ namespace SiemensTiaSkillSuite
             chatBox.BackColor = Color.FromArgb(247, 250, 244);
             chatBox.ForeColor = Ink;
             chatBox.Font = new Font("Microsoft YaHei UI", 9.4F);
-            chatBox.Text = "这里不会偷偷调用云端AI；它会根据项目结构和最近日志生成一份Codex任务草稿，方便回到主对话继续让Codex写PLC程序、改LAD、跑验证。\n";
-            aiLayout.Controls.Add(chatBox, 0, 0);
+            chatBox.Text = "AI 对话主界面\n\n这里会记录你提交的任务草稿、模型和工作流选择。真正的程序生成、LAD修改和克隆验证仍由 Codex 主对话或 workflow 脚本执行。\n";
+
+            mainTabs.Dock = DockStyle.Fill;
+            mainTabs.Font = new Font("Microsoft YaHei UI", 9.6F, FontStyle.Bold);
+            mainTabs.Appearance = TabAppearance.Normal;
+            mainTabs.Controls.Add(NewTab("AI 对话", chatBox));
+            mainTabs.Controls.Add(NewTab("日志输出", jobBox));
+            mainTabs.Controls.Add(NewTab("文件预览", previewBox));
+            mainTabs.Controls.Add(NewTab("Runs", runList));
+            mainLayout.Controls.Add(mainTabs, 0, 1);
+
+            GroupBox aiInputBox = NewGroup("AI交互与工作流");
+            aiInputBox.Dock = DockStyle.Fill;
+            center.Panel2.Controls.Add(aiInputBox);
+
+            TableLayoutPanel aiLayout = new TableLayoutPanel();
+            aiLayout.Dock = DockStyle.Fill;
+            aiLayout.RowCount = 2;
+            aiLayout.ColumnCount = 1;
+            aiLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
+            aiLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            aiInputBox.Controls.Add(aiLayout);
+
+            FlowLayoutPanel aiOptions = new FlowLayoutPanel();
+            aiOptions.Dock = DockStyle.Fill;
+            aiOptions.Padding = new Padding(8, 3, 8, 2);
+            aiOptions.BackColor = Card;
+            aiOptions.Controls.Add(NewSmallLabel("模型"));
+            ConfigureCombo(modelBox, new string[] { "gpt-5-codex", "gpt-5", "gpt-5-mini", "本地/手动" }, "gpt-5-codex", 128);
+            aiOptions.Controls.Add(modelBox);
+            aiOptions.Controls.Add(NewSmallLabel("工作流"));
+            ConfigureCombo(workflowSelectBox, new string[] { "读取项目并总结", "LAD编写与验证", "DB+程序块协同", "WinCC画面生成", "故障诊断", "工业化重构" }, "LAD编写与验证", 150);
+            aiOptions.Controls.Add(workflowSelectBox);
+            aiOptions.Controls.Add(NewSmallLabel("字体"));
+            PopulateFontOptions();
+            fontBox.Width = 170;
+            aiOptions.Controls.Add(fontBox);
+            aiOptions.Controls.Add(NewSmallLabel("字号"));
+            ConfigureCombo(fontSizeBox, new string[] { "9", "10", "11", "12", "14", "16", "18" }, "10", 62);
+            aiOptions.Controls.Add(fontSizeBox);
+            Button applyFont = NewButton("应用字体", Ink);
+            applyFont.Width = 92;
+            applyFont.Click += delegate { ApplySelectedFont(); };
+            aiOptions.Controls.Add(applyFont);
+            aiLayout.Controls.Add(aiOptions, 0, 0);
+
+            TableLayoutPanel inputLayout = new TableLayoutPanel();
+            inputLayout.Dock = DockStyle.Fill;
+            inputLayout.ColumnCount = 2;
+            inputLayout.RowCount = 1;
+            inputLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            inputLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 168));
+            aiLayout.Controls.Add(inputLayout, 0, 1);
 
             requestBox.Dock = DockStyle.Fill;
             requestBox.Multiline = true;
             requestBox.ScrollBars = ScrollBars.Vertical;
             StyleInput(requestBox);
             requestBox.Text = "例如：把FC5自动流程增加取料超时报警，用LAD写入并在克隆工程中编译验证。";
-            aiLayout.Controls.Add(requestBox, 0, 1);
+            inputLayout.Controls.Add(requestBox, 0, 0);
 
             Button promptButton = NewButton("生成 Codex 任务草稿", Teal);
             promptButton.Dock = DockStyle.Fill;
             promptButton.Click += delegate { CreateAiPrompt(); };
-            aiLayout.Controls.Add(promptButton, 0, 2);
+            inputLayout.Controls.Add(promptButton, 1, 0);
 
             Panel bottom = new Panel();
             bottom.Dock = DockStyle.Bottom;
@@ -325,6 +422,12 @@ namespace SiemensTiaSkillSuite
 
             tailTimer.Interval = 1200;
             tailTimer.Tick += delegate { RefreshCurrentJobTail(); };
+
+            Shown += delegate
+            {
+                SafeConfigureSplitter(outer, 240, 560, 360);
+                SafeConfigureSplitter(center, 300, 150, Math.Max(360, center.Height - 230));
+            };
         }
 
         private void WireEvents()
@@ -357,6 +460,9 @@ namespace SiemensTiaSkillSuite
                     }
                 }
             };
+
+            fontSizeBox.SelectedIndexChanged += delegate { ApplySelectedFont(); };
+            fontBox.SelectedIndexChanged += delegate { ApplySelectedFont(); };
         }
 
         private static GroupBox NewGroup(string title)
@@ -401,12 +507,169 @@ namespace SiemensTiaSkillSuite
             box.Font = new Font("Microsoft YaHei UI", 9F);
         }
 
+        private static TabPage NewTab(string title, Control inner)
+        {
+            TabPage page = new TabPage(title);
+            page.BackColor = Card;
+            page.Padding = new Padding(8);
+            inner.Dock = DockStyle.Fill;
+            page.Controls.Add(inner);
+            return page;
+        }
+
+        private static Label NewSmallLabel(string text)
+        {
+            return new Label
+            {
+                Text = text,
+                AutoSize = false,
+                Width = 40,
+                Height = 28,
+                TextAlign = ContentAlignment.MiddleRight,
+                ForeColor = MutedInk,
+                Margin = new Padding(8, 2, 2, 2)
+            };
+        }
+
+        private static void ConfigureCombo(ComboBox combo, string[] values, string selected, int width)
+        {
+            combo.DropDownStyle = ComboBoxStyle.DropDownList;
+            combo.Width = width;
+            combo.Height = 28;
+            combo.FlatStyle = FlatStyle.Flat;
+            combo.BackColor = Color.FromArgb(255, 254, 248);
+            combo.ForeColor = Ink;
+            combo.Items.Clear();
+            combo.Items.AddRange(values);
+            combo.SelectedItem = selected;
+            if (combo.SelectedIndex < 0 && combo.Items.Count > 0)
+            {
+                combo.SelectedIndex = 0;
+            }
+        }
+
+        private void PopulateFontOptions()
+        {
+            fontBox.DropDownStyle = ComboBoxStyle.DropDownList;
+            fontBox.FlatStyle = FlatStyle.Flat;
+            fontBox.BackColor = Color.FromArgb(255, 254, 248);
+            fontBox.ForeColor = Ink;
+            fontBox.Items.Clear();
+
+            InstalledFontCollection installed = new InstalledFontCollection();
+            foreach (FontFamily family in installed.Families)
+            {
+                if (family.IsStyleAvailable(FontStyle.Regular))
+                {
+                    fontBox.Items.Add(family.Name);
+                }
+            }
+
+            string preferred = FontFamilyExists("Microsoft YaHei UI") ? "Microsoft YaHei UI" : Font.FontFamily.Name;
+            fontBox.SelectedItem = preferred;
+            if (fontBox.SelectedIndex < 0 && fontBox.Items.Count > 0)
+            {
+                fontBox.SelectedIndex = 0;
+            }
+        }
+
+        private static bool FontFamilyExists(string name)
+        {
+            InstalledFontCollection installed = new InstalledFontCollection();
+            foreach (FontFamily family in installed.Families)
+            {
+                if (string.Equals(family.Name, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private void ApplySelectedFont()
+        {
+            try
+            {
+                string family = Convert.ToString(fontBox.SelectedItem);
+                float size = 10F;
+                float.TryParse(Convert.ToString(fontSizeBox.SelectedItem), out size);
+                Font uiFont = new Font(family, size, FontStyle.Regular);
+                Font codeFont = new Font(FontFamilyExists("Cascadia Code") ? "Cascadia Code" : family, Math.Max(8F, size - 0.5F), FontStyle.Regular);
+
+                ApplyFontRecursive(this, uiFont);
+                previewBox.Font = codeFont;
+                jobBox.Font = codeFont;
+                runList.Font = new Font(FontFamilyExists("Cascadia Mono") ? "Cascadia Mono" : family, Math.Max(8F, size - 0.5F), FontStyle.Regular);
+                projectTree.ItemHeight = Math.Max(22, (int)(size * 2.4F));
+                statusLabel.Text = "字体已应用：" + family + " " + size.ToString("0");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "字体应用失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private static void ApplyFontRecursive(Control control, Font font)
+        {
+            if (!(control is RichTextBox))
+            {
+                control.Font = font;
+            }
+            foreach (Control child in control.Controls)
+            {
+                ApplyFontRecursive(child, font);
+            }
+        }
+
         private Button CommandButton(string text, string command, Color color)
         {
             Button button = NewButton(text, color);
             button.Width = 132;
             button.Click += delegate { StartCommand(command); };
             return button;
+        }
+
+        private static void SafeSetSplitterDistance(SplitContainer splitter, int requestedDistance)
+        {
+            try
+            {
+                if (splitter.Width <= 0 || splitter.Height <= 0)
+                {
+                    return;
+                }
+
+                int span = splitter.Orientation == Orientation.Vertical ? splitter.Width : splitter.Height;
+                int max = span - splitter.Panel2MinSize - splitter.SplitterWidth;
+                int min = splitter.Panel1MinSize;
+                if (max <= min)
+                {
+                    return;
+                }
+
+                splitter.SplitterDistance = Math.Max(min, Math.Min(max, requestedDistance));
+            }
+            catch
+            {
+            }
+        }
+
+        private static void SafeConfigureSplitter(SplitContainer splitter, int panel1Min, int panel2Min, int requestedDistance)
+        {
+            try
+            {
+                int span = splitter.Orientation == Orientation.Vertical ? splitter.Width : splitter.Height;
+                if (span <= panel1Min + panel2Min + splitter.SplitterWidth)
+                {
+                    return;
+                }
+
+                splitter.Panel1MinSize = panel1Min;
+                splitter.Panel2MinSize = panel2Min;
+                SafeSetSplitterDistance(splitter, requestedDistance);
+            }
+            catch
+            {
+            }
         }
 
         private void LoadProject(string path)
@@ -425,6 +688,306 @@ namespace SiemensTiaSkillSuite
             {
                 MessageBox.Show(ex.Message, "加载失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void BrowseProject()
+        {
+            OpenFileDialog dialog = new OpenFileDialog();
+            dialog.Title = "选择 TIA Portal 项目文件";
+            dialog.Filter = "TIA Portal Projects (*.ap16;*.ap17;*.ap18;*.ap19;*.ap20;*.ap21)|*.ap16;*.ap17;*.ap18;*.ap19;*.ap20;*.ap21|All files (*.*)|*.*";
+            dialog.InitialDirectory = Directory.Exists(projectPathBox.Text) ? projectPathBox.Text : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            if (dialog.ShowDialog(this) == DialogResult.OK)
+            {
+                LoadProject(dialog.FileName);
+                return;
+            }
+
+            FolderBrowserDialog folder = new FolderBrowserDialog();
+            folder.Description = "也可以选择 TIA 项目所在文件夹";
+            if (Directory.Exists(projectPathBox.Text))
+            {
+                folder.SelectedPath = projectPathBox.Text;
+            }
+            if (folder.ShowDialog(this) == DialogResult.OK)
+            {
+                LoadProject(folder.SelectedPath);
+            }
+        }
+
+        private void AutoLoadCurrentTiaProject()
+        {
+            AutoLoadCurrentTiaProject(true);
+        }
+
+        private void AutoLoadCurrentTiaProject(bool showBrowseWhenMissing)
+        {
+            try
+            {
+                string detected = DetectCurrentTiaProjectPath();
+                if (string.IsNullOrWhiteSpace(detected))
+                {
+                    statusLabel.Text = "未识别到当前TIA项目";
+                    if (showBrowseWhenMissing)
+                    {
+                        MessageBox.Show("没有自动识别到当前 TIA 项目路径。可以点击“浏览打开”选择 .ap16-.ap21 文件。", "需要选择项目", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        BrowseProject();
+                    }
+                    return;
+                }
+
+                LoadProject(detected);
+                statusLabel.Text = "已自动识别项目";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "自动读取失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void OpenProjectWithDefaultApp()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string projectFile = FindFirstProjectFile(root);
+                if (string.IsNullOrWhiteSpace(projectFile))
+                {
+                    throw new FileNotFoundException("当前目录下没有找到 .ap16-.ap21 项目文件。", root);
+                }
+
+                ProcessStartInfo start = new ProcessStartInfo();
+                start.FileName = projectFile;
+                start.UseShellExecute = true;
+                Process.Start(start);
+                statusLabel.Text = "已交给TIA/默认程序打开";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "打开TIA项目失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void OpenProjectFolder()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                Process.Start("explorer.exe", QuoteForExplorer(root));
+                statusLabel.Text = "已打开项目文件夹";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "打开文件夹失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private string DetectCurrentTiaProjectPath()
+        {
+            List<string> candidates = new List<string>();
+            candidates.AddRange(ProjectPathsFromTiaCommandLines());
+
+            if (!string.IsNullOrWhiteSpace(projectPathBox.Text))
+            {
+                AddProjectCandidates(candidates, projectPathBox.Text);
+            }
+
+            AddProjectCandidates(candidates, Directory.GetCurrentDirectory());
+            AddProjectCandidates(candidates, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Documents"));
+            AddProjectCandidates(candidates, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"));
+            AddLikelyProjectRoots(candidates);
+
+            string newest = "";
+            DateTime newestTime = DateTime.MinValue;
+            foreach (string path in candidates)
+            {
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    continue;
+                }
+                string root = ResolveProjectRoot(path);
+                string projectFile = FindFirstProjectFile(root);
+                if (string.IsNullOrWhiteSpace(projectFile))
+                {
+                    continue;
+                }
+                DateTime time = File.GetLastWriteTime(projectFile);
+                if (time > newestTime)
+                {
+                    newestTime = time;
+                    newest = projectFile;
+                }
+            }
+            return newest;
+        }
+
+        private static void AddLikelyProjectRoots(List<string> candidates)
+        {
+            try
+            {
+                foreach (DriveInfo drive in DriveInfo.GetDrives())
+                {
+                    if (!drive.IsReady || drive.DriveType != DriveType.Fixed)
+                    {
+                        continue;
+                    }
+
+                    AddProjectCandidates(candidates, Path.Combine(drive.RootDirectory.FullName, "plc"));
+                    AddProjectCandidates(candidates, Path.Combine(drive.RootDirectory.FullName, "PLC"));
+                    AddProjectCandidates(candidates, Path.Combine(drive.RootDirectory.FullName, "TIA"));
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        private static List<string> ProjectPathsFromTiaCommandLines()
+        {
+            List<string> rows = new List<string>();
+            try
+            {
+                ProcessStartInfo start = new ProcessStartInfo();
+                start.FileName = "powershell.exe";
+                start.Arguments = "-NoProfile -Command \"Get-CimInstance Win32_Process | Where-Object { $_.Name -like 'Siemens.Automation.Portal*' } | Select-Object -ExpandProperty CommandLine\"";
+                start.UseShellExecute = false;
+                start.CreateNoWindow = true;
+                start.RedirectStandardOutput = true;
+                start.RedirectStandardError = true;
+                using (Process process = Process.Start(start))
+                {
+                    string text = process.StandardOutput.ReadToEnd();
+                    process.WaitForExit(5000);
+                    foreach (string line in text.Split(new string[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        foreach (string candidate in ExtractProjectPaths(line))
+                        {
+                            rows.Add(candidate);
+                        }
+                    }
+                }
+            }
+            catch
+            {
+            }
+            return rows;
+        }
+
+        private static IEnumerable<string> ExtractProjectPaths(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                yield break;
+            }
+
+            Regex pathPattern = new Regex("\"(?<path>[^\"]+\\.ap(?:16|17|18|19|20|21))\"|(?<path>[^\\s\"]+\\.ap(?:16|17|18|19|20|21))", RegexOptions.IgnoreCase);
+            foreach (Match match in pathPattern.Matches(text))
+            {
+                string candidate = match.Groups["path"].Value.Trim();
+                if (!string.IsNullOrWhiteSpace(candidate))
+                {
+                    yield return candidate;
+                }
+            }
+        }
+
+        private static void AddProjectCandidates(List<string> candidates, string path)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path) && !File.Exists(path))
+                {
+                    return;
+                }
+                if (File.Exists(path))
+                {
+                    candidates.Add(path);
+                    return;
+                }
+                string projectFile = FindFirstProjectFile(path);
+                if (string.IsNullOrWhiteSpace(projectFile))
+                {
+                    projectFile = FindFirstProjectFileDeep(path, 4);
+                }
+                if (!string.IsNullOrWhiteSpace(projectFile))
+                {
+                    candidates.Add(projectFile);
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        private static string FindFirstProjectFile(string root)
+        {
+            if (File.Exists(root) && IsTiaProjectFile(root))
+            {
+                return root;
+            }
+            if (!Directory.Exists(root))
+            {
+                return "";
+            }
+
+            string newest = "";
+            DateTime newestTime = DateTime.MinValue;
+            foreach (string file in Directory.GetFiles(root, "*.ap*", SearchOption.TopDirectoryOnly))
+            {
+                if (!IsTiaProjectFile(file))
+                {
+                    continue;
+                }
+                DateTime time = File.GetLastWriteTime(file);
+                if (time > newestTime)
+                {
+                    newest = file;
+                    newestTime = time;
+                }
+            }
+            return newest;
+        }
+
+        private static string FindFirstProjectFileDeep(string root, int maxDepth)
+        {
+            if (!Directory.Exists(root) || maxDepth < 0)
+            {
+                return "";
+            }
+
+            string direct = FindFirstProjectFile(root);
+            if (!string.IsNullOrWhiteSpace(direct))
+            {
+                return direct;
+            }
+
+            string newest = "";
+            DateTime newestTime = DateTime.MinValue;
+            foreach (string dir in SafeGetDirectories(root))
+            {
+                string name = Path.GetFileName(dir);
+                if (name == ".git" || name == "_backup" || name == "node_modules" || name == "__pycache__")
+                {
+                    continue;
+                }
+                string candidate = FindFirstProjectFileDeep(dir, maxDepth - 1);
+                if (string.IsNullOrWhiteSpace(candidate))
+                {
+                    continue;
+                }
+                DateTime time = File.GetLastWriteTime(candidate);
+                if (time > newestTime)
+                {
+                    newestTime = time;
+                    newest = candidate;
+                }
+            }
+            return newest;
+        }
+
+        private static bool IsTiaProjectFile(string path)
+        {
+            string ext = Path.GetExtension(path).ToLowerInvariant();
+            return ext == ".ap16" || ext == ".ap17" || ext == ".ap18" || ext == ".ap19" || ext == ".ap20" || ext == ".ap21";
         }
 
         private static string ResolveProjectRoot(string path)
@@ -557,6 +1120,10 @@ namespace SiemensTiaSkillSuite
             {
                 runList.Items.Add(row);
             }
+            if (mainTabs.TabPages.Count >= 4)
+            {
+                mainTabs.SelectedIndex = 3;
+            }
         }
 
         private void ShowFile(string path)
@@ -564,6 +1131,10 @@ namespace SiemensTiaSkillSuite
             try
             {
                 previewBox.Text = ReadText(path);
+                if (mainTabs.TabPages.Count >= 3)
+                {
+                    mainTabs.SelectedIndex = 2;
+                }
             }
             catch (Exception ex)
             {
@@ -656,6 +1227,10 @@ namespace SiemensTiaSkillSuite
                 };
 
                 jobBox.Text = "启动命令：" + command + Environment.NewLine + start.Arguments + Environment.NewLine + "日志：" + currentStdoutPath + Environment.NewLine;
+                if (mainTabs.TabPages.Count >= 2)
+                {
+                    mainTabs.SelectedIndex = 1;
+                }
                 statusLabel.Text = "运行中：" + command;
                 currentProcess.Start();
                 currentProcess.BeginOutputReadLine();
@@ -733,6 +1308,15 @@ namespace SiemensTiaSkillSuite
             return "\"" + value.Replace("\"", "\\\"") + "\"";
         }
 
+        private static string QuoteForExplorer(string value)
+        {
+            if (value == null)
+            {
+                return "\"\"";
+            }
+            return "\"" + value.Replace("\"", "\"\"") + "\"";
+        }
+
         private void AppendOutput(string path, string line)
         {
             if (line == null)
@@ -800,6 +1384,8 @@ namespace SiemensTiaSkillSuite
                 content.AppendLine();
                 content.AppendLine("Created: " + DateTime.Now.ToString("s"));
                 content.AppendLine("Project: `" + root + "`");
+                content.AppendLine("Model: `" + Convert.ToString(modelBox.SelectedItem) + "`");
+                content.AppendLine("Workflow: `" + Convert.ToString(workflowSelectBox.SelectedItem) + "`");
                 content.AppendLine();
                 content.AppendLine("## User Request");
                 content.AppendLine();
@@ -817,8 +1403,14 @@ namespace SiemensTiaSkillSuite
                 content.AppendLine("2. Edit exported LAD XML, LAD JSON specs, SCL sources, or DB sources.");
                 content.AppendLine("3. Use `write-cycle` on a cloned project before applying to the real project.");
                 File.WriteAllText(path, content.ToString(), Encoding.UTF8);
-                chatBox.AppendText(Environment.NewLine + "已生成任务草稿：" + path + Environment.NewLine);
+                chatBox.AppendText(Environment.NewLine + "用户任务：" + requestBox.Text.Trim() + Environment.NewLine);
+                chatBox.AppendText("模型：" + Convert.ToString(modelBox.SelectedItem) + "    工作流：" + Convert.ToString(workflowSelectBox.SelectedItem) + Environment.NewLine);
+                chatBox.AppendText("已生成任务草稿：" + path + Environment.NewLine);
                 previewBox.Text = ReadText(path);
+                if (mainTabs.TabPages.Count > 0)
+                {
+                    mainTabs.SelectedIndex = 0;
+                }
             }
             catch (Exception ex)
             {

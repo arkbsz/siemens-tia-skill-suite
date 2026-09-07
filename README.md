@@ -30,7 +30,7 @@
 - 导出和导入 FC、FB、DB、LAD XML、SCL
 - LAD 梯形图模板化生成与网络批量写入
 - WinCC 画面、变量、报警、Faceplate、导航、版式与运行时联动自动化
-- 本地窗口版 `PLCDevConsole.exe`：项目结构、runs/log、常用工作流按钮和 AI 任务草稿区
+- 本地窗口版 `PLCDevConsole.exe`：自动识别 TIA 项目、左侧可拖动项目树、中心日志/预览/对话页面、底部 AI 工作流任务区
 - 本地 Openness 自动化和 REST 桥接
 - `V16-V21` 版本探测、项目后缀识别、程序集路径路由
 - 编译验证与回读比对
@@ -86,9 +86,11 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex
 
 控制台包含：
 
-- 左侧项目结构：查看 `.ap16-.ap21` 工程、导出 XML、SCL、DB、UDT、报告和日志。
-- 中间工作流与日志：运行 `doctor`、快速读取、完整导出、列块、`write-cycle` 克隆验证。
-- 右侧 AI 对话区：生成带当前项目结构、最近 runs 和块列表的 Codex 任务草稿，保存到 `PLC_Code\ai-prompts`。
+- 顶部项目栏：自动读取当前 TIA Portal 相关项目，也可以浏览 `.ap16-.ap21` 文件、打开项目文件夹或交给 TIA/默认程序打开。
+- 左侧项目结构：可拖动宽度，查看 `.ap16-.ap21` 工程、导出 XML、SCL、DB、UDT、报告和日志。
+- 中间主界面：通过 Tab 切换 AI 对话、日志输出、文件预览和 runs 列表，并可上下拉伸工作区。
+- 底部 AI 交互区：选择模型、工作流、字体和字号，生成带当前项目结构、最近 runs 和块列表的 Codex 任务草稿，保存到 `PLC_Code\ai-prompts`。
+- 视觉设置：使用柔和工业渐变、卡片式区域、圆角按钮，并读取 Windows 本机字体库供界面文字配置。
 
 `console` 和 `console-exe` 默认启动窗口版。旧的浏览器控制台保留为备用入口 `console-web`，不再作为默认方式。当前 AI 区定位是“Codex 任务草稿生成器”，不会在后台偷偷调用云端模型。真正的程序生成、审查、LAD 修改和导入验证仍建议回到 Codex 主对话执行。
 

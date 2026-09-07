@@ -52,7 +52,7 @@ Use `console` when the workflow needs a native Windows window instead of only te
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" console -ProjectPath "D:\path\to\project"
 ```
 
-The default `console` route builds and opens `PLCDevConsole.exe`. It provides project tree browsing, run/log preview, buttons for common Openness workflows, a `write-cycle` input box for generated LAD XML, and an AI task composer that saves context-rich Codex prompts under `PLC_Code\ai-prompts`. Use `console-web` only as a fallback browser UI.
+The default `console` route builds and opens `PLCDevConsole.exe`. It provides automatic current-TIA-project detection, browse/open actions, a draggable left project tree, switchable center pages for AI chat/log/file preview/runs, common Openness workflow buttons, a `write-cycle` input box for generated LAD XML, and a bottom AI task composer with model/workflow selection plus Windows font-library UI settings. The AI composer saves context-rich Codex prompts under `PLC_Code\ai-prompts`. Use `console-web` only as a fallback browser UI.
 
 ## Read-cycle entry point
 
