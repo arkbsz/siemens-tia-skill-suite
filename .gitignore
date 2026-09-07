@@ -1,2 +1,5 @@
 gcm-diagnose.log
 skills/tia-portal-v17/scripts/bin/
+__pycache__/
+*.pyc
+skills/*/scripts/.session-cache/

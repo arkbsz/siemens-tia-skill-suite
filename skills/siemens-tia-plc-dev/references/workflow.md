@@ -22,6 +22,7 @@ Use this when the task is about Siemens PLC development in general rather than o
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\bootstrap-siemens-plc-dev.ps1" -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\refresh-plc-libraries.ps1" -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" route-info
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" console -ProjectPath "D:\path\to\project" -Background
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" doctor -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" read-cycle -ProjectPath "D:\path\to\project" -UseUi
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" clone-project -ProjectPath "D:\path\to\project"
@@ -42,6 +43,16 @@ For live TIA reads or writes, treat `probe` or `doctor` as a hard gate:
 When the session gate is closed, keep moving with source-only LAD XML, SCL, summaries, templates, and release-package preparation instead of waiting on a stuck Openness run.
 
 If a live command fails with `EngineeringSecurityException`, `Security error`, or a timeout immediately after a fresh install, treat it as a first-run Openness trust handshake problem. Run the same read once with `-UseUi` or open the project manually in TIA Portal and rerun with `-Attach`; do not keep retrying no-UI commands.
+
+## Visual console entry point
+
+Use `console` when the workflow needs a window instead of only terminal commands:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" console -ProjectPath "D:\path\to\project" -Background
+```
+
+The console provides project tree browsing, run/log preview, buttons for common Openness workflows, a `write-cycle` input box for generated LAD XML, and an AI task composer that saves context-rich Codex prompts under `PLC_Code\ai-prompts`.
 
 ## Read-cycle entry point
 

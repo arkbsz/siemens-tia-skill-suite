@@ -35,6 +35,23 @@ Treat PLC work like software work:
 
 For the generic workflow, read `references/workflow.md`.
 
+## Visual console
+
+Use the local visual console when the user wants a better interaction surface than terminal commands. It opens a browser-based window with:
+
+- project tree for `.ap16` through `.ap21`, exported XML/SCL/DB/UDT, reports, and logs
+- common workflow buttons for `doctor`, `read-cycle`, `list-blocks`, and `write-cycle`
+- run and log preview panels for `PLC_Code\runs` and `PLC_Code\console-jobs`
+- an AI task box that creates a Codex-ready prompt file under `PLC_Code\ai-prompts`
+
+Start it with:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" console -ProjectPath "D:\path\to\project" -Background
+```
+
+The first version keeps the AI panel as a Codex task composer rather than a hidden cloud agent. Use the generated prompt file in the main Codex thread for code generation, LAD review, and safe write-cycle execution.
+
 ## Local bridge
 
 This release keeps the legacy sibling skill name `tia-portal-v17`, but the packaged bridge now routes TIA Portal `V16` through `V21`.
@@ -44,6 +61,7 @@ Use the wrapper scripts in this skill to stay generic:
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\bootstrap-siemens-plc-dev.ps1" -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\refresh-plc-libraries.ps1" -ProjectPath "D:\path\to\project"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" console -ProjectPath "D:\path\to\project" -Background
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" doctor -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" read-cycle -ProjectPath "D:\path\to\project" -UseUi
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" list-blocks --project "D:\path\to\project"

@@ -16,6 +16,7 @@ function Show-Help {
 Siemens TIA PLC Dev
 Commands:
   route-info
+  console [-ProjectPath <projectDir|ap16..ap21>] [-Port <n>] [-Background] [-NoOpen]
   doctor [-ProjectPath <projectDir|ap16..ap21>]
   create-project --name <projectName> [--directory <dir>] [--device-type <typeIdentifier>] [--device-item-type <typeIdentifier>] [--item-name <name>] [--device-name <name>]
   hold-project --project <projectDir|ap16..ap21> [--ui] [--lease-file <path>] [--poll-ms <ms>]
@@ -134,6 +135,10 @@ switch ($Command.ToLowerInvariant()) {
             AvailableBridgeSkills = $available
             GenericSkill = Split-Path -Parent $PSScriptRoot
         } | ConvertTo-Json -Depth 5
+        break
+    }
+    "console" {
+        Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "start-plc-dev-console.ps1") -Arguments $CommandArgs
         break
     }
     "probe" {

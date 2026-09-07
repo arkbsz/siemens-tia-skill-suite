@@ -95,6 +95,7 @@
                   "V21 helper builds switch to modular Openness assemblies under PublicAPI\\V21\\net48 while V16-V20 keep the classic Siemens.Engineering.dll route.",
                   "read-cycle is the preferred first project intake command after Openness readiness is confirmed.",
                   "write-cycle is the preferred generated LAD XML safety gate before applying any release to a production project.",
-                  "write-cycle writes current-step.json plus stdout/stderr temp logs and supports StepTimeoutSeconds for no-hang live Openness operation."
+                  "write-cycle writes current-step.json plus stdout/stderr temp logs and supports StepTimeoutSeconds for no-hang live Openness operation.",
+                  "The visual console is available through the console command and provides project tree, runs/logs, workflow buttons, and Codex-ready AI task drafting."
               ]
 }
