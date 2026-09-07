@@ -23,6 +23,7 @@
 - Added an IDE-style native menu bar with File/Edit/View/Navigation/Code/Refactor/Run/Tools/Git/Window/Help menus, moved settings into a scrollable Tools drop-down panel, and reduced bottom-panel crowding to prevent overlapping controls.
 - Trimmed the native console header into a compact one-line project toolbar and wrapped the main workspace in a right-side scrollable canvas with mouse-wheel support.
 - Reworked the native console command area into separate fixed rows for workflow buttons, LAD/XML inputs, and content tabs, and corrected dock ordering so scrollable content no longer slips underneath the menu bar.
+- Added an AI-area quick configuration row and project-level `PLC_Code\config\ai-workflow.json` persistence; read/write cycles now consume the configuration, enforce its session and safety choices, and archive a snapshot in each workflow report.
 - Added a WinCC visual AI workflow reference for turning uploaded screenshots or text descriptions into WinCC-native screens, faceplates, tags, alarms, navigation, and SiVArc/Openess implementation plans.
 - Validated the installed skill path after TIA/Openness reinstall on 2026-09-07: `read-cycle -ProjectPath "D:\plc\手动程序" -Attach -SkipExport` detected `V17` and `PLC_1`.
 - Added a reusable knowledge-retrieval reference plus broader official instruction-family links for math, conversion, string, word-logic, and shift/rotate routes.

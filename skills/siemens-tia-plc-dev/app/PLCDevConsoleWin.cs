@@ -77,6 +77,12 @@ namespace SiemensTiaSkillSuite
         private readonly MenuStrip mainMenu = new MenuStrip();
         private readonly ComboBox modelBox = new ComboBox();
         private readonly ComboBox workflowSelectBox = new ComboBox();
+        private readonly ComboBox quickModelBox = new ComboBox();
+        private readonly ComboBox quickWorkflowBox = new ComboBox();
+        private readonly ComboBox languagePreferenceBox = new ComboBox();
+        private readonly ComboBox tiaSessionModeBox = new ComboBox();
+        private readonly ComboBox safetyModeBox = new ComboBox();
+        private readonly ComboBox timeoutSecondsBox = new ComboBox();
         private readonly ComboBox apiProviderBox = new ComboBox();
         private readonly ComboBox imageWorkflowBox = new ComboBox();
         private readonly ComboBox imageModelBox = new ComboBox();
@@ -114,6 +120,9 @@ namespace SiemensTiaSkillSuite
         private string currentStderrPath = "";
         private Process currentProcess;
         private bool applyingWorkflowDefaults;
+        private bool synchronizingSettings;
+        private bool loadingWorkflowConfig;
+        private string workflowConfigPath = "";
 
         public MainForm(string projectPath, string invokeScriptArg)
         {
@@ -428,10 +437,40 @@ namespace SiemensTiaSkillSuite
 
             TableLayoutPanel aiLayout = new TableLayoutPanel();
             aiLayout.Dock = DockStyle.Fill;
-            aiLayout.RowCount = 1;
+            aiLayout.RowCount = 2;
             aiLayout.ColumnCount = 1;
+            aiLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
             aiLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             aiInputBox.Controls.Add(aiLayout);
+
+            FlowLayoutPanel configBar = new FlowLayoutPanel();
+            configBar.Dock = DockStyle.Fill;
+            configBar.WrapContents = false;
+            configBar.AutoScroll = true;
+            configBar.FlowDirection = FlowDirection.LeftToRight;
+            configBar.Padding = new Padding(4, 3, 4, 2);
+            configBar.BackColor = CardSoft;
+            configBar.Controls.Add(NewWideLabel("模型"));
+            configBar.Controls.Add(quickModelBox);
+            configBar.Controls.Add(NewWideLabel("工作流"));
+            configBar.Controls.Add(quickWorkflowBox);
+            configBar.Controls.Add(NewWideLabel("语言"));
+            configBar.Controls.Add(languagePreferenceBox);
+            configBar.Controls.Add(NewWideLabel("TIA连接"));
+            configBar.Controls.Add(tiaSessionModeBox);
+            configBar.Controls.Add(NewWideLabel("安全策略"));
+            configBar.Controls.Add(safetyModeBox);
+            configBar.Controls.Add(NewWideLabel("超时(s)"));
+            configBar.Controls.Add(timeoutSecondsBox);
+            Button saveConfigButton = NewButton("保存配置", Ink);
+            saveConfigButton.Width = 102;
+            saveConfigButton.Click += delegate { SaveWorkflowConfig(true); };
+            configBar.Controls.Add(saveConfigButton);
+            Button viewConfigButton = NewButton("查看配置", Teal);
+            viewConfigButton.Width = 102;
+            viewConfigButton.Click += delegate { ShowWorkflowConfig(); };
+            configBar.Controls.Add(viewConfigButton);
+            aiLayout.Controls.Add(configBar, 0, 0);
 
             TableLayoutPanel inputLayout = new TableLayoutPanel();
             inputLayout.Dock = DockStyle.Fill;
@@ -439,7 +478,7 @@ namespace SiemensTiaSkillSuite
             inputLayout.RowCount = 1;
             inputLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             inputLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 168));
-            aiLayout.Controls.Add(inputLayout, 0, 0);
+            aiLayout.Controls.Add(inputLayout, 0, 1);
 
             requestBox.Dock = DockStyle.Fill;
             requestBox.Multiline = true;
@@ -496,9 +535,39 @@ namespace SiemensTiaSkillSuite
                 }
             };
 
-            fontSizeBox.SelectedIndexChanged += delegate { ApplySelectedFont(); };
-            fontBox.SelectedIndexChanged += delegate { ApplySelectedFont(); };
-            workflowSelectBox.SelectedIndexChanged += delegate { ApplyWorkflowDefaults(false); };
+            fontSizeBox.SelectedIndexChanged += delegate { ApplySelectedFont(); SaveWorkflowConfig(false); };
+            fontBox.SelectedIndexChanged += delegate { ApplySelectedFont(); SaveWorkflowConfig(false); };
+            modelBox.SelectedIndexChanged += delegate
+            {
+                if (synchronizingSettings) { return; }
+                SyncQuickSettingsFromAdvanced();
+                SaveWorkflowConfig(false);
+            };
+            workflowSelectBox.SelectedIndexChanged += delegate
+            {
+                if (synchronizingSettings) { return; }
+                if (!loadingWorkflowConfig)
+                {
+                    ApplyWorkflowDefaults(false);
+                }
+                SyncQuickSettingsFromAdvanced();
+                SaveWorkflowConfig(false);
+            };
+            quickModelBox.SelectedIndexChanged += delegate { ApplyQuickSettingsToAdvanced(false); };
+            quickWorkflowBox.SelectedIndexChanged += delegate { ApplyQuickSettingsToAdvanced(true); };
+            languagePreferenceBox.SelectedIndexChanged += delegate { SaveWorkflowConfig(false); };
+            tiaSessionModeBox.SelectedIndexChanged += delegate { SaveWorkflowConfig(false); };
+            safetyModeBox.SelectedIndexChanged += delegate { SaveWorkflowConfig(false); };
+            timeoutSecondsBox.SelectedIndexChanged += delegate { SaveWorkflowConfig(false); };
+            apiProviderBox.SelectedIndexChanged += delegate { SaveWorkflowConfig(false); };
+            imageWorkflowBox.SelectedIndexChanged += delegate { SaveWorkflowConfig(false); };
+            imageModelBox.SelectedIndexChanged += delegate { SaveWorkflowConfig(false); };
+            imageQualityBox.SelectedIndexChanged += delegate { SaveWorkflowConfig(false); };
+            imageSizeBox.SelectedIndexChanged += delegate { SaveWorkflowConfig(false); };
+            componentStrategyBox.SelectedIndexChanged += delegate { SaveWorkflowConfig(false); };
+            apiBaseBox.Leave += delegate { SaveWorkflowConfig(false); };
+            apiKeyEnvBox.Leave += delegate { SaveWorkflowConfig(false); };
+            plcNameBox.Leave += delegate { SaveWorkflowConfig(false); };
             requestBox.TextChanged += delegate { ApplyWorkflowDefaults(true); };
             referenceImageBox.TextChanged += delegate
             {
@@ -506,7 +575,9 @@ namespace SiemensTiaSkillSuite
                 {
                     LoadReferencePreview(referenceImageBox.Text);
                 }
+                SaveWorkflowConfig(false);
             };
+            FormClosing += delegate { SaveWorkflowConfig(false); };
         }
 
         private void LayoutScrollableContent()
@@ -562,8 +633,16 @@ namespace SiemensTiaSkillSuite
 
         private void ConfigureSettingsControls()
         {
-            ConfigureCombo(modelBox, new string[] { "gpt-5-codex", "gpt-5", "gpt-5-mini", "本地/手动" }, "gpt-5-codex", 150);
-            ConfigureCombo(workflowSelectBox, new string[] { "自动选择", "读取项目并总结", "LAD编写与验证", "DB+程序块协同", "WinCC画面生成", "WinCC参考图复刻", "故障诊断", "工业化重构" }, "自动选择", 168);
+            string[] models = new string[] { "gpt-5-codex", "gpt-5", "gpt-5-mini", "本地/手动" };
+            string[] workflows = new string[] { "自动选择", "读取项目并总结", "LAD编写与验证", "DB+程序块协同", "WinCC画面生成", "WinCC参考图复刻", "故障诊断", "工业化重构" };
+            ConfigureCombo(modelBox, models, "gpt-5-codex", 150);
+            ConfigureCombo(workflowSelectBox, workflows, "自动选择", 168);
+            ConfigureCombo(quickModelBox, models, "gpt-5-codex", 132);
+            ConfigureCombo(quickWorkflowBox, workflows, "自动选择", 154);
+            ConfigureCombo(languagePreferenceBox, new string[] { "LAD优先", "按项目现有语言", "FBD优先", "SCL优先" }, "LAD优先", 126);
+            ConfigureCombo(tiaSessionModeBox, new string[] { "自动附加", "附加当前TIA", "显示TIA界面" }, "自动附加", 126);
+            ConfigureCombo(safetyModeBox, new string[] { "只生成不写入", "克隆编译验证", "克隆验证并生成发布包" }, "克隆编译验证", 168);
+            ConfigureCombo(timeoutSecondsBox, new string[] { "300", "600", "900", "1200" }, "600", 72);
             ConfigureCombo(apiProviderBox, new string[] { "Codex内置", "OpenAI API", "Azure OpenAI", "本地/手动" }, "Codex内置", 142);
             ConfigureCombo(imageWorkflowBox, new string[] { "自动", "无图像", "文生图", "图生图/参考图" }, "自动", 142);
             ConfigureCombo(imageModelBox, new string[] { "内置imagegen", "gpt-image-2", "gpt-image-1.5", "自定义" }, "内置imagegen", 142);
@@ -1033,6 +1112,278 @@ namespace SiemensTiaSkillSuite
             }
         }
 
+        private void ApplyQuickSettingsToAdvanced(bool applyWorkflowDefaults)
+        {
+            if (synchronizingSettings)
+            {
+                return;
+            }
+
+            try
+            {
+                synchronizingSettings = true;
+                SelectCombo(modelBox, Convert.ToString(quickModelBox.SelectedItem));
+                SelectCombo(workflowSelectBox, Convert.ToString(quickWorkflowBox.SelectedItem));
+            }
+            finally
+            {
+                synchronizingSettings = false;
+            }
+
+            if (applyWorkflowDefaults && !loadingWorkflowConfig)
+            {
+                ApplyWorkflowDefaults(false);
+            }
+            SyncQuickSettingsFromAdvanced();
+            SaveWorkflowConfig(false);
+        }
+
+        private void SyncQuickSettingsFromAdvanced()
+        {
+            if (synchronizingSettings)
+            {
+                return;
+            }
+
+            try
+            {
+                synchronizingSettings = true;
+                SelectCombo(quickModelBox, Convert.ToString(modelBox.SelectedItem));
+                SelectCombo(quickWorkflowBox, Convert.ToString(workflowSelectBox.SelectedItem));
+            }
+            finally
+            {
+                synchronizingSettings = false;
+            }
+        }
+
+        private string SaveWorkflowConfig(bool notifyUser)
+        {
+            if (loadingWorkflowConfig)
+            {
+                return workflowConfigPath;
+            }
+
+            try
+            {
+                string root = projectRoot;
+                if (string.IsNullOrWhiteSpace(root))
+                {
+                    if (string.IsNullOrWhiteSpace(projectPathBox.Text))
+                    {
+                        return "";
+                    }
+                    root = ResolveProjectRoot(projectPathBox.Text);
+                }
+
+                string configDir = Path.Combine(root, "PLC_Code", "config");
+                Directory.CreateDirectory(configDir);
+                workflowConfigPath = Path.Combine(configDir, "ai-workflow.json");
+
+                string safetyMode = SelectedText(safetyModeBox, "克隆编译验证");
+                StringBuilder json = new StringBuilder();
+                json.AppendLine("{");
+                json.AppendLine("  \"schemaVersion\": 1,");
+                json.AppendLine("  \"updatedAt\": " + JsonString(DateTime.Now.ToString("o")) + ",");
+                json.AppendLine("  \"projectRoot\": " + JsonString(root) + ",");
+                json.AppendLine("  \"routing\": {");
+                json.AppendLine("    \"codeModel\": " + JsonString(SelectedText(modelBox, "gpt-5-codex")) + ",");
+                json.AppendLine("    \"workflow\": " + JsonString(SelectedText(workflowSelectBox, "自动选择")) + ",");
+                json.AppendLine("    \"languagePreference\": " + JsonString(SelectedText(languagePreferenceBox, "LAD优先")) + ",");
+                json.AppendLine("    \"apiProvider\": " + JsonString(SelectedText(apiProviderBox, "Codex内置")) + ",");
+                json.AppendLine("    \"apiBase\": " + JsonString(apiBaseBox.Text.Trim()) + ",");
+                json.AppendLine("    \"apiKeyEnvironment\": " + JsonString(EmptyAsDefault(apiKeyEnvBox.Text.Trim(), "OPENAI_API_KEY")));
+                json.AppendLine("  },");
+                json.AppendLine("  \"tia\": {");
+                json.AppendLine("    \"sessionMode\": " + JsonString(SelectedText(tiaSessionModeBox, "自动附加")) + ",");
+                json.AppendLine("    \"plcName\": " + JsonString(PlcName()) + ",");
+                json.AppendLine("    \"stepTimeoutSeconds\": " + WorkflowTimeoutSeconds().ToString());
+                json.AppendLine("  },");
+                json.AppendLine("  \"safety\": {");
+                json.AppendLine("    \"safetyMode\": " + JsonString(safetyMode) + ",");
+                json.AppendLine("    \"backupFirst\": true,");
+                json.AppendLine("    \"cloneBeforeWrite\": " + (safetyMode == "只生成不写入" ? "false" : "true") + ",");
+                json.AppendLine("    \"generateReleasePackage\": " + (safetyMode == "克隆验证并生成发布包" ? "true" : "false") + ",");
+                json.AppendLine("    \"allowProductionWrite\": false");
+                json.AppendLine("  },");
+                json.AppendLine("  \"image\": {");
+                json.AppendLine("    \"workflow\": " + JsonString(SelectedText(imageWorkflowBox, "自动")) + ",");
+                json.AppendLine("    \"model\": " + JsonString(SelectedText(imageModelBox, "内置imagegen")) + ",");
+                json.AppendLine("    \"quality\": " + JsonString(SelectedText(imageQualityBox, "auto")) + ",");
+                json.AppendLine("    \"size\": " + JsonString(SelectedText(imageSizeBox, "1536x1024")) + ",");
+                json.AppendLine("    \"componentStrategy\": " + JsonString(SelectedText(componentStrategyBox, "自动匹配+自定义")) + ",");
+                json.AppendLine("    \"referenceImage\": " + JsonString(referenceImageBox.Text.Trim()));
+                json.AppendLine("  },");
+                json.AppendLine("  \"ui\": {");
+                json.AppendLine("    \"fontFamily\": " + JsonString(SelectedText(fontBox, Font.FontFamily.Name)) + ",");
+                json.AppendLine("    \"fontSize\": " + JsonString(SelectedText(fontSizeBox, "10")));
+                json.AppendLine("  }");
+                json.AppendLine("}");
+                File.WriteAllText(workflowConfigPath, json.ToString(), Encoding.UTF8);
+
+                if (notifyUser)
+                {
+                    statusLabel.Text = "工作流配置已保存";
+                    previewBox.Text = ReadText(workflowConfigPath);
+                    SelectMainTab(2);
+                }
+                return workflowConfigPath;
+            }
+            catch (Exception ex)
+            {
+                if (notifyUser)
+                {
+                    MessageBox.Show(ex.Message, "保存工作流配置失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+                return "";
+            }
+        }
+
+        private void LoadWorkflowConfig(string root)
+        {
+            workflowConfigPath = Path.Combine(root, "PLC_Code", "config", "ai-workflow.json");
+            if (!File.Exists(workflowConfigPath))
+            {
+                SyncQuickSettingsFromAdvanced();
+                SaveWorkflowConfig(false);
+                return;
+            }
+
+            try
+            {
+                loadingWorkflowConfig = true;
+                string json = ReadText(workflowConfigPath);
+                SelectCombo(modelBox, JsonStringValue(json, "codeModel", SelectedText(modelBox, "gpt-5-codex")));
+                SelectCombo(workflowSelectBox, JsonStringValue(json, "workflow", SelectedText(workflowSelectBox, "自动选择")));
+                SelectCombo(languagePreferenceBox, JsonStringValue(json, "languagePreference", SelectedText(languagePreferenceBox, "LAD优先")));
+                SelectCombo(apiProviderBox, JsonStringValue(json, "apiProvider", SelectedText(apiProviderBox, "Codex内置")));
+                apiBaseBox.Text = JsonStringValue(json, "apiBase", apiBaseBox.Text);
+                apiKeyEnvBox.Text = JsonStringValue(json, "apiKeyEnvironment", apiKeyEnvBox.Text);
+                SelectCombo(tiaSessionModeBox, JsonStringValue(json, "sessionMode", SelectedText(tiaSessionModeBox, "自动附加")));
+                plcNameBox.Text = JsonStringValue(json, "plcName", PlcName());
+                SelectCombo(timeoutSecondsBox, JsonNumberValue(json, "stepTimeoutSeconds", WorkflowTimeoutSeconds()).ToString());
+                SelectCombo(safetyModeBox, JsonStringValue(json, "safetyMode", SelectedText(safetyModeBox, "克隆编译验证")));
+                SelectCombo(imageWorkflowBox, JsonStringValue(json, "workflow", SelectedText(imageWorkflowBox, "自动"), "image"));
+                SelectCombo(imageModelBox, JsonStringValue(json, "model", SelectedText(imageModelBox, "内置imagegen")));
+                SelectCombo(imageQualityBox, JsonStringValue(json, "quality", SelectedText(imageQualityBox, "auto")));
+                SelectCombo(imageSizeBox, JsonStringValue(json, "size", SelectedText(imageSizeBox, "1536x1024")));
+                SelectCombo(componentStrategyBox, JsonStringValue(json, "componentStrategy", SelectedText(componentStrategyBox, "自动匹配+自定义")));
+                referenceImageBox.Text = JsonStringValue(json, "referenceImage", referenceImageBox.Text);
+                SelectCombo(fontBox, JsonStringValue(json, "fontFamily", SelectedText(fontBox, Font.FontFamily.Name)));
+                SelectCombo(fontSizeBox, JsonStringValue(json, "fontSize", SelectedText(fontSizeBox, "10")));
+            }
+            catch (Exception ex)
+            {
+                statusLabel.Text = "配置读取失败：" + ex.Message;
+            }
+            finally
+            {
+                loadingWorkflowConfig = false;
+            }
+            SyncQuickSettingsFromAdvanced();
+            ApplySelectedFont();
+        }
+
+        private void ShowWorkflowConfig()
+        {
+            string path = SaveWorkflowConfig(false);
+            if (File.Exists(path))
+            {
+                ShowFile(path);
+                statusLabel.Text = "已打开工作流配置";
+            }
+        }
+
+        private static string SelectedText(ComboBox combo, string fallback)
+        {
+            string value = Convert.ToString(combo.SelectedItem);
+            return string.IsNullOrWhiteSpace(value) ? fallback : value;
+        }
+
+        private int WorkflowTimeoutSeconds()
+        {
+            int value;
+            return int.TryParse(SelectedText(timeoutSecondsBox, "600"), out value) ? value : 600;
+        }
+
+        private static string JsonString(string value)
+        {
+            string safe = value ?? "";
+            safe = safe.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n").Replace("\t", "\\t");
+            return "\"" + safe + "\"";
+        }
+
+        private static string JsonStringValue(string json, string key, string fallback)
+        {
+            return JsonStringValue(json, key, fallback, "");
+        }
+
+        private static string JsonStringValue(string json, string key, string fallback, string section)
+        {
+            string source = json ?? "";
+            if (!string.IsNullOrWhiteSpace(section))
+            {
+                Match sectionMatch = Regex.Match(source, "\\\"" + Regex.Escape(section) + "\\\"\\s*:\\s*\\{(?<body>.*?)\\}", RegexOptions.Singleline);
+                if (sectionMatch.Success)
+                {
+                    source = sectionMatch.Groups["body"].Value;
+                }
+            }
+            Match match = Regex.Match(source, "\\\"" + Regex.Escape(key) + "\\\"\\s*:\\s*\\\"(?<value>(?:\\\\.|[^\\\"])*)\\\"", RegexOptions.Singleline);
+            return match.Success ? UnescapeJson(match.Groups["value"].Value) : fallback;
+        }
+
+        private static int JsonNumberValue(string json, string key, int fallback)
+        {
+            Match match = Regex.Match(json ?? "", "\\\"" + Regex.Escape(key) + "\\\"\\s*:\\s*(?<value>\\d+)");
+            int value;
+            return match.Success && int.TryParse(match.Groups["value"].Value, out value) ? value : fallback;
+        }
+
+        private static string UnescapeJson(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return value ?? "";
+            }
+            StringBuilder builder = new StringBuilder();
+            for (int i = 0; i < value.Length; i++)
+            {
+                char current = value[i];
+                if (current != '\\' || i + 1 >= value.Length)
+                {
+                    builder.Append(current);
+                    continue;
+                }
+
+                char escaped = value[++i];
+                if (escaped == 'n') { builder.Append('\n'); }
+                else if (escaped == 'r') { builder.Append('\r'); }
+                else if (escaped == 't') { builder.Append('\t'); }
+                else if (escaped == 'b') { builder.Append('\b'); }
+                else if (escaped == 'f') { builder.Append('\f'); }
+                else if (escaped == 'u' && i + 4 < value.Length)
+                {
+                    int code;
+                    string hex = value.Substring(i + 1, 4);
+                    if (int.TryParse(hex, System.Globalization.NumberStyles.HexNumber, null, out code))
+                    {
+                        builder.Append((char)code);
+                        i += 4;
+                    }
+                    else
+                    {
+                        builder.Append('u');
+                    }
+                }
+                else
+                {
+                    builder.Append(escaped);
+                }
+            }
+            return builder.ToString();
+        }
+
         private void ApplyWorkflowDefaults(bool inferFromTextOnly)
         {
             if (applyingWorkflowDefaults)
@@ -1085,6 +1436,7 @@ namespace SiemensTiaSkillSuite
             {
                 applyingWorkflowDefaults = false;
             }
+            SyncQuickSettingsFromAdvanced();
         }
 
         private static string InferWorkflow(string request, string currentWorkflow)
@@ -1230,6 +1582,7 @@ namespace SiemensTiaSkillSuite
                 string resolved = ResolveProjectRoot(path);
                 projectRoot = resolved;
                 projectPathBox.Text = resolved;
+                LoadWorkflowConfig(resolved);
                 statusLabel.Text = "已加载";
                 BuildProjectTree();
                 RefreshRuns();
@@ -1744,7 +2097,8 @@ namespace SiemensTiaSkillSuite
                 string root = ResolveProjectRoot(projectPathBox.Text);
                 projectRoot = root;
                 Directory.CreateDirectory(Path.Combine(root, "PLC_Code", "console-jobs"));
-                List<string> args = BuildCommandArgs(command, root);
+                string configPath = SaveWorkflowConfig(false);
+                List<string> args = BuildCommandArgs(command, root, configPath);
                 string stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
                 currentStdoutPath = Path.Combine(root, "PLC_Code", "console-jobs", stamp + "-" + command + ".log");
                 currentStderrPath = Path.Combine(root, "PLC_Code", "console-jobs", stamp + "-" + command + ".err.log");
@@ -1777,7 +2131,7 @@ namespace SiemensTiaSkillSuite
                     });
                 };
 
-                jobBox.Text = "启动命令：" + command + Environment.NewLine + start.Arguments + Environment.NewLine + "日志：" + currentStdoutPath + Environment.NewLine;
+                jobBox.Text = "启动命令：" + command + Environment.NewLine + start.Arguments + Environment.NewLine + "工作流配置：" + configPath + Environment.NewLine + "日志：" + currentStdoutPath + Environment.NewLine;
                 if (mainTabs.TabPages.Count >= 2)
                 {
                     mainTabs.SelectedIndex = 1;
@@ -1794,7 +2148,7 @@ namespace SiemensTiaSkillSuite
             }
         }
 
-        private List<string> BuildCommandArgs(string command, string root)
+        private List<string> BuildCommandArgs(string command, string root, string configPath)
         {
             List<string> args = new List<string>();
             if (command == "doctor")
@@ -1805,29 +2159,65 @@ namespace SiemensTiaSkillSuite
             }
             else if (command == "read-cycle-skip")
             {
-                args.AddRange(new string[] { "read-cycle", "-ProjectPath", root, "-Attach", "-SkipExport" });
+                args.AddRange(new string[] { "read-cycle", "-ProjectPath", root, "-SkipExport" });
+                AddReadCycleSessionArgs(args);
+                AddWorkflowConfigArg(args, configPath);
             }
             else if (command == "read-cycle-full")
             {
-                args.AddRange(new string[] { "read-cycle", "-ProjectPath", root, "-Attach" });
+                args.AddRange(new string[] { "read-cycle", "-ProjectPath", root });
+                AddReadCycleSessionArgs(args);
+                AddWorkflowConfigArg(args, configPath);
             }
             else if (command == "list-blocks")
             {
-                args.AddRange(new string[] { "list-blocks", "--project", root, "--plc", PlcName(), "--attach" });
+                args.AddRange(new string[] { "list-blocks", "--project", root, "--plc", PlcName() });
+                args.Add(SelectedText(tiaSessionModeBox, "自动附加") == "显示TIA界面" ? "--ui" : "--attach");
             }
             else if (command == "write-cycle")
             {
+                string safetyMode = SelectedText(safetyModeBox, "克隆编译验证");
+                if (safetyMode == "只生成不写入")
+                {
+                    throw new InvalidOperationException("当前安全策略为“只生成不写入”，请改为克隆验证后再启动 write-cycle。");
+                }
                 if (string.IsNullOrWhiteSpace(inputXmlBox.Text) || !File.Exists(inputXmlBox.Text))
                 {
                     throw new FileNotFoundException("请先选择或填写要验证的LAD XML文件。", inputXmlBox.Text);
                 }
-                args.AddRange(new string[] { "write-cycle", "-ProjectPath", root, "-InputXml", inputXmlBox.Text, "-PlcName", PlcName(), "-StepTimeoutSeconds", "300" });
+                args.AddRange(new string[] { "write-cycle", "-ProjectPath", root, "-InputXml", inputXmlBox.Text, "-PlcName", PlcName(), "-StepTimeoutSeconds", WorkflowTimeoutSeconds().ToString() });
+                AddWorkflowConfigArg(args, configPath);
+                if (safetyMode == "克隆编译验证")
+                {
+                    args.Add("-SkipRelease");
+                }
             }
             else
             {
                 throw new InvalidOperationException("未知命令：" + command);
             }
             return args;
+        }
+
+        private void AddReadCycleSessionArgs(List<string> args)
+        {
+            if (SelectedText(tiaSessionModeBox, "自动附加") == "显示TIA界面")
+            {
+                args.Add("-UseUi");
+            }
+            else
+            {
+                args.Add("-Attach");
+            }
+        }
+
+        private static void AddWorkflowConfigArg(List<string> args, string configPath)
+        {
+            if (!string.IsNullOrWhiteSpace(configPath))
+            {
+                args.Add("-WorkflowConfigPath");
+                args.Add(configPath);
+            }
         }
 
         private string PlcName()
@@ -1931,6 +2321,7 @@ namespace SiemensTiaSkillSuite
                 string path = Path.Combine(outputDir, "codex-task-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".md");
                 string blockList = FindLatestBlockList(root);
                 ApplyWorkflowDefaults(false);
+                string configPath = SaveWorkflowConfig(false);
                 string workflow = Convert.ToString(workflowSelectBox.SelectedItem);
                 string referenceImage = referenceImageBox.Text.Trim();
                 bool hasReferenceImage = File.Exists(referenceImage);
@@ -1941,10 +2332,15 @@ namespace SiemensTiaSkillSuite
                 content.AppendLine("Project: `" + root + "`");
                 content.AppendLine("Model: `" + Convert.ToString(modelBox.SelectedItem) + "`");
                 content.AppendLine("Workflow: `" + workflow + "`");
+                content.AppendLine("Workflow config: `" + configPath + "`");
                 content.AppendLine();
                 content.AppendLine("## Model And API Routing");
                 content.AppendLine();
                 content.AppendLine("- Code model: `" + Convert.ToString(modelBox.SelectedItem) + "`");
+                content.AppendLine("- Language preference: `" + SelectedText(languagePreferenceBox, "LAD优先") + "`");
+                content.AppendLine("- TIA session mode: `" + SelectedText(tiaSessionModeBox, "自动附加") + "`");
+                content.AppendLine("- Safety mode: `" + SelectedText(safetyModeBox, "克隆编译验证") + "`");
+                content.AppendLine("- Step timeout seconds: `" + WorkflowTimeoutSeconds().ToString() + "`");
                 content.AppendLine("- API provider: `" + Convert.ToString(apiProviderBox.SelectedItem) + "`");
                 content.AppendLine("- API base: `" + EmptyAsDefault(apiBaseBox.Text.Trim(), "default") + "`");
                 content.AppendLine("- API key environment variable: `" + EmptyAsDefault(apiKeyEnvBox.Text.Trim(), "OPENAI_API_KEY") + "`");
@@ -1991,7 +2387,8 @@ namespace SiemensTiaSkillSuite
                 content.AppendLine("4. Use `write-cycle` on a cloned project before applying PLC-side generated LAD XML to the real project.");
                 File.WriteAllText(path, content.ToString(), Encoding.UTF8);
                 chatBox.AppendText(Environment.NewLine + "用户任务：" + requestBox.Text.Trim() + Environment.NewLine);
-                chatBox.AppendText("模型：" + Convert.ToString(modelBox.SelectedItem) + "    工作流：" + workflow + "    图像：" + Convert.ToString(imageWorkflowBox.SelectedItem) + Environment.NewLine);
+                chatBox.AppendText("模型：" + Convert.ToString(modelBox.SelectedItem) + "    工作流：" + workflow + "    语言：" + SelectedText(languagePreferenceBox, "LAD优先") + "    安全：" + SelectedText(safetyModeBox, "克隆编译验证") + Environment.NewLine);
+                chatBox.AppendText("配置：" + configPath + Environment.NewLine);
                 if (hasReferenceImage)
                 {
                     chatBox.AppendText("参考图：" + referenceImage + Environment.NewLine);

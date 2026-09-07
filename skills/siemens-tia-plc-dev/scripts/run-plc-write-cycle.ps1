@@ -19,6 +19,8 @@ param(
 
     [string]$SupportingSourceDir = "",
 
+    [string]$WorkflowConfigPath = "",
+
     [int]$StepTimeoutSeconds = 600,
 
     [switch]$SkipRelease
@@ -172,6 +174,29 @@ $startedAt = Get-Date
 $projectItem = Get-Item -LiteralPath $ProjectPath
 $projectDir = if ($projectItem.PSIsContainer) { $projectItem.FullName } else { $projectItem.Directory.FullName }
 $resolvedInputXml = (Get-Item -LiteralPath $InputXml).FullName
+$workflowConfig = $null
+if (-not [string]::IsNullOrWhiteSpace($WorkflowConfigPath)) {
+    if (-not (Test-Path -LiteralPath $WorkflowConfigPath)) {
+        throw "Workflow config not found: $WorkflowConfigPath"
+    }
+    $WorkflowConfigPath = (Get-Item -LiteralPath $WorkflowConfigPath).FullName
+    $workflowConfig = Get-Content -LiteralPath $WorkflowConfigPath -Raw | ConvertFrom-Json
+
+    if (-not $PSBoundParameters.ContainsKey("PlcName") -and $workflowConfig.tia.plcName) {
+        $PlcName = [string]$workflowConfig.tia.plcName
+    }
+    if (-not $PSBoundParameters.ContainsKey("StepTimeoutSeconds") -and $workflowConfig.tia.stepTimeoutSeconds) {
+        $StepTimeoutSeconds = [int]$workflowConfig.tia.stepTimeoutSeconds
+    }
+
+    $configuredSafetyMode = [string]$workflowConfig.safety.safetyMode
+    if ($configuredSafetyMode -eq "只生成不写入") {
+        throw "Workflow config safetyMode is '只生成不写入'; write-cycle is disabled."
+    }
+    if ($configuredSafetyMode -eq "克隆编译验证") {
+        $SkipRelease = $true
+    }
+}
 
 if ([string]::IsNullOrWhiteSpace($RunName)) {
     $RunName = "write-cycle-" + (Get-Date -Format "yyyyMMdd-HHmmss")
@@ -190,6 +215,11 @@ $runRoot = Join-Path (Join-Path $workspaceRoot "runs") $RunName
 $logRoot = Join-Path $runRoot "logs"
 New-Item -ItemType Directory -Path $logRoot -Force | Out-Null
 $script:StepMarkerPath = Join-Path $runRoot "current-step.json"
+$workflowConfigSnapshotPath = ""
+if ($workflowConfig) {
+    $workflowConfigSnapshotPath = Join-Path $runRoot "workflow-config.snapshot.json"
+    $workflowConfig | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $workflowConfigSnapshotPath -Encoding UTF8
+}
 
 $verifyScript = Join-Path $PSScriptRoot "verify-lad-change-on-clone.ps1"
 $releaseScript = Join-Path $PSScriptRoot "prepare-plc-release.ps1"
@@ -248,6 +278,10 @@ $report = [pscustomobject]@{
     PlcName = $PlcName
     ChangeName = $ChangeName
     ReleaseName = $ReleaseName
+    StepTimeoutSeconds = $StepTimeoutSeconds
+    WorkflowConfigPath = $WorkflowConfigPath
+    WorkflowConfigSnapshotPath = $workflowConfigSnapshotPath
+    WorkflowConfig = $workflowConfig
     Status = $status
     RunRoot = $runRoot
     VerificationDirectory = $verifyInfo.VerificationDirectory

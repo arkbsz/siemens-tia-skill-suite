@@ -8,6 +8,8 @@ param(
 
     [string[]]$Languages = @("LAD", "FBD", "SCL"),
 
+    [string]$WorkflowConfigPath = "",
+
     [switch]$UseUi,
 
     [switch]$Attach,
@@ -139,6 +141,33 @@ $startedAt = Get-Date
 $projectItem = Get-Item -LiteralPath $ProjectPath
 $resolvedProjectPath = $projectItem.FullName
 $projectDir = if ($projectItem.PSIsContainer) { $projectItem.FullName } else { $projectItem.Directory.FullName }
+$workflowConfig = $null
+if (-not [string]::IsNullOrWhiteSpace($WorkflowConfigPath)) {
+    if (-not (Test-Path -LiteralPath $WorkflowConfigPath)) {
+        throw "Workflow config not found: $WorkflowConfigPath"
+    }
+    $WorkflowConfigPath = (Get-Item -LiteralPath $WorkflowConfigPath).FullName
+    $workflowConfig = Get-Content -LiteralPath $WorkflowConfigPath -Raw | ConvertFrom-Json
+
+    if ([string]::IsNullOrWhiteSpace($PlcName) -and $workflowConfig.tia.plcName) {
+        $PlcName = [string]$workflowConfig.tia.plcName
+    }
+    if (-not $PSBoundParameters.ContainsKey("Languages")) {
+        switch ([string]$workflowConfig.routing.languagePreference) {
+            "FBD优先" { $Languages = @("FBD", "LAD", "SCL") }
+            "SCL优先" { $Languages = @("SCL", "LAD", "FBD") }
+            default { $Languages = @("LAD", "FBD", "SCL") }
+        }
+    }
+    if (-not $UseUi -and -not $Attach) {
+        if ([string]$workflowConfig.tia.sessionMode -eq "显示TIA界面") {
+            $UseUi = $true
+        }
+        else {
+            $Attach = $true
+        }
+    }
+}
 
 if ([string]::IsNullOrWhiteSpace($RunName)) {
     $RunName = "read-cycle-" + (Get-Date -Format "yyyyMMdd-HHmmss")
@@ -152,6 +181,11 @@ $reportRoot = Join-Path $runRoot "reports"
 $ladReportRoot = Join-Path $reportRoot "lad"
 
 New-Item -ItemType Directory -Path $logRoot, $exportRoot, $reportRoot, $ladReportRoot -Force | Out-Null
+$workflowConfigSnapshotPath = ""
+if ($workflowConfig) {
+    $workflowConfigSnapshotPath = Join-Path $reportRoot "workflow-config.snapshot.json"
+    $workflowConfig | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $workflowConfigSnapshotPath -Encoding UTF8
+}
 
 $skillsRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 . (Join-Path $PSScriptRoot "resolve-bridge-skill.ps1")
@@ -252,6 +286,9 @@ $report = [pscustomobject]@{
     ReportRoot = $reportRoot
     ProbeReady = [bool]$probeJson.ReadyForOpennessSession
     DetectedVersion = $probeJson.DetectedVersion
+    WorkflowConfigPath = $WorkflowConfigPath
+    WorkflowConfigSnapshotPath = $workflowConfigSnapshotPath
+    WorkflowConfig = $workflowConfig
     PlcRows = $plcRows
     Exports = $exports
     Logs = [pscustomobject]@{

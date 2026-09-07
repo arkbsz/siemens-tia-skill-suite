@@ -34,6 +34,7 @@ Treat PLC work like software work:
 9. Re-export and compare.
 
 For the generic workflow, read `references/workflow.md`.
+For the native console configuration schema and execution mapping, read `references/ai-workflow-config.md`.
 
 ## Native visual console
 
@@ -46,7 +47,9 @@ Use the local visual console when the user wants a better interaction surface th
 - a draggable left project tree for TIA projects, exported XML/SCL/DB/UDT, reports, and logs
 - switchable center pages for AI chat, command logs, file preview, runs, and reference-image preview
 - a bottom AI task box focused on the user request, with settings moved into the Tools menu to avoid crowding
+- a horizontally scrollable quick-configuration row in the AI area for model, workflow, language preference, TIA session mode, safety mode, and step timeout
 - a scrollable Tools settings panel for model/workflow selection, API provider/base/key-env settings, image workflow/model/quality/size, WinCC component strategy, Windows font settings, and uploaded reference image path
+- project-level configuration persistence at `PLC_Code\config\ai-workflow.json`; `read-cycle` and `write-cycle` consume the saved file and copy a snapshot into their run reports
 - common workflow buttons for `doctor`, `read-cycle`, `list-blocks`, and `write-cycle`
 - run and log preview panels for `PLC_Code\runs` and `PLC_Code\console-jobs`
 - a Codex-ready prompt file writer under `PLC_Code\ai-prompts`
@@ -286,3 +289,4 @@ The skill now includes small reusable source examples under:
 - REST bridge: `references/rest-bridge.md`
 - VS Code client template: `references/vscode-client-template.md`
 - GUI download bridge: `references/gui-download-bridge.md`
+- AI workflow configuration: `references/ai-workflow-config.md`

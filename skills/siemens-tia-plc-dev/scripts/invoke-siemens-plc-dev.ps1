@@ -25,8 +25,8 @@ Commands:
   probe [-ProjectPath <projectDir|ap16..ap21>]
   backup-project -ProjectPath <projectDir|ap16..ap21>
   clone-project -ProjectPath <projectDir|ap16..ap21> [-CloneRoot <dir>] [-CloneName <name>]
-  read-cycle -ProjectPath <projectDir|ap16..ap21> [-PlcName <name>] [-RunName <name>] [-Languages LAD,FBD,SCL] [-UseUi] [-Attach] [-SkipExport]
-  write-cycle -ProjectPath <projectDir|ap16..ap21> -InputXml <xml> [-PlcName <name>] [-ChangeName <name>] [-ReleaseName <name>] [-StepTimeoutSeconds <n>] [-SkipRelease]
+  read-cycle -ProjectPath <projectDir|ap16..ap21> [-PlcName <name>] [-RunName <name>] [-Languages LAD,FBD,SCL] [-WorkflowConfigPath <json>] [-UseUi] [-Attach] [-SkipExport]
+  write-cycle -ProjectPath <projectDir|ap16..ap21> -InputXml <xml> [-PlcName <name>] [-ChangeName <name>] [-ReleaseName <name>] [-WorkflowConfigPath <json>] [-StepTimeoutSeconds <n>] [-SkipRelease]
   bootstrap -ProjectPath <projectDir|ap16..ap21>
   refresh -ProjectPath <projectDir|ap16..ap21>
   init-workspace -ProjectPath <projectDir|ap16..ap21>
