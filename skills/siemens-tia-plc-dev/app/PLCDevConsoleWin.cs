@@ -90,6 +90,8 @@ namespace SiemensTiaSkillSuite
         private readonly TextBox referenceImageBox = new TextBox();
         private readonly PictureBox referencePreviewBox = new PictureBox();
         private readonly TabControl mainTabs = new TabControl();
+        private readonly Panel scrollHost = new Panel();
+        private readonly Panel scrollContent = new Panel();
         private readonly System.Windows.Forms.Timer tailTimer = new System.Windows.Forms.Timer();
         private readonly string invokeScript;
         private SplitContainer outerSplitter;
@@ -169,71 +171,76 @@ namespace SiemensTiaSkillSuite
             Controls.Add(mainMenu);
             MainMenuStrip = mainMenu;
 
-            Panel top = new BannerPanel();
-            top.Dock = DockStyle.Top;
-            top.Height = 104;
-            top.Padding = new Padding(18, 14, 18, 14);
-            top.BackColor = Rail;
-            Controls.Add(top);
+            Panel bottom = new Panel();
+            bottom.Dock = DockStyle.Bottom;
+            bottom.Height = 28;
+            bottom.BackColor = Color.FromArgb(224, 231, 222);
+            Controls.Add(bottom);
+
+            Label safety = new Label();
+            safety.Text = "安全策略：读写分离 · 先克隆验证 · 不并发打开TIA工程 · 主工程写入前人工确认";
+            safety.Dock = DockStyle.Fill;
+            safety.TextAlign = ContentAlignment.MiddleLeft;
+            safety.Padding = new Padding(16, 0, 0, 0);
+            safety.ForeColor = MutedInk;
+            bottom.Controls.Add(safety);
+
+            scrollHost.Dock = DockStyle.Fill;
+            scrollHost.AutoScroll = true;
+            scrollHost.BackColor = Canvas;
+            scrollHost.MouseWheel += delegate (object sender, MouseEventArgs e) { ScrollHostByWheel(e); };
+            Controls.Add(scrollHost);
+            scrollHost.BringToFront();
             mainMenu.BringToFront();
 
+            scrollContent.Location = new Point(0, 0);
+            scrollContent.BackColor = Canvas;
+            scrollContent.MinimumSize = new Size(980, 760);
+            scrollHost.Controls.Add(scrollContent);
+            scrollHost.Resize += delegate { LayoutScrollableContent(); };
+
+            Panel top = new BannerPanel();
+            top.Dock = DockStyle.Top;
+            top.Height = 68;
+            top.Padding = new Padding(18, 10, 18, 8);
+            top.BackColor = Rail;
+            scrollContent.Controls.Add(top);
+
             Label title = new Label();
-            title.Text = "Siemens TIA PLC Dev Console";
+            title.Text = "TIA PLC Dev";
             title.ForeColor = Color.White;
-            title.Font = new Font("Bahnschrift SemiBold", 18F, FontStyle.Bold);
+            title.Font = new Font("Bahnschrift SemiBold", 14F, FontStyle.Bold);
             title.AutoSize = true;
-            title.Location = new Point(18, 14);
+            title.Location = new Point(18, 20);
             title.BackColor = Color.Transparent;
             top.Controls.Add(title);
 
-            Label subtitle = new Label();
-            subtitle.Text = "Native PLC engineering cockpit  |  项目结构 · 日志 · AI任务草稿 · Openness工作流";
-            subtitle.ForeColor = Color.FromArgb(211, 226, 220);
-            subtitle.AutoSize = true;
-            subtitle.Location = new Point(21, 52);
-            subtitle.BackColor = Color.Transparent;
-            top.Controls.Add(subtitle);
-
             projectPathBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            projectPathBox.Location = new Point(370, 16);
-            projectPathBox.Width = 560;
+            projectPathBox.Location = new Point(164, 17);
+            projectPathBox.Width = 620;
             StyleInput(projectPathBox);
             top.Controls.Add(projectPathBox);
 
             Button autoButton = NewButton("读取当前TIA", Teal);
             autoButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            autoButton.Location = new Point(944, 14);
+            autoButton.Location = new Point(800, 14);
             autoButton.Width = 120;
             autoButton.Click += delegate { AutoLoadCurrentTiaProject(); };
             top.Controls.Add(autoButton);
 
             Button browseButton = NewButton("浏览打开", Ink);
             browseButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            browseButton.Location = new Point(1072, 14);
+            browseButton.Location = new Point(928, 14);
             browseButton.Width = 106;
             browseButton.Click += delegate { BrowseProject(); };
             top.Controls.Add(browseButton);
 
             Button loadButton = NewButton("加载项目", Teal);
             loadButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            loadButton.Location = new Point(1186, 14);
+            loadButton.Location = new Point(1042, 14);
             loadButton.Width = 100;
             loadButton.Click += delegate { LoadProject(projectPathBox.Text); };
             top.Controls.Add(loadButton);
-
-            Button openProjectButton = NewButton("TIA打开", Orange);
-            openProjectButton.Location = new Point(370, 54);
-            openProjectButton.Width = 100;
-            openProjectButton.Height = 32;
-            openProjectButton.Click += delegate { OpenProjectWithDefaultApp(); };
-            top.Controls.Add(openProjectButton);
-
-            Button openFolderButton = NewButton("打开文件夹", Ink);
-            openFolderButton.Location = new Point(478, 54);
-            openFolderButton.Width = 112;
-            openFolderButton.Height = 32;
-            openFolderButton.Click += delegate { OpenProjectFolder(); };
-            top.Controls.Add(openFolderButton);
 
             projectBadge.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             projectBadge.Text = "V16-V21";
@@ -241,16 +248,17 @@ namespace SiemensTiaSkillSuite
             projectBadge.BackColor = Gold;
             projectBadge.Font = new Font(Font.FontFamily, 9F, FontStyle.Bold);
             projectBadge.TextAlign = ContentAlignment.MiddleCenter;
-            projectBadge.Location = new Point(1298, 17);
+            projectBadge.Location = new Point(1156, 17);
             projectBadge.Size = new Size(82, 28);
             top.Controls.Add(projectBadge);
 
             statusLabel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             statusLabel.ForeColor = Color.FromArgb(244, 202, 145);
             statusLabel.AutoSize = true;
-            statusLabel.Location = new Point(944, 58);
+            statusLabel.Location = new Point(1252, 22);
             statusLabel.BackColor = Color.Transparent;
             top.Controls.Add(statusLabel);
+            top.Resize += delegate { LayoutHeader(top, title, projectPathBox, autoButton, browseButton, loadButton, projectBadge, statusLabel); };
 
             SplitContainer outer = new SplitContainer();
             outerSplitter = outer;
@@ -261,7 +269,7 @@ namespace SiemensTiaSkillSuite
             outer.BackColor = Canvas;
             outer.Panel1.Padding = new Padding(12, 14, 6, 14);
             outer.Panel2.Padding = new Padding(6, 14, 12, 14);
-            Controls.Add(outer);
+            scrollContent.Controls.Add(outer);
 
             GroupBox leftBox = NewGroup("项目结构");
             leftBox.Dock = DockStyle.Fill;
@@ -410,25 +418,13 @@ namespace SiemensTiaSkillSuite
             promptButton.Click += delegate { CreateAiPrompt(); };
             inputLayout.Controls.Add(promptButton, 1, 0);
 
-            Panel bottom = new Panel();
-            bottom.Dock = DockStyle.Bottom;
-            bottom.Height = 28;
-            bottom.BackColor = Color.FromArgb(224, 231, 222);
-            Controls.Add(bottom);
-
-            Label safety = new Label();
-            safety.Text = "安全策略：读写分离 · 先克隆验证 · 不并发打开TIA工程 · 主工程写入前人工确认";
-            safety.Dock = DockStyle.Fill;
-            safety.TextAlign = ContentAlignment.MiddleLeft;
-            safety.Padding = new Padding(16, 0, 0, 0);
-            safety.ForeColor = MutedInk;
-            bottom.Controls.Add(safety);
-
             tailTimer.Interval = 1200;
             tailTimer.Tick += delegate { RefreshCurrentJobTail(); };
 
             Shown += delegate
             {
+                LayoutScrollableContent();
+                LayoutHeader(top, title, projectPathBox, autoButton, browseButton, loadButton, projectBadge, statusLabel);
                 SafeConfigureSplitter(outer, 240, 560, 360);
                 SafeConfigureSplitter(center, 300, 240, Math.Max(340, center.Height - 310));
             };
@@ -476,6 +472,56 @@ namespace SiemensTiaSkillSuite
                     LoadReferencePreview(referenceImageBox.Text);
                 }
             };
+        }
+
+        private void LayoutScrollableContent()
+        {
+            int width = Math.Max(1100, scrollHost.ClientSize.Width - SystemInformation.VerticalScrollBarWidth - 2);
+            int height = Math.Max(780, scrollHost.ClientSize.Height + 180);
+            scrollContent.Size = new Size(width, height);
+            scrollHost.AutoScrollMinSize = new Size(width, height);
+        }
+
+        private void ScrollHostByWheel(MouseEventArgs e)
+        {
+            int current = -scrollHost.AutoScrollPosition.Y;
+            int next = Math.Max(0, current - e.Delta);
+            scrollHost.AutoScrollPosition = new Point(0, next);
+        }
+
+        private static void LayoutHeader(Panel top, Label title, TextBox pathBox, Button autoButton, Button browseButton, Button loadButton, Label badge, Label status)
+        {
+            int w = Math.Max(980, top.ClientSize.Width);
+            title.Location = new Point(18, 21);
+            title.AutoSize = true;
+
+            int badgeWidth = 82;
+            int buttonGap = 10;
+            int right = w - 18;
+            badge.Size = new Size(badgeWidth, 28);
+            badge.Location = new Point(right - badgeWidth, 19);
+
+            int loadWidth = 96;
+            int browseWidth = 104;
+            int autoWidth = 118;
+            loadButton.Size = new Size(loadWidth, 38);
+            browseButton.Size = new Size(browseWidth, 38);
+            autoButton.Size = new Size(autoWidth, 38);
+
+            int x = badge.Left - buttonGap - loadWidth;
+            loadButton.Location = new Point(x, 14);
+            x -= buttonGap + browseWidth;
+            browseButton.Location = new Point(x, 14);
+            x -= buttonGap + autoWidth;
+            autoButton.Location = new Point(x, 14);
+
+            int pathLeft = Math.Max(142, title.Right + 28);
+            int pathRight = Math.Max(pathLeft + 220, autoButton.Left - 18);
+            pathBox.Location = new Point(pathLeft, 18);
+            pathBox.Size = new Size(pathRight - pathLeft, 28);
+
+            status.Location = new Point(Math.Max(pathLeft, autoButton.Left), 48);
+            status.MaximumSize = new Size(Math.Max(160, right - status.Left), 18);
         }
 
         private void ConfigureSettingsControls()

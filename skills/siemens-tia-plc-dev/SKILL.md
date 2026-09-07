@@ -41,6 +41,8 @@ Use the local visual console when the user wants a better interaction surface th
 
 - automatic current-TIA-project detection plus browse/open actions for `.ap16` through `.ap21`
 - an IDE-style top menu for file, view, navigation, code, refactor, run, tools, Git, window, and help actions
+- a compact one-line project toolbar that avoids duplicating menu actions
+- a scrollable main canvas with a right-side vertical scrollbar and mouse-wheel support when the window is shorter than the content
 - a draggable left project tree for TIA projects, exported XML/SCL/DB/UDT, reports, and logs
 - switchable center pages for AI chat, command logs, file preview, runs, and reference-image preview
 - a bottom AI task box focused on the user request, with settings moved into the Tools menu to avoid crowding
