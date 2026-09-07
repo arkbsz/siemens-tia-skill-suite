@@ -30,7 +30,7 @@
 - 导出和导入 FC、FB、DB、LAD XML、SCL
 - LAD 梯形图模板化生成与网络批量写入
 - WinCC 画面、变量、报警、Faceplate、导航、版式与运行时联动自动化
-- 本地可视化开发控制台：项目结构、runs/log、常用工作流按钮和 AI 任务草稿区
+- 本地窗口版 `PLCDevConsole.exe`：项目结构、runs/log、常用工作流按钮和 AI 任务草稿区
 - 本地 Openness 自动化和 REST 桥接
 - `V16-V21` 版本探测、项目后缀识别、程序集路径路由
 - 编译验证与回读比对
@@ -76,12 +76,12 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install-skills.ps1
 
 - `%USERPROFILE%\.codex\skills`
 
-## 可视化开发控制台
+## 本地窗口版开发控制台
 
-安装后可以一键打开本地控制台：
+安装后可以一键构建并打开原生 Windows 窗口：
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" console -ProjectPath "D:\path\to\project" -Background
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" console -ProjectPath "D:\path\to\project"
 ```
 
 控制台包含：
@@ -90,7 +90,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex
 - 中间工作流与日志：运行 `doctor`、快速读取、完整导出、列块、`write-cycle` 克隆验证。
 - 右侧 AI 对话区：生成带当前项目结构、最近 runs 和块列表的 Codex 任务草稿，保存到 `PLC_Code\ai-prompts`。
 
-当前 AI 区定位是“Codex 任务草稿生成器”，不会在后台偷偷调用云端模型。真正的程序生成、审查、LAD 修改和导入验证仍建议回到 Codex 主对话执行。
+`console` 和 `console-exe` 默认启动窗口版。旧的浏览器控制台保留为备用入口 `console-web`，不再作为默认方式。当前 AI 区定位是“Codex 任务草稿生成器”，不会在后台偷偷调用云端模型。真正的程序生成、审查、LAD 修改和导入验证仍建议回到 Codex 主对话执行。
 
 ## 推荐使用顺序
 
