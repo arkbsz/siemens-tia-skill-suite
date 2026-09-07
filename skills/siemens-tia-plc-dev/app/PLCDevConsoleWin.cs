@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -47,8 +48,21 @@ namespace SiemensTiaSkillSuite
         private readonly RichTextBox chatBox = new RichTextBox();
         private readonly TextBox requestBox = new TextBox();
         private readonly Label statusLabel = new Label();
+        private readonly Label projectBadge = new Label();
         private readonly System.Windows.Forms.Timer tailTimer = new System.Windows.Forms.Timer();
         private readonly string invokeScript;
+
+        private static readonly Color Ink = Color.FromArgb(20, 34, 36);
+        private static readonly Color MutedInk = Color.FromArgb(88, 105, 105);
+        private static readonly Color Canvas = Color.FromArgb(235, 239, 232);
+        private static readonly Color Card = Color.FromArgb(251, 249, 242);
+        private static readonly Color CardSoft = Color.FromArgb(243, 246, 239);
+        private static readonly Color Rail = Color.FromArgb(16, 44, 46);
+        private static readonly Color Teal = Color.FromArgb(8, 128, 124);
+        private static readonly Color Orange = Color.FromArgb(224, 111, 45);
+        private static readonly Color Gold = Color.FromArgb(242, 190, 93);
+        private static readonly Color CodeBack = Color.FromArgb(12, 31, 31);
+        private static readonly Color CodeFore = Color.FromArgb(213, 239, 221);
 
         private string projectRoot = "";
         private string currentStdoutPath = "";
@@ -64,6 +78,8 @@ namespace SiemensTiaSkillSuite
             MinimumSize = new Size(1100, 680);
             Font = new Font("Microsoft YaHei UI", 9F);
             StartPosition = FormStartPosition.CenterScreen;
+            AutoScaleMode = AutoScaleMode.Dpi;
+            DoubleBuffered = true;
 
             BuildUi();
             WireEvents();
@@ -98,52 +114,69 @@ namespace SiemensTiaSkillSuite
 
         private void BuildUi()
         {
-            BackColor = Color.FromArgb(242, 239, 229);
+            BackColor = Canvas;
 
-            Panel top = new Panel();
+            Panel top = new BannerPanel();
             top.Dock = DockStyle.Top;
-            top.Height = 72;
-            top.Padding = new Padding(12);
-            top.BackColor = Color.FromArgb(31, 48, 48);
+            top.Height = 92;
+            top.Padding = new Padding(18, 14, 18, 14);
+            top.BackColor = Rail;
             Controls.Add(top);
 
             Label title = new Label();
             title.Text = "Siemens TIA PLC Dev Console";
             title.ForeColor = Color.White;
-            title.Font = new Font(Font.FontFamily, 13F, FontStyle.Bold);
+            title.Font = new Font("Bahnschrift SemiBold", 18F, FontStyle.Bold);
             title.AutoSize = true;
-            title.Location = new Point(12, 10);
+            title.Location = new Point(18, 14);
+            title.BackColor = Color.Transparent;
             top.Controls.Add(title);
 
             Label subtitle = new Label();
-            subtitle.Text = "原生窗口版：项目结构、日志、AI任务草稿、Openness工作流";
-            subtitle.ForeColor = Color.FromArgb(208, 224, 219);
+            subtitle.Text = "Native PLC engineering cockpit  |  项目结构 · 日志 · AI任务草稿 · Openness工作流";
+            subtitle.ForeColor = Color.FromArgb(211, 226, 220);
             subtitle.AutoSize = true;
-            subtitle.Location = new Point(14, 40);
+            subtitle.Location = new Point(21, 52);
+            subtitle.BackColor = Color.Transparent;
             top.Controls.Add(subtitle);
 
             projectPathBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            projectPathBox.Location = new Point(430, 12);
-            projectPathBox.Width = 660;
+            projectPathBox.Location = new Point(500, 18);
+            projectPathBox.Width = 560;
+            StyleInput(projectPathBox);
             top.Controls.Add(projectPathBox);
 
-            Button loadButton = NewButton("加载项目", Color.FromArgb(17, 124, 121));
+            Button loadButton = NewButton("加载项目", Teal);
             loadButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            loadButton.Location = new Point(1100, 10);
-            loadButton.Width = 96;
+            loadButton.Location = new Point(1074, 15);
+            loadButton.Width = 108;
             loadButton.Click += delegate { LoadProject(projectPathBox.Text); };
             top.Controls.Add(loadButton);
+
+            projectBadge.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            projectBadge.Text = "V16-V21";
+            projectBadge.ForeColor = Color.FromArgb(28, 45, 42);
+            projectBadge.BackColor = Gold;
+            projectBadge.Font = new Font(Font.FontFamily, 9F, FontStyle.Bold);
+            projectBadge.TextAlign = ContentAlignment.MiddleCenter;
+            projectBadge.Location = new Point(1194, 16);
+            projectBadge.Size = new Size(82, 28);
+            top.Controls.Add(projectBadge);
 
             statusLabel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             statusLabel.ForeColor = Color.FromArgb(244, 202, 145);
             statusLabel.AutoSize = true;
-            statusLabel.Location = new Point(1210, 18);
+            statusLabel.Location = new Point(1290, 22);
+            statusLabel.BackColor = Color.Transparent;
             top.Controls.Add(statusLabel);
 
             SplitContainer outer = new SplitContainer();
             outer.Dock = DockStyle.Fill;
             outer.SplitterWidth = 6;
-            outer.SplitterDistance = 350;
+            outer.SplitterDistance = 360;
+            outer.BackColor = Canvas;
+            outer.Panel1.Padding = new Padding(12, 14, 6, 14);
+            outer.Panel2.Padding = new Padding(6, 14, 12, 14);
             Controls.Add(outer);
 
             GroupBox leftBox = NewGroup("项目结构");
@@ -151,12 +184,21 @@ namespace SiemensTiaSkillSuite
             outer.Panel1.Controls.Add(leftBox);
             projectTree.Dock = DockStyle.Fill;
             projectTree.HideSelection = false;
+            projectTree.BorderStyle = BorderStyle.None;
+            projectTree.BackColor = Card;
+            projectTree.ForeColor = Ink;
+            projectTree.LineColor = Color.FromArgb(174, 190, 184);
+            projectTree.Font = new Font("Microsoft YaHei UI", 9.4F);
+            projectTree.ItemHeight = 24;
             leftBox.Controls.Add(projectTree);
 
             SplitContainer right = new SplitContainer();
             right.Dock = DockStyle.Fill;
             right.SplitterWidth = 6;
-            right.SplitterDistance = 650;
+            right.SplitterDistance = 680;
+            right.BackColor = Canvas;
+            right.Panel1.Padding = new Padding(0, 0, 6, 0);
+            right.Panel2.Padding = new Padding(6, 0, 0, 0);
             outer.Panel2.Controls.Add(right);
 
             GroupBox workflowBox = NewGroup("工作流与日志");
@@ -176,11 +218,12 @@ namespace SiemensTiaSkillSuite
 
             FlowLayoutPanel actions = new FlowLayoutPanel();
             actions.Dock = DockStyle.Fill;
-            actions.Padding = new Padding(4);
-            actions.Controls.Add(CommandButton("Doctor检查", "doctor", Color.FromArgb(31, 48, 48)));
-            actions.Controls.Add(CommandButton("快速读取", "read-cycle-skip", Color.FromArgb(17, 124, 121)));
-            actions.Controls.Add(CommandButton("完整导出", "read-cycle-full", Color.FromArgb(218, 105, 46)));
-            actions.Controls.Add(CommandButton("列程序块", "list-blocks", Color.FromArgb(31, 48, 48)));
+            actions.Padding = new Padding(8, 8, 8, 4);
+            actions.BackColor = Card;
+            actions.Controls.Add(CommandButton("Doctor 检查", "doctor", Ink));
+            actions.Controls.Add(CommandButton("快速读取", "read-cycle-skip", Teal));
+            actions.Controls.Add(CommandButton("完整导出", "read-cycle-full", Orange));
+            actions.Controls.Add(CommandButton("列程序块", "list-blocks", Ink));
             workLayout.Controls.Add(actions, 0, 0);
 
             TableLayoutPanel writePanel = new TableLayoutPanel();
@@ -191,34 +234,46 @@ namespace SiemensTiaSkillSuite
             writePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             writePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 80));
             writePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120));
-            writePanel.Controls.Add(new Label { Text = "XML", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft }, 0, 0);
+            writePanel.Padding = new Padding(8, 2, 8, 4);
+            writePanel.BackColor = Card;
+            StyleInput(inputXmlBox);
+            StyleInput(plcNameBox);
+            writePanel.Controls.Add(new Label { Text = "LAD XML", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, ForeColor = MutedInk }, 0, 0);
             writePanel.Controls.Add(inputXmlBox, 1, 0);
-            writePanel.Controls.Add(new Label { Text = "PLC", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleCenter }, 2, 0);
+            writePanel.Controls.Add(new Label { Text = "PLC", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleCenter, ForeColor = MutedInk }, 2, 0);
             writePanel.Controls.Add(plcNameBox, 3, 0);
-            Button writeCycle = NewButton("克隆验证LAD", Color.FromArgb(218, 105, 46));
+            Button writeCycle = NewButton("克隆验证 LAD", Orange);
             writeCycle.Dock = DockStyle.Fill;
             writeCycle.Click += delegate { StartCommand("write-cycle"); };
             writePanel.Controls.Add(writeCycle, 3, 1);
-            Button refresh = NewButton("刷新runs", Color.FromArgb(17, 124, 121));
+            Button refresh = NewButton("刷新 runs", Teal);
             refresh.Dock = DockStyle.Fill;
             refresh.Click += delegate { RefreshRuns(); };
             writePanel.Controls.Add(refresh, 1, 1);
             workLayout.Controls.Add(writePanel, 0, 1);
 
             runList.Dock = DockStyle.Fill;
+            runList.BorderStyle = BorderStyle.None;
+            runList.BackColor = CardSoft;
+            runList.ForeColor = Ink;
+            runList.Font = new Font("Cascadia Mono", 9F);
+            runList.ItemHeight = 22;
             workLayout.Controls.Add(Wrap("最近 runs", runList), 0, 2);
 
             previewBox.Dock = DockStyle.Fill;
-            previewBox.Font = new Font("Consolas", 9F);
+            previewBox.Font = new Font("Cascadia Code", 9F);
             previewBox.ReadOnly = true;
-            previewBox.BackColor = Color.FromArgb(16, 38, 36);
-            previewBox.ForeColor = Color.FromArgb(215, 241, 220);
+            previewBox.BorderStyle = BorderStyle.None;
+            previewBox.BackColor = CodeBack;
+            previewBox.ForeColor = CodeFore;
             workLayout.Controls.Add(Wrap("文件/报告预览", previewBox), 0, 3);
 
             jobBox.Dock = DockStyle.Fill;
-            jobBox.Font = new Font("Consolas", 9F);
+            jobBox.Font = new Font("Cascadia Code", 9F);
             jobBox.ReadOnly = true;
-            jobBox.BackColor = Color.FromArgb(250, 248, 241);
+            jobBox.BorderStyle = BorderStyle.None;
+            jobBox.BackColor = Color.FromArgb(248, 250, 244);
+            jobBox.ForeColor = Ink;
             workLayout.Controls.Add(Wrap("当前命令输出", jobBox), 0, 4);
 
             GroupBox aiBox = NewGroup("AI任务草稿");
@@ -235,20 +290,38 @@ namespace SiemensTiaSkillSuite
 
             chatBox.Dock = DockStyle.Fill;
             chatBox.ReadOnly = true;
-            chatBox.BackColor = Color.FromArgb(250, 248, 241);
+            chatBox.BorderStyle = BorderStyle.None;
+            chatBox.BackColor = Color.FromArgb(247, 250, 244);
+            chatBox.ForeColor = Ink;
+            chatBox.Font = new Font("Microsoft YaHei UI", 9.4F);
             chatBox.Text = "这里不会偷偷调用云端AI；它会根据项目结构和最近日志生成一份Codex任务草稿，方便回到主对话继续让Codex写PLC程序、改LAD、跑验证。\n";
             aiLayout.Controls.Add(chatBox, 0, 0);
 
             requestBox.Dock = DockStyle.Fill;
             requestBox.Multiline = true;
             requestBox.ScrollBars = ScrollBars.Vertical;
+            StyleInput(requestBox);
             requestBox.Text = "例如：把FC5自动流程增加取料超时报警，用LAD写入并在克隆工程中编译验证。";
             aiLayout.Controls.Add(requestBox, 0, 1);
 
-            Button promptButton = NewButton("生成Codex任务草稿", Color.FromArgb(17, 124, 121));
+            Button promptButton = NewButton("生成 Codex 任务草稿", Teal);
             promptButton.Dock = DockStyle.Fill;
             promptButton.Click += delegate { CreateAiPrompt(); };
             aiLayout.Controls.Add(promptButton, 0, 2);
+
+            Panel bottom = new Panel();
+            bottom.Dock = DockStyle.Bottom;
+            bottom.Height = 28;
+            bottom.BackColor = Color.FromArgb(224, 231, 222);
+            Controls.Add(bottom);
+
+            Label safety = new Label();
+            safety.Text = "安全策略：读写分离 · 先克隆验证 · 不并发打开TIA工程 · 主工程写入前人工确认";
+            safety.Dock = DockStyle.Fill;
+            safety.TextAlign = ContentAlignment.MiddleLeft;
+            safety.Padding = new Padding(16, 0, 0, 0);
+            safety.ForeColor = MutedInk;
+            bottom.Controls.Add(safety);
 
             tailTimer.Interval = 1200;
             tailTimer.Tick += delegate { RefreshCurrentJobTail(); };
@@ -288,7 +361,12 @@ namespace SiemensTiaSkillSuite
 
         private static GroupBox NewGroup(string title)
         {
-            return new GroupBox { Text = title, Padding = new Padding(8), BackColor = Color.FromArgb(250, 248, 241) };
+            ThemedGroupBox box = new ThemedGroupBox();
+            box.Text = title;
+            box.Padding = new Padding(12, 28, 12, 12);
+            box.BackColor = Card;
+            box.ForeColor = Ink;
+            return box;
         }
 
         private static Control Wrap(string title, Control inner)
@@ -302,15 +380,25 @@ namespace SiemensTiaSkillSuite
 
         private static Button NewButton(string text, Color color)
         {
-            Button button = new Button();
+            Button button = new AccentButton();
             button.Text = text;
-            button.Height = 34;
+            button.Height = 38;
             button.FlatStyle = FlatStyle.Flat;
             button.FlatAppearance.BorderSize = 0;
             button.BackColor = color;
             button.ForeColor = Color.White;
             button.Margin = new Padding(5);
+            button.Cursor = Cursors.Hand;
+            button.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
             return button;
+        }
+
+        private static void StyleInput(TextBox box)
+        {
+            box.BorderStyle = BorderStyle.FixedSingle;
+            box.BackColor = Color.FromArgb(255, 254, 248);
+            box.ForeColor = Ink;
+            box.Font = new Font("Microsoft YaHei UI", 9F);
         }
 
         private Button CommandButton(string text, string command, Color color)
@@ -773,6 +861,168 @@ namespace SiemensTiaSkillSuite
             {
                 return Modified.ToString("MM-dd HH:mm:ss") + "  " + Name;
             }
+        }
+    }
+
+    internal sealed class BannerPanel : Panel
+    {
+        public BannerPanel()
+        {
+            DoubleBuffered = true;
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            Rectangle rect = ClientRectangle;
+            if (rect.Width <= 0 || rect.Height <= 0)
+            {
+                base.OnPaint(e);
+                return;
+            }
+
+            using (LinearGradientBrush brush = new LinearGradientBrush(rect, Color.FromArgb(13, 42, 45), Color.FromArgb(22, 105, 101), LinearGradientMode.Horizontal))
+            {
+                e.Graphics.FillRectangle(brush, rect);
+            }
+
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            using (SolidBrush glow = new SolidBrush(Color.FromArgb(42, 242, 190, 93)))
+            {
+                e.Graphics.FillEllipse(glow, rect.Width - 290, -96, 340, 210);
+            }
+            using (SolidBrush wash = new SolidBrush(Color.FromArgb(34, 224, 111, 45)))
+            {
+                e.Graphics.FillEllipse(wash, rect.Width - 470, 32, 320, 140);
+            }
+            using (Pen line = new Pen(Color.FromArgb(70, 255, 255, 255), 1F))
+            {
+                e.Graphics.DrawLine(line, 0, rect.Height - 1, rect.Width, rect.Height - 1);
+            }
+        }
+    }
+
+    internal sealed class ThemedGroupBox : GroupBox
+    {
+        public ThemedGroupBox()
+        {
+            DoubleBuffered = true;
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            Rectangle rect = new Rectangle(1, 10, Width - 3, Height - 12);
+            using (GraphicsPath path = RoundedRect(rect, 16))
+            using (SolidBrush fill = new SolidBrush(BackColor))
+            using (Pen border = new Pen(Color.FromArgb(190, 205, 198), 1F))
+            {
+                e.Graphics.FillPath(fill, path);
+                e.Graphics.DrawPath(border, path);
+            }
+
+            Rectangle titleRect = new Rectangle(16, 0, Math.Min(Width - 32, 260), 24);
+            using (SolidBrush titleBack = new SolidBrush(Color.FromArgb(8, 128, 124)))
+            using (GraphicsPath titlePath = RoundedRect(titleRect, 12))
+            {
+                e.Graphics.FillPath(titleBack, titlePath);
+            }
+            using (SolidBrush textBrush = new SolidBrush(Color.White))
+            {
+                e.Graphics.DrawString(Text, new Font(Font.FontFamily, 9F, FontStyle.Bold), textBrush, new PointF(28, 4));
+            }
+        }
+
+        private static GraphicsPath RoundedRect(Rectangle rect, int radius)
+        {
+            GraphicsPath path = new GraphicsPath();
+            int d = radius * 2;
+            path.AddArc(rect.Left, rect.Top, d, d, 180, 90);
+            path.AddArc(rect.Right - d, rect.Top, d, d, 270, 90);
+            path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+            path.AddArc(rect.Left, rect.Bottom - d, d, d, 90, 90);
+            path.CloseFigure();
+            return path;
+        }
+    }
+
+    internal sealed class AccentButton : Button
+    {
+        private bool hovering;
+        private bool pressing;
+
+        public AccentButton()
+        {
+            DoubleBuffered = true;
+            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
+        }
+
+        protected override void OnMouseEnter(EventArgs e)
+        {
+            hovering = true;
+            Invalidate();
+            base.OnMouseEnter(e);
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            hovering = false;
+            pressing = false;
+            Invalidate();
+            base.OnMouseLeave(e);
+        }
+
+        protected override void OnMouseDown(MouseEventArgs mevent)
+        {
+            pressing = true;
+            Invalidate();
+            base.OnMouseDown(mevent);
+        }
+
+        protected override void OnMouseUp(MouseEventArgs mevent)
+        {
+            pressing = false;
+            Invalidate();
+            base.OnMouseUp(mevent);
+        }
+
+        protected override void OnPaint(PaintEventArgs pevent)
+        {
+            pevent.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            Rectangle rect = new Rectangle(0, 0, Width - 1, Height - 1);
+            Color baseColor = BackColor;
+            Color top = Blend(baseColor, Color.White, hovering ? 0.18F : 0.08F);
+            Color bottom = Blend(baseColor, Color.Black, pressing ? 0.18F : 0.05F);
+
+            using (GraphicsPath path = RoundedRect(rect, 12))
+            using (LinearGradientBrush fill = new LinearGradientBrush(rect, top, bottom, LinearGradientMode.Vertical))
+            using (Pen border = new Pen(Color.FromArgb(90, Color.White), 1F))
+            {
+                pevent.Graphics.FillPath(fill, path);
+                pevent.Graphics.DrawPath(border, path);
+            }
+
+            TextRenderer.DrawText(pevent.Graphics, Text, Font, rect, ForeColor, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+        }
+
+        private static Color Blend(Color a, Color b, float amount)
+        {
+            amount = Math.Max(0F, Math.Min(1F, amount));
+            int r = (int)(a.R + ((b.R - a.R) * amount));
+            int g = (int)(a.G + ((b.G - a.G) * amount));
+            int bl = (int)(a.B + ((b.B - a.B) * amount));
+            return Color.FromArgb(a.A, r, g, bl);
+        }
+
+        private static GraphicsPath RoundedRect(Rectangle rect, int radius)
+        {
+            GraphicsPath path = new GraphicsPath();
+            int d = radius * 2;
+            path.AddArc(rect.Left, rect.Top, d, d, 180, 90);
+            path.AddArc(rect.Right - d, rect.Top, d, d, 270, 90);
+            path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+            path.AddArc(rect.Left, rect.Bottom - d, d, d, 90, 90);
+            path.CloseFigure();
+            return path;
         }
     }
 }
