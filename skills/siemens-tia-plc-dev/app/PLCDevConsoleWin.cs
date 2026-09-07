@@ -167,15 +167,28 @@ namespace SiemensTiaSkillSuite
             BackColor = Canvas;
 
             ConfigureSettingsControls();
+            TableLayoutPanel formLayout = new TableLayoutPanel();
+            formLayout.Dock = DockStyle.Fill;
+            formLayout.Margin = new Padding(0);
+            formLayout.Padding = new Padding(0);
+            formLayout.ColumnCount = 1;
+            formLayout.RowCount = 3;
+            formLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            formLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
+            formLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            formLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
+            Controls.Add(formLayout);
+
             BuildMainMenu();
-            Controls.Add(mainMenu);
+            mainMenu.Margin = new Padding(0);
+            formLayout.Controls.Add(mainMenu, 0, 0);
             MainMenuStrip = mainMenu;
 
             Panel bottom = new Panel();
-            bottom.Dock = DockStyle.Bottom;
-            bottom.Height = 28;
+            bottom.Dock = DockStyle.Fill;
+            bottom.Margin = new Padding(0);
             bottom.BackColor = Color.FromArgb(224, 231, 222);
-            Controls.Add(bottom);
+            formLayout.Controls.Add(bottom, 0, 2);
 
             Label safety = new Label();
             safety.Text = "安全策略：读写分离 · 先克隆验证 · 不并发打开TIA工程 · 主工程写入前人工确认";
@@ -189,12 +202,10 @@ namespace SiemensTiaSkillSuite
             scrollHost.AutoScroll = true;
             scrollHost.BackColor = Canvas;
             scrollHost.TabStop = true;
+            scrollHost.Margin = new Padding(0);
             scrollHost.MouseEnter += delegate { scrollHost.Focus(); };
             scrollHost.MouseWheel += delegate (object sender, MouseEventArgs e) { ScrollHostByWheel(e); };
-            Controls.Add(scrollHost);
-            scrollHost.SendToBack();
-            bottom.BringToFront();
-            mainMenu.BringToFront();
+            formLayout.Controls.Add(scrollHost, 0, 1);
 
             scrollContent.Location = new Point(0, 0);
             scrollContent.BackColor = Canvas;
@@ -574,7 +585,8 @@ namespace SiemensTiaSkillSuite
 
         private void BuildMainMenu()
         {
-            mainMenu.Dock = DockStyle.Top;
+            mainMenu.Dock = DockStyle.Fill;
+            mainMenu.AutoSize = false;
             mainMenu.Height = 32;
             mainMenu.Padding = new Padding(4, 3, 4, 2);
             mainMenu.BackColor = Color.FromArgb(37, 39, 42);
