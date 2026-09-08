@@ -11,6 +11,7 @@ Route by task type instead of using one model for everything:
 - New visual concepts from text: use text-to-image workflow.
 - Matching a screenshot, panel photo, or style reference: use image-to-image/reference workflow.
 - Final WinCC implementation: convert the visual result into WinCC-native screens, tags, faceplates, alarms, navigation, and style rules; do not import a static image as the only HMI.
+- Before generating the design, read `PLC_Code\wincc\plugin-routing.json`; explicitly call `$imagegen` when its visual-concept stage is ready, then use the selected engineering adapter for native implementation.
 
 ## Reference Image Intake
 

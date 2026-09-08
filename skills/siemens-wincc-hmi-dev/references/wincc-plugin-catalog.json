@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-09-08",
+  "plugins": [
+    {
+      "id": "codex-imagegen",
+      "name": "Codex imagegen skill",
+      "kind": "codex-skill",
+      "role": "visual-concept",
+      "versions": "all",
+      "url": "local://imagegen",
+      "license": "bundled",
+      "trust": "bundled",
+      "notes": "Use for text-to-image and reference-guided bitmap concepts before mapping the result to WinCC-native objects."
+    },
+    {
+      "id": "siemens-openness",
+      "name": "Siemens TIA Portal Openness",
+      "kind": "local-api",
+      "role": "engineering",
+      "versions": "V16-V21",
+      "url": "https://support.industry.siemens.com/cs/document/109792902/",
+      "license": "Siemens installation",
+      "trust": "official",
+      "notes": "Primary engineering-time route for screens, tags, alarms, faceplates, scripts and compile workflows when the installed API exposes the required objects."
+    },
+    {
+      "id": "sivarc-openness",
+      "name": "SiVArc Openness",
+      "kind": "local-api",
+      "role": "rule-generation",
+      "versions": "installation-dependent",
+      "url": "https://docs.tia.siemens.cloud/r/en-us/v21/sivarc-openness",
+      "license": "Siemens option license",
+      "trust": "official",
+      "notes": "Use for repeated station/device screen generation only when the local SiVArc API and license are present."
+    },
+    {
+      "id": "tia-openness-mcp",
+      "name": "TIA Portal Openness MCP",
+      "kind": "mcp",
+      "role": "engineering",
+      "versions": "V20-V21 Unified; community forks add V18 Classic/Comfort",
+      "url": "https://github.com/bulaofen0036-coder/TIA_Portal_Openness_MCP",
+      "license": "MIT",
+      "trust": "community-review-required",
+      "notes": "Useful for declarative PLC/HMI generation. Prefer source review and a project clone before enabling its executable."
+    },
+    {
+      "id": "show-scripts-addin",
+      "name": "TIA Add-In ShowScripts",
+      "kind": "tia-addin",
+      "role": "screen-script-audit",
+      "versions": "V17+ with documented limitations",
+      "url": "https://github.com/tia-portal-applications/TIA-Add-In-ShowScripts",
+      "license": "repository-specific",
+      "trust": "community-siemens-ecosystem",
+      "notes": "Exports WinCC Unified screen JavaScript and an overview for review. It is not a general screen writer."
+    },
+    {
+      "id": "winccua-mcp-server",
+      "name": "WinCC Unified MCP Server",
+      "kind": "mcp",
+      "role": "runtime-validation",
+      "versions": "WinCC Unified runtime with GraphQL",
+      "url": "https://github.com/vogler75/winccua-mcp-server",
+      "license": "GPL-3.0",
+      "trust": "community-review-required",
+      "notes": "Use for runtime tag/alarm browsing and validation. Do not expose it beyond a trusted network and do not disable TLS validation in production."
+    },
+    {
+      "id": "unified-cwc-guide",
+      "name": "CWC in WinCC Unified",
+      "kind": "component-library",
+      "role": "custom-component",
+      "versions": "WinCC Unified",
+      "url": "https://github.com/tia-portal-applications/CWC-in-WinCC-Unified",
+      "license": "repository-specific",
+      "trust": "community-siemens-ecosystem",
+      "notes": "Use as a design and packaging reference when standard controls or faceplates cannot meet the requirement."
+    },
+    {
+      "id": "unified-cwc-library",
+      "name": "WinCC Unified community CWC libraries",
+      "kind": "component-library",
+      "role": "custom-component",
+      "versions": "WinCC Unified",
+      "url": "https://github.com/Rynstick/LBS",
+      "license": "verify-before-use",
+      "trust": "community-review-required",
+      "notes": "Review license, code and dependency provenance before copying a component into a customer project."
+    }
+  ]
+}

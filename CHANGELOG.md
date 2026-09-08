@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed WinCC plugin routing under Windows PowerShell 5.1 by preserving UTF-8 BOM encoding, and normalized missing SiVArc paths to an empty string in generated reports.
+
 - Extended the packaged Openness bridge from a V17-only assumption to version-aware routing across TIA Portal V16 through V21.
 - Added shared TIA version resolution, `.ap17` through `.ap21` project detection, and V21 modular assembly handling for helper builds and scaffolds.
 - Added a version-compatibility reference that captures the V16-V21 differences most relevant to Openness, XML, and SIMATIC SD workflows.
@@ -24,6 +26,7 @@
 - Trimmed the native console header into a compact one-line project toolbar and wrapped the main workspace in a right-side scrollable canvas with mouse-wheel support.
 - Reworked the native console command area into separate fixed rows for workflow buttons, LAD/XML inputs, and content tabs, and corrected dock ordering so scrollable content no longer slips underneath the menu bar.
 - Added an AI-area quick configuration row and project-level `PLC_Code\config\ai-workflow.json` persistence; read/write cycles now consume the configuration, enforce its session and safety choices, and archive a snapshot in each workflow report.
+- Added version-aware WinCC plugin discovery and routing for bundled image generation, local Openness/SiVArc, reviewed TIA MCP adapters, Unified screen-script export, GraphQL runtime validation, and Custom Web Control references.
 - Added a WinCC visual AI workflow reference for turning uploaded screenshots or text descriptions into WinCC-native screens, faceplates, tags, alarms, navigation, and SiVArc/Openess implementation plans.
 - Validated the installed skill path after TIA/Openness reinstall on 2026-09-07: `read-cycle -ProjectPath "D:\plc\手动程序" -Attach -SkipExport` detected `V17` and `PLC_1`.
 - Added a reusable knowledge-retrieval reference plus broader official instruction-family links for math, conversion, string, word-logic, and shift/rotate routes.

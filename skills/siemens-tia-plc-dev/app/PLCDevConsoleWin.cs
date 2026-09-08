@@ -89,11 +89,17 @@ namespace SiemensTiaSkillSuite
         private readonly ComboBox imageQualityBox = new ComboBox();
         private readonly ComboBox imageSizeBox = new ComboBox();
         private readonly ComboBox componentStrategyBox = new ComboBox();
+        private readonly ComboBox winccFlavorBox = new ComboBox();
+        private readonly ComboBox winccPluginPolicyBox = new ComboBox();
         private readonly ComboBox fontBox = new ComboBox();
         private readonly ComboBox fontSizeBox = new ComboBox();
         private readonly TextBox apiBaseBox = new TextBox();
         private readonly TextBox apiKeyEnvBox = new TextBox();
         private readonly TextBox referenceImageBox = new TextBox();
+        private readonly TextBox winccGraphqlUrlBox = new TextBox();
+        private readonly TextBox tiaMcpPathBox = new TextBox();
+        private readonly TextBox showScriptsPathBox = new TextBox();
+        private readonly TextBox runtimeMcpPathBox = new TextBox();
         private readonly PictureBox referencePreviewBox = new PictureBox();
         private readonly TabControl mainTabs = new TabControl();
         private readonly Panel scrollHost = new Panel();
@@ -354,6 +360,7 @@ namespace SiemensTiaSkillSuite
             commandBar.Controls.Add(CommandButton("快速读取", "read-cycle-skip", Teal));
             commandBar.Controls.Add(CommandButton("完整导出", "read-cycle-full", Orange));
             commandBar.Controls.Add(CommandButton("列程序块", "list-blocks", Ink));
+            commandBar.Controls.Add(CommandButton("WinCC插件", "wincc-plugins", Teal));
             mainLayout.Controls.Add(commandBar, 0, 0);
 
             TableLayoutPanel writePanel = new TableLayoutPanel();
@@ -470,6 +477,10 @@ namespace SiemensTiaSkillSuite
             viewConfigButton.Width = 102;
             viewConfigButton.Click += delegate { ShowWorkflowConfig(); };
             configBar.Controls.Add(viewConfigButton);
+            Button scanPluginsButton = NewButton("扫描WinCC插件", Orange);
+            scanPluginsButton.Width = 132;
+            scanPluginsButton.Click += delegate { StartCommand("wincc-plugins"); };
+            configBar.Controls.Add(scanPluginsButton);
             aiLayout.Controls.Add(configBar, 0, 0);
 
             TableLayoutPanel inputLayout = new TableLayoutPanel();
@@ -565,8 +576,14 @@ namespace SiemensTiaSkillSuite
             imageQualityBox.SelectedIndexChanged += delegate { SaveWorkflowConfig(false); };
             imageSizeBox.SelectedIndexChanged += delegate { SaveWorkflowConfig(false); };
             componentStrategyBox.SelectedIndexChanged += delegate { SaveWorkflowConfig(false); };
+            winccFlavorBox.SelectedIndexChanged += delegate { SaveWorkflowConfig(false); };
+            winccPluginPolicyBox.SelectedIndexChanged += delegate { SaveWorkflowConfig(false); };
             apiBaseBox.Leave += delegate { SaveWorkflowConfig(false); };
             apiKeyEnvBox.Leave += delegate { SaveWorkflowConfig(false); };
+            winccGraphqlUrlBox.Leave += delegate { SaveWorkflowConfig(false); };
+            tiaMcpPathBox.Leave += delegate { SaveWorkflowConfig(false); };
+            showScriptsPathBox.Leave += delegate { SaveWorkflowConfig(false); };
+            runtimeMcpPathBox.Leave += delegate { SaveWorkflowConfig(false); };
             plcNameBox.Leave += delegate { SaveWorkflowConfig(false); };
             requestBox.TextChanged += delegate { ApplyWorkflowDefaults(true); };
             referenceImageBox.TextChanged += delegate
@@ -649,6 +666,8 @@ namespace SiemensTiaSkillSuite
             ConfigureCombo(imageQualityBox, new string[] { "auto", "high", "medium", "low" }, "auto", 96);
             ConfigureCombo(imageSizeBox, new string[] { "auto", "1536x1024", "1024x1024", "1920x1080", "3840x2160" }, "1536x1024", 122);
             ConfigureCombo(componentStrategyBox, new string[] { "自动匹配+自定义", "标准WinCC组件", "Faceplate优先", "自定义组件优先", "SiVArc规则生成" }, "自动匹配+自定义", 168);
+            ConfigureCombo(winccFlavorBox, new string[] { "自动检测", "WinCC Advanced/Comfort", "WinCC Unified Engineering", "WinCC Unified Runtime", "SiVArc" }, "自动检测", 184);
+            ConfigureCombo(winccPluginPolicyBox, new string[] { "自动选择", "仅官方/本机", "允许已审核社区插件", "禁用插件" }, "自动选择", 184);
             PopulateFontOptions();
             fontBox.Width = 178;
             ConfigureCombo(fontSizeBox, new string[] { "9", "10", "11", "12", "14", "16", "18" }, "10", 72);
@@ -660,6 +679,14 @@ namespace SiemensTiaSkillSuite
             StyleInput(apiKeyEnvBox);
             referenceImageBox.Width = 330;
             StyleInput(referenceImageBox);
+            winccGraphqlUrlBox.Width = 260;
+            StyleInput(winccGraphqlUrlBox);
+            tiaMcpPathBox.Width = 260;
+            StyleInput(tiaMcpPathBox);
+            showScriptsPathBox.Width = 260;
+            StyleInput(showScriptsPathBox);
+            runtimeMcpPathBox.Width = 260;
+            StyleInput(runtimeMcpPathBox);
         }
 
         private void BuildMainMenu()
@@ -737,6 +764,7 @@ namespace SiemensTiaSkillSuite
             run.DropDownItems.Add(NewMenuItem("快速读取", delegate { StartCommand("read-cycle-skip"); }));
             run.DropDownItems.Add(NewMenuItem("完整导出", delegate { StartCommand("read-cycle-full"); }));
             run.DropDownItems.Add(NewMenuItem("列程序块", delegate { StartCommand("list-blocks"); }));
+            run.DropDownItems.Add(NewMenuItem("扫描 WinCC 插件", delegate { StartCommand("wincc-plugins"); }));
             run.DropDownItems.Add(NewMenuItem("克隆验证 LAD", delegate { StartCommand("write-cycle"); }));
             return run;
         }
@@ -747,6 +775,8 @@ namespace SiemensTiaSkillSuite
             tools.DropDownItems.Add(BuildSettingsPanelMenu("AI / API / 图像 / WinCC 设置"));
             tools.DropDownItems.Add(new ToolStripSeparator());
             tools.DropDownItems.Add(NewMenuItem("上传 WinCC 参考图...", delegate { BrowseReferenceImage(); }));
+            tools.DropDownItems.Add(NewMenuItem("联网扫描 WinCC 插件", delegate { StartCommand("wincc-plugins"); }));
+            tools.DropDownItems.Add(NewMenuItem("查看 WinCC 插件路由", delegate { ShowWinccPluginRouting(); }));
             tools.DropDownItems.Add(NewMenuItem("应用字体设置", delegate { ApplySelectedFont(); }));
             tools.DropDownItems.Add(NewMenuItem("按任务自动推荐模型", delegate { ApplyWorkflowDefaults(false); }));
             return tools;
@@ -796,7 +826,7 @@ namespace SiemensTiaSkillSuite
             ToolStripMenuItem item = NewMenu(title);
             Panel panel = new Panel();
             panel.Width = 620;
-            panel.Height = 360;
+            panel.Height = 460;
             panel.AutoScroll = true;
             panel.BackColor = Color.FromArgb(35, 39, 43);
 
@@ -804,7 +834,7 @@ namespace SiemensTiaSkillSuite
             grid.Dock = DockStyle.Top;
             grid.AutoSize = true;
             grid.ColumnCount = 4;
-            grid.RowCount = 9;
+            grid.RowCount = 13;
             grid.Padding = new Padding(12);
             grid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 96));
             grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
@@ -817,10 +847,14 @@ namespace SiemensTiaSkillSuite
             AddSettingRow(grid, 2, "Key 环境变量", apiKeyEnvBox, "图像工作流", imageWorkflowBox);
             AddSettingRow(grid, 3, "图像模型", imageModelBox, "图像质量", imageQualityBox);
             AddSettingRow(grid, 4, "图像尺寸", imageSizeBox, "组件策略", componentStrategyBox);
-            AddSettingRow(grid, 5, "界面字体", fontBox, "字号", fontSizeBox);
-            AddSettingRow(grid, 6, "参考图", referenceImageBox, "", NewMenuButton("上传/预览", delegate { BrowseReferenceImage(); }));
-            AddSettingRow(grid, 7, "应用", NewMenuButton("应用字体", delegate { ApplySelectedFont(); }), "推荐", NewMenuButton("自动推荐模型", delegate { ApplyWorkflowDefaults(false); }));
-            AddSettingRow(grid, 8, "生成", NewMenuButton("生成任务草稿", delegate { CreateAiPrompt(); }), "预览", NewMenuButton("查看参考图", delegate { SelectMainTab(4); }));
+            AddSettingRow(grid, 5, "WinCC 类型", winccFlavorBox, "插件策略", winccPluginPolicyBox);
+            AddSettingRow(grid, 6, "GraphQL URL", winccGraphqlUrlBox, "运行时 MCP", runtimeMcpPathBox);
+            AddSettingRow(grid, 7, "TIA MCP", tiaMcpPathBox, "脚本 Add-In", showScriptsPathBox);
+            AddSettingRow(grid, 8, "界面字体", fontBox, "字号", fontSizeBox);
+            AddSettingRow(grid, 9, "参考图", referenceImageBox, "", NewMenuButton("上传/预览", delegate { BrowseReferenceImage(); }));
+            AddSettingRow(grid, 10, "配置", NewMenuButton("保存配置", delegate { SaveWorkflowConfig(true); }), "插件", NewMenuButton("联网扫描", delegate { StartCommand("wincc-plugins"); }));
+            AddSettingRow(grid, 11, "应用", NewMenuButton("应用字体", delegate { ApplySelectedFont(); }), "推荐", NewMenuButton("自动推荐模型", delegate { ApplyWorkflowDefaults(false); }));
+            AddSettingRow(grid, 12, "生成", NewMenuButton("生成任务草稿", delegate { CreateAiPrompt(); }), "预览", NewMenuButton("查看参考图", delegate { SelectMainTab(4); }));
 
             item.DropDownItems.Add(new ToolStripControlHost(panel)
             {
@@ -1206,6 +1240,15 @@ namespace SiemensTiaSkillSuite
                 json.AppendLine("    \"generateReleasePackage\": " + (safetyMode == "克隆验证并生成发布包" ? "true" : "false") + ",");
                 json.AppendLine("    \"allowProductionWrite\": false");
                 json.AppendLine("  },");
+                json.AppendLine("  \"wincc\": {");
+                json.AppendLine("    \"flavor\": " + JsonString(SelectedText(winccFlavorBox, "自动检测")) + ",");
+                json.AppendLine("    \"pluginPolicy\": " + JsonString(SelectedText(winccPluginPolicyBox, "自动选择")) + ",");
+                json.AppendLine("    \"searchOnline\": true,");
+                json.AppendLine("    \"graphqlUrl\": " + JsonString(winccGraphqlUrlBox.Text.Trim()) + ",");
+                json.AppendLine("    \"runtimeMcpPath\": " + JsonString(runtimeMcpPathBox.Text.Trim()) + ",");
+                json.AppendLine("    \"tiaMcpPath\": " + JsonString(tiaMcpPathBox.Text.Trim()) + ",");
+                json.AppendLine("    \"showScriptsPath\": " + JsonString(showScriptsPathBox.Text.Trim()));
+                json.AppendLine("  },");
                 json.AppendLine("  \"image\": {");
                 json.AppendLine("    \"workflow\": " + JsonString(SelectedText(imageWorkflowBox, "自动")) + ",");
                 json.AppendLine("    \"model\": " + JsonString(SelectedText(imageModelBox, "内置imagegen")) + ",");
@@ -1263,6 +1306,12 @@ namespace SiemensTiaSkillSuite
                 plcNameBox.Text = JsonStringValue(json, "plcName", PlcName());
                 SelectCombo(timeoutSecondsBox, JsonNumberValue(json, "stepTimeoutSeconds", WorkflowTimeoutSeconds()).ToString());
                 SelectCombo(safetyModeBox, JsonStringValue(json, "safetyMode", SelectedText(safetyModeBox, "克隆编译验证")));
+                SelectCombo(winccFlavorBox, JsonStringValue(json, "flavor", SelectedText(winccFlavorBox, "自动检测"), "wincc"));
+                SelectCombo(winccPluginPolicyBox, JsonStringValue(json, "pluginPolicy", SelectedText(winccPluginPolicyBox, "自动选择"), "wincc"));
+                winccGraphqlUrlBox.Text = JsonStringValue(json, "graphqlUrl", winccGraphqlUrlBox.Text, "wincc");
+                runtimeMcpPathBox.Text = JsonStringValue(json, "runtimeMcpPath", runtimeMcpPathBox.Text, "wincc");
+                tiaMcpPathBox.Text = JsonStringValue(json, "tiaMcpPath", tiaMcpPathBox.Text, "wincc");
+                showScriptsPathBox.Text = JsonStringValue(json, "showScriptsPath", showScriptsPathBox.Text, "wincc");
                 SelectCombo(imageWorkflowBox, JsonStringValue(json, "workflow", SelectedText(imageWorkflowBox, "自动"), "image"));
                 SelectCombo(imageModelBox, JsonStringValue(json, "model", SelectedText(imageModelBox, "内置imagegen")));
                 SelectCombo(imageQualityBox, JsonStringValue(json, "quality", SelectedText(imageQualityBox, "auto")));
@@ -1291,6 +1340,27 @@ namespace SiemensTiaSkillSuite
             {
                 ShowFile(path);
                 statusLabel.Text = "已打开工作流配置";
+            }
+        }
+
+        private void ShowWinccPluginRouting()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string path = Path.Combine(root, "PLC_Code", "wincc", "plugin-routing.json");
+                if (!File.Exists(path))
+                {
+                    statusLabel.Text = "尚未生成WinCC插件路由，正在扫描";
+                    StartCommand("wincc-plugins");
+                    return;
+                }
+                ShowFile(path);
+                statusLabel.Text = "已打开WinCC插件路由";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "打开WinCC插件路由失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 
@@ -2128,6 +2198,10 @@ namespace SiemensTiaSkillSuite
                         statusLabel.Text = "完成，ExitCode=" + currentProcess.ExitCode;
                         RefreshCurrentJobTail();
                         RefreshRuns();
+                        if (command == "wincc-plugins" && currentProcess.ExitCode == 0)
+                        {
+                            ShowWinccPluginRouting();
+                        }
                     });
                 };
 
@@ -2173,6 +2247,16 @@ namespace SiemensTiaSkillSuite
             {
                 args.AddRange(new string[] { "list-blocks", "--project", root, "--plc", PlcName() });
                 args.Add(SelectedText(tiaSessionModeBox, "自动附加") == "显示TIA界面" ? "--ui" : "--attach");
+            }
+            else if (command == "wincc-plugins")
+            {
+                args.AddRange(new string[] { "wincc-plugins", "-ProjectPath", root, "-TaskText", requestBox.Text.Trim(), "-RefreshCatalog" });
+                AddWorkflowConfigArg(args, configPath);
+                if (File.Exists(referenceImageBox.Text.Trim()))
+                {
+                    args.Add("-ReferenceImagePath");
+                    args.Add(referenceImageBox.Text.Trim());
+                }
             }
             else if (command == "write-cycle")
             {
@@ -2325,6 +2409,11 @@ namespace SiemensTiaSkillSuite
                 string workflow = Convert.ToString(workflowSelectBox.SelectedItem);
                 string referenceImage = referenceImageBox.Text.Trim();
                 bool hasReferenceImage = File.Exists(referenceImage);
+                string winccPluginRouting = "";
+                if (workflow.IndexOf("WinCC", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    winccPluginRouting = ResolveWinccPluginRouting(root, configPath, requestBox.Text.Trim(), referenceImage);
+                }
                 StringBuilder content = new StringBuilder();
                 content.AppendLine("# Codex PLC Task");
                 content.AppendLine();
@@ -2371,6 +2460,14 @@ namespace SiemensTiaSkillSuite
                     content.AppendLine();
                     content.AppendLine(BuildComponentMappingPlan());
                     content.AppendLine();
+                    content.AppendLine("## Required Plugin Routing");
+                    content.AppendLine();
+                    content.AppendLine("Use the ready adapters in this routing plan. For `codex-imagegen`, explicitly invoke `$imagegen`; for engineering adapters, preserve backup/clone-first behavior. Do not run an unreviewed downloaded executable.");
+                    content.AppendLine();
+                    content.AppendLine("```json");
+                    content.AppendLine(winccPluginRouting);
+                    content.AppendLine("```");
+                    content.AppendLine();
                 }
                 content.AppendLine();
                 content.AppendLine("## Latest Block List");
@@ -2403,6 +2500,58 @@ namespace SiemensTiaSkillSuite
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, "生成失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private string ResolveWinccPluginRouting(string root, string configPath, string taskText, string referenceImage)
+        {
+            string routePath = Path.Combine(root, "PLC_Code", "wincc", "plugin-routing.json");
+            try
+            {
+                List<string> args = new List<string>();
+                args.Add("wincc-plugins");
+                args.Add("-ProjectPath");
+                args.Add(root);
+                AddWorkflowConfigArg(args, configPath);
+                if (!string.IsNullOrWhiteSpace(taskText))
+                {
+                    args.Add("-TaskText");
+                    args.Add(taskText);
+                }
+                if (File.Exists(referenceImage))
+                {
+                    args.Add("-ReferenceImagePath");
+                    args.Add(referenceImage);
+                }
+
+                ProcessStartInfo start = new ProcessStartInfo();
+                start.FileName = "powershell.exe";
+                start.Arguments = "-NoProfile -ExecutionPolicy Bypass -File " + Quote(invokeScript) + " " + JoinArgs(args);
+                start.WorkingDirectory = root;
+                start.UseShellExecute = false;
+                start.CreateNoWindow = true;
+
+                using (Process process = Process.Start(start))
+                {
+                    if (!process.WaitForExit(15000))
+                    {
+                        process.Kill();
+                        return "{\"status\":\"timeout\",\"message\":\"WinCC plugin routing exceeded 15 seconds; use the last cached route or run the scanner from the toolbar.\"}";
+                    }
+                    if (process.ExitCode != 0)
+                    {
+                        return "{\"status\":\"error\",\"message\":\"WinCC plugin routing failed; run the toolbar scanner to inspect its log.\"}";
+                    }
+                    if (File.Exists(routePath))
+                    {
+                        return ReadText(routePath);
+                    }
+                    return "{\"status\":\"missing-output\"}";
+                }
+            }
+            catch (Exception ex)
+            {
+                return "{\"status\":\"error\",\"message\":" + JsonString(ex.Message) + "}";
             }
         }
 

@@ -19,6 +19,7 @@ Commands:
   console [-ProjectPath <projectDir|ap16..ap21>] [-Wait] [-ForceBuild]
   console-exe [-ProjectPath <projectDir|ap16..ap21>] [-Wait] [-ForceBuild]
   console-web [-ProjectPath <projectDir|ap16..ap21>] [-Port <n>] [-Background] [-NoOpen]
+  wincc-plugins -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-ReferenceImagePath <image>] [-RefreshCatalog]
   doctor [-ProjectPath <projectDir|ap16..ap21>]
   create-project --name <projectName> [--directory <dir>] [--device-type <typeIdentifier>] [--device-item-type <typeIdentifier>] [--item-name <name>] [--device-name <name>]
   hold-project --project <projectDir|ap16..ap21> [--ui] [--lease-file <path>] [--poll-ms <ms>]
@@ -80,6 +81,7 @@ function Invoke-PowerShellFile {
 }
 
 $bridge = Resolve-TiaBridgeSkill -SkillsRoot $skillsRoot
+$winccPluginScript = Join-Path (Join-Path $skillsRoot "siemens-wincc-hmi-dev") "scripts\resolve-wincc-plugins.ps1"
 
 $opennessScript = Resolve-TiaBridgeScript -SkillPath $bridge.SkillPath -Candidates @(
     "scripts\invoke-tia-openness.ps1"
@@ -149,6 +151,13 @@ switch ($Command.ToLowerInvariant()) {
     }
     "console-web" {
         Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "start-plc-dev-console.ps1") -Arguments $CommandArgs
+        break
+    }
+    "wincc-plugins" {
+        if (-not (Test-Path -LiteralPath $winccPluginScript)) {
+            throw "WinCC plugin resolver was not found: $winccPluginScript"
+        }
+        Invoke-PowerShellFile -Path $winccPluginScript -Arguments $CommandArgs
         break
     }
     "probe" {

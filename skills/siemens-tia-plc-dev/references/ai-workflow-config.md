@@ -20,3 +20,5 @@ The quick row in the AI interaction area edits the code model, workflow, languag
 - `safety.allowProductionWrite` remains `false`; applying a release to the production project is a separate reviewed action.
 
 Both `read-cycle` and `write-cycle` accept `-WorkflowConfigPath`. Each run records the source path and writes a configuration snapshot beside its `workflow-report.json`, so the effective routing and safety settings remain auditable after later configuration changes.
+
+WinCC plugin routing also reads the `wincc` section: flavor, plugin policy, GraphQL URL, and reviewed local adapter paths. The `wincc-plugins` command refreshes compatible plugin metadata and writes `PLC_Code\wincc\plugin-routing.json`; WinCC task drafts embed this routing plan so the selected skills, Openness APIs, or MCP adapters are actually requested during execution.

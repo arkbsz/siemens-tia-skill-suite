@@ -13,6 +13,7 @@ Prefer these routes:
 - SiVArc Openness for rule-based generation of WinCC content
 - WinCC Unified GraphQL or Open Pipe when the task is runtime read/write/subscribe against a Unified runtime
 - visual AI routing for text-to-image or image-to-image screen concepts, then conversion into WinCC-native components
+- plugin-aware routing that detects the TIA version and locally available imagegen, Openness, SiVArc, TIA MCP, screen-script export, and Unified runtime MCP adapters
 
 ## Screen quality target
 
@@ -34,4 +35,6 @@ Before any write-like action, back up the project or work on a clone.
 When PLC and HMI data must align, stabilize the PLC tag/DB contract first, then mirror it in the HMI.
 If the exact WinCC flavor or installed API version is unclear, inspect the local TIA installation before assuming a DLL or method exists.
 
-Read `references/official-sources.md` for the capability boundaries, `references/workflow.md` for the recommended edit loop, `references/screen-design.md` for layout, navigation, and visual quality rules, and `references/visual-ai-workflow.md` when the task uses text descriptions or uploaded reference images to drive WinCC screen design.
+For WinCC design tasks, run `scripts/resolve-wincc-plugins.ps1` before implementation. It refreshes vetted GitHub metadata when requested, writes `PLC_Code\wincc\plugin-routing.json`, and selects only compatible installed adapters. Use the generated invocation plan in the Codex task. Do not execute a downloaded prebuilt community binary until its source and provenance have been reviewed.
+
+Read `references/official-sources.md` for the capability boundaries, `references/workflow.md` for the recommended edit loop, `references/screen-design.md` for layout, navigation, and visual quality rules, `references/visual-ai-workflow.md` when the task uses text descriptions or uploaded reference images, and `references/plugin-routing.md` when selecting or configuring WinCC plugins.
