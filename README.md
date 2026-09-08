@@ -32,6 +32,8 @@
 - WinCC 画面、变量、报警、Faceplate、导航、版式与运行时联动自动化
 - WinCC 参考图/文字描述驱动设计：可选择文生图、图生图/参考图、组件匹配、Faceplate、SiVArc 或自定义组件路线
 - 本地窗口版 `PLCDevConsole.exe`：IDE 风格顶部菜单、精简项目工具条、右侧滚动界面、左侧可拖动项目树、中心日志/预览/对话页面、底部 AI 工作流任务区
+- 内置 Agent 对话：在窗口中直接选择 PLC LAD、SCL、DB、WinCC、Openness、诊断或只读审查 Agent，连续对话并查看流式日志，无需另开 AI 窗口
+- 文件上传：图片、PDF、文档、源码、XML 和日志自动复制到项目工作区并随当前消息交给 Agent
 - 本地 Openness 自动化和 REST 桥接
 - `V16-V21` 版本探测、项目后缀识别、程序集路径路由
 - 编译验证与回读比对
@@ -72,8 +74,10 @@
 ## 一键部署
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install-skills.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\setup-siemens-tia-suite.ps1 -ProjectPath "D:\path\to\project"
 ```
+
+该脚本会备份并安装全部 skill，检测 Codex CLI 与登录状态，必要时通过官方 `@openai/codex` npm 包补齐 CLI，写入 Agent 运行配置，编译并启动本地窗口。只安装 skill、不配置 Agent 运行环境时仍可使用 `install-skills.ps1`。
 
 默认安装位置：
 
@@ -95,11 +99,12 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex
 - 左侧项目结构：可拖动宽度，查看 `.ap16-.ap21` 工程、导出 XML、SCL、DB、UDT、报告和日志。
 - 中间主界面：通过 Tab 切换 AI 对话、日志输出、文件预览和 runs 列表，并可上下拉伸工作区。
 - 设置下拉面板：在 `工具 > AI / API / 图像 / WinCC 设置` 中配置模型、工作流、API、图像模型、质量、尺寸、组件策略、字体和字号；面板支持滚动，避免小窗口遮挡。
-- 底部 AI 交互区：专注输入任务描述和生成 Codex 任务草稿，保存到 `PLC_Code\ai-prompts`。
+- 底部 AI 交互区：可选择内置 Agent、模型和工作流，直接发送消息、停止执行、新建连续会话、上传文件，也可生成 Codex 任务草稿。
+- Agent 会话：每次请求、附件清单、JSONL 事件和错误日志保存在 `PLC_Code\agent-sessions`，附件副本保存在 `PLC_Code\agent-attachments`。
 - WinCC 视觉页：上传参考图后在中心 `参考图` Tab 中预览，任务草稿会自动写入文生图/图生图提示词、组件匹配计划和 WinCC 原生实现步骤。
 - 视觉设置：使用柔和工业渐变、卡片式区域、圆角按钮，并读取 Windows 本机字体库供界面文字配置。
 
-`console` 和 `console-exe` 默认启动窗口版。旧的浏览器控制台保留为备用入口 `console-web`，不再作为默认方式。当前 AI 区定位是“Codex 任务草稿生成器”，不会在后台偷偷调用云端模型。真正的程序生成、审查、LAD 修改和导入验证仍建议回到 Codex 主对话执行。
+`console` 和 `console-exe` 默认启动窗口版。旧的浏览器控制台保留为备用入口 `console-web`，不再作为默认方式。窗口通过本机已登录的 Codex CLI 调用 Agent，不在项目配置中保存 API 密钥；生产工程写入仍必须经过备份、克隆验证和明确确认。
 
 ## 推荐使用顺序
 
@@ -132,6 +137,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc
 
 - `skills/`：可安装的 Codex 技能目录
 - `install-skills.ps1`：本地一键安装脚本
+- `setup-siemens-tia-suite.ps1`：skill、内置 Agent、Codex CLI 检测、依赖和本地窗口的一键配置入口
+- `dependencies.json`：必需和可选依赖清单
 - `release-manifest.json`：发布元数据和验证记录
 - `LICENSE`：仓库的 MIT 开源许可证
 

@@ -79,6 +79,9 @@ namespace SiemensTiaSkillSuite
         private readonly ComboBox workflowSelectBox = new ComboBox();
         private readonly ComboBox quickModelBox = new ComboBox();
         private readonly ComboBox quickWorkflowBox = new ComboBox();
+        private readonly ComboBox agentBox = new ComboBox();
+        private readonly ComboBox agentSandboxBox = new ComboBox();
+        private readonly CheckBox agentSearchBox = new CheckBox();
         private readonly ComboBox languagePreferenceBox = new ComboBox();
         private readonly ComboBox tiaSessionModeBox = new ComboBox();
         private readonly ComboBox safetyModeBox = new ComboBox();
@@ -100,6 +103,9 @@ namespace SiemensTiaSkillSuite
         private readonly TextBox tiaMcpPathBox = new TextBox();
         private readonly TextBox showScriptsPathBox = new TextBox();
         private readonly TextBox runtimeMcpPathBox = new TextBox();
+        private readonly Label agentAttachmentLabel = new Label();
+        private readonly Button sendAgentButton = new Button();
+        private readonly Button stopAgentButton = new Button();
         private readonly PictureBox referencePreviewBox = new PictureBox();
         private readonly TabControl mainTabs = new TabControl();
         private readonly Panel scrollHost = new Panel();
@@ -125,6 +131,11 @@ namespace SiemensTiaSkillSuite
         private string currentStdoutPath = "";
         private string currentStderrPath = "";
         private Process currentProcess;
+        private Process agentProcess;
+        private string agentThreadId = "";
+        private string agentStdoutPath = "";
+        private string agentStderrPath = "";
+        private readonly List<string> agentAttachments = new List<string>();
         private bool applyingWorkflowDefaults;
         private bool synchronizingSettings;
         private bool loadingWorkflowConfig;
@@ -421,7 +432,7 @@ namespace SiemensTiaSkillSuite
             chatBox.BackColor = Color.FromArgb(247, 250, 244);
             chatBox.ForeColor = Ink;
             chatBox.Font = new Font("Microsoft YaHei UI", 9.4F);
-            chatBox.Text = "AI 对话主界面\n\n这里会记录你提交的任务草稿、模型和工作流选择。真正的程序生成、LAD修改和克隆验证仍由 Codex 主对话或 workflow 脚本执行。\n";
+            chatBox.Text = "内置 Agent 对话\n\n选择 Agent、模型和工作流后，可在下方直接发送消息或上传文件。PLC/WinCC 工程写入仍遵循备份优先、克隆编译验证和主工程人工确认策略。\n";
 
             referencePreviewBox.Dock = DockStyle.Fill;
             referencePreviewBox.BackColor = Color.FromArgb(28, 47, 48);
@@ -444,9 +455,10 @@ namespace SiemensTiaSkillSuite
 
             TableLayoutPanel aiLayout = new TableLayoutPanel();
             aiLayout.Dock = DockStyle.Fill;
-            aiLayout.RowCount = 2;
+            aiLayout.RowCount = 3;
             aiLayout.ColumnCount = 1;
             aiLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
+            aiLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
             aiLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             aiInputBox.Controls.Add(aiLayout);
 
@@ -457,6 +469,8 @@ namespace SiemensTiaSkillSuite
             configBar.FlowDirection = FlowDirection.LeftToRight;
             configBar.Padding = new Padding(4, 3, 4, 2);
             configBar.BackColor = CardSoft;
+            configBar.Controls.Add(NewWideLabel("Agent"));
+            configBar.Controls.Add(agentBox);
             configBar.Controls.Add(NewWideLabel("模型"));
             configBar.Controls.Add(quickModelBox);
             configBar.Controls.Add(NewWideLabel("工作流"));
@@ -483,25 +497,77 @@ namespace SiemensTiaSkillSuite
             configBar.Controls.Add(scanPluginsButton);
             aiLayout.Controls.Add(configBar, 0, 0);
 
+            FlowLayoutPanel attachmentBar = new FlowLayoutPanel();
+            attachmentBar.Dock = DockStyle.Fill;
+            attachmentBar.WrapContents = false;
+            attachmentBar.AutoScroll = true;
+            attachmentBar.Padding = new Padding(6, 1, 6, 1);
+            attachmentBar.BackColor = Color.FromArgb(238, 243, 235);
+            Button addAttachmentButton = NewButton("上传文件", Teal);
+            addAttachmentButton.Width = 96;
+            addAttachmentButton.Height = 30;
+            addAttachmentButton.Margin = new Padding(3);
+            addAttachmentButton.Click += delegate { BrowseAgentAttachments(); };
+            attachmentBar.Controls.Add(addAttachmentButton);
+            Button clearAttachmentButton = NewButton("清空附件", Ink);
+            clearAttachmentButton.Width = 96;
+            clearAttachmentButton.Height = 30;
+            clearAttachmentButton.Margin = new Padding(3);
+            clearAttachmentButton.Click += delegate { ClearAgentAttachments(); };
+            attachmentBar.Controls.Add(clearAttachmentButton);
+            agentAttachmentLabel.AutoSize = false;
+            agentAttachmentLabel.Width = 620;
+            agentAttachmentLabel.Height = 30;
+            agentAttachmentLabel.TextAlign = ContentAlignment.MiddleLeft;
+            agentAttachmentLabel.ForeColor = MutedInk;
+            agentAttachmentLabel.Text = "附件：无，可上传图片、PDF、文档、源码或导出 XML";
+            attachmentBar.Controls.Add(agentAttachmentLabel);
+            aiLayout.Controls.Add(attachmentBar, 0, 1);
+
             TableLayoutPanel inputLayout = new TableLayoutPanel();
             inputLayout.Dock = DockStyle.Fill;
             inputLayout.ColumnCount = 2;
             inputLayout.RowCount = 1;
             inputLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            inputLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 168));
-            aiLayout.Controls.Add(inputLayout, 0, 1);
+            inputLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 230));
+            aiLayout.Controls.Add(inputLayout, 0, 2);
 
             requestBox.Dock = DockStyle.Fill;
             requestBox.Multiline = true;
             requestBox.ScrollBars = ScrollBars.Vertical;
             StyleInput(requestBox);
-            requestBox.Text = "例如：参考上传的画面截图，生成一个 WinCC 总览+手动+报警界面方案，自动匹配电机/气缸/报警组件，并输出可导入的画面设计任务。";
+            requestBox.Text = "例如：读取当前项目并检查电机正反转 LAD、DB 变量和 WinCC 手动画面的联锁是否完整，然后在克隆工程中修复并编译验证。";
             inputLayout.Controls.Add(requestBox, 0, 0);
 
-            Button promptButton = NewButton("生成 Codex 任务草稿", Teal);
+            TableLayoutPanel agentActions = new TableLayoutPanel();
+            agentActions.Dock = DockStyle.Fill;
+            agentActions.ColumnCount = 2;
+            agentActions.RowCount = 2;
+            agentActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+            agentActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+            agentActions.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+            agentActions.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+            sendAgentButton.Text = "发送 Agent";
+            StyleActionButton(sendAgentButton, Teal);
+            sendAgentButton.Click += delegate { SendAgentMessage(); };
+            agentActions.Controls.Add(sendAgentButton, 0, 0);
+            stopAgentButton.Text = "停止";
+            StyleActionButton(stopAgentButton, Orange);
+            stopAgentButton.Enabled = false;
+            stopAgentButton.Click += delegate { StopAgent(); };
+            agentActions.Controls.Add(stopAgentButton, 1, 0);
+            Button newSessionButton = NewButton("新会话", Ink);
+            newSessionButton.Dock = DockStyle.Fill;
+            newSessionButton.Margin = new Padding(4);
+            newSessionButton.Click += delegate { NewAgentSession(); };
+            agentActions.Controls.Add(newSessionButton, 0, 1);
+            Button promptButton = NewButton("任务草稿", Gold);
+            promptButton.ForeColor = Ink;
             promptButton.Dock = DockStyle.Fill;
+            promptButton.Margin = new Padding(4);
             promptButton.Click += delegate { CreateAiPrompt(); };
-            inputLayout.Controls.Add(promptButton, 1, 0);
+            agentActions.Controls.Add(promptButton, 1, 1);
+            inputLayout.Controls.Add(agentActions, 1, 0);
 
             tailTimer.Interval = 1200;
             tailTimer.Tick += delegate { RefreshCurrentJobTail(); };
@@ -566,6 +632,17 @@ namespace SiemensTiaSkillSuite
             };
             quickModelBox.SelectedIndexChanged += delegate { ApplyQuickSettingsToAdvanced(false); };
             quickWorkflowBox.SelectedIndexChanged += delegate { ApplyQuickSettingsToAdvanced(true); };
+            agentBox.SelectedIndexChanged += delegate
+            {
+                if (!loadingWorkflowConfig && !applyingWorkflowDefaults && !string.IsNullOrWhiteSpace(agentThreadId))
+                {
+                    agentThreadId = "";
+                    chatBox.AppendText(Environment.NewLine + "--- Agent 已切换，自动开始新会话 ---" + Environment.NewLine);
+                }
+                SaveWorkflowConfig(false);
+            };
+            agentSandboxBox.SelectedIndexChanged += delegate { SaveWorkflowConfig(false); };
+            agentSearchBox.CheckedChanged += delegate { SaveWorkflowConfig(false); };
             languagePreferenceBox.SelectedIndexChanged += delegate { SaveWorkflowConfig(false); };
             tiaSessionModeBox.SelectedIndexChanged += delegate { SaveWorkflowConfig(false); };
             safetyModeBox.SelectedIndexChanged += delegate { SaveWorkflowConfig(false); };
@@ -586,6 +663,14 @@ namespace SiemensTiaSkillSuite
             runtimeMcpPathBox.Leave += delegate { SaveWorkflowConfig(false); };
             plcNameBox.Leave += delegate { SaveWorkflowConfig(false); };
             requestBox.TextChanged += delegate { ApplyWorkflowDefaults(true); };
+            requestBox.KeyDown += delegate (object sender, KeyEventArgs eventArgs)
+            {
+                if (eventArgs.Control && eventArgs.KeyCode == Keys.Enter)
+                {
+                    eventArgs.SuppressKeyPress = true;
+                    SendAgentMessage();
+                }
+            };
             referenceImageBox.TextChanged += delegate
             {
                 if (File.Exists(referenceImageBox.Text))
@@ -594,7 +679,14 @@ namespace SiemensTiaSkillSuite
                 }
                 SaveWorkflowConfig(false);
             };
-            FormClosing += delegate { SaveWorkflowConfig(false); };
+            FormClosing += delegate
+            {
+                SaveWorkflowConfig(false);
+                if (agentProcess != null && !agentProcess.HasExited)
+                {
+                    StopAgent();
+                }
+            };
         }
 
         private void LayoutScrollableContent()
@@ -650,11 +742,18 @@ namespace SiemensTiaSkillSuite
 
         private void ConfigureSettingsControls()
         {
-            string[] models = new string[] { "gpt-5-codex", "gpt-5", "gpt-5-mini", "本地/手动" };
+            string[] models = new string[] { "继承 Codex 默认", "gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.2", "gpt-5-codex", "gpt-5", "本地/手动" };
             string[] workflows = new string[] { "自动选择", "读取项目并总结", "LAD编写与验证", "DB+程序块协同", "WinCC画面生成", "WinCC参考图复刻", "故障诊断", "工业化重构" };
-            ConfigureCombo(modelBox, models, "gpt-5-codex", 150);
+            ConfigureCombo(agentBox, new string[] { "自动路由 Agent", "PLC LAD 工程师", "PLC SCL 工程师", "DB 与变量架构师", "WinCC 画面工程师", "Openness 自动化工程师", "编译诊断 Agent", "只读审查 Agent" }, "自动路由 Agent", 166);
+            ConfigureCombo(agentSandboxBox, new string[] { "只读", "工作区读写", "完全访问" }, "工作区读写", 142);
+            agentSearchBox.Text = "允许联网检索";
+            agentSearchBox.Checked = true;
+            agentSearchBox.AutoSize = true;
+            agentSearchBox.ForeColor = Ink;
+            agentSearchBox.Font = new Font("Microsoft YaHei UI", 9F);
+            ConfigureCombo(modelBox, models, "继承 Codex 默认", 150);
             ConfigureCombo(workflowSelectBox, workflows, "自动选择", 168);
-            ConfigureCombo(quickModelBox, models, "gpt-5-codex", 132);
+            ConfigureCombo(quickModelBox, models, "继承 Codex 默认", 132);
             ConfigureCombo(quickWorkflowBox, workflows, "自动选择", 154);
             ConfigureCombo(languagePreferenceBox, new string[] { "LAD优先", "按项目现有语言", "FBD优先", "SCL优先" }, "LAD优先", 126);
             ConfigureCombo(tiaSessionModeBox, new string[] { "自动附加", "附加当前TIA", "显示TIA界面" }, "自动附加", 126);
@@ -774,6 +873,11 @@ namespace SiemensTiaSkillSuite
             ToolStripMenuItem tools = NewMenu("工具(&T)");
             tools.DropDownItems.Add(BuildSettingsPanelMenu("AI / API / 图像 / WinCC 设置"));
             tools.DropDownItems.Add(new ToolStripSeparator());
+            tools.DropDownItems.Add(NewMenuItem("上传 Agent 附件...", delegate { BrowseAgentAttachments(); }));
+            tools.DropDownItems.Add(NewMenuItem("发送当前消息", delegate { SendAgentMessage(); }));
+            tools.DropDownItems.Add(NewMenuItem("新建 Agent 会话", delegate { NewAgentSession(); }));
+            tools.DropDownItems.Add(NewMenuItem("停止 Agent", delegate { StopAgent(); }));
+            tools.DropDownItems.Add(new ToolStripSeparator());
             tools.DropDownItems.Add(NewMenuItem("上传 WinCC 参考图...", delegate { BrowseReferenceImage(); }));
             tools.DropDownItems.Add(NewMenuItem("联网扫描 WinCC 插件", delegate { StartCommand("wincc-plugins"); }));
             tools.DropDownItems.Add(NewMenuItem("查看 WinCC 插件路由", delegate { ShowWinccPluginRouting(); }));
@@ -834,7 +938,7 @@ namespace SiemensTiaSkillSuite
             grid.Dock = DockStyle.Top;
             grid.AutoSize = true;
             grid.ColumnCount = 4;
-            grid.RowCount = 13;
+            grid.RowCount = 14;
             grid.Padding = new Padding(12);
             grid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 96));
             grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
@@ -842,19 +946,20 @@ namespace SiemensTiaSkillSuite
             grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
             panel.Controls.Add(grid);
 
-            AddSettingRow(grid, 0, "代码模型", modelBox, "工作流", workflowSelectBox);
-            AddSettingRow(grid, 1, "API 提供方", apiProviderBox, "API Base", apiBaseBox);
-            AddSettingRow(grid, 2, "Key 环境变量", apiKeyEnvBox, "图像工作流", imageWorkflowBox);
-            AddSettingRow(grid, 3, "图像模型", imageModelBox, "图像质量", imageQualityBox);
-            AddSettingRow(grid, 4, "图像尺寸", imageSizeBox, "组件策略", componentStrategyBox);
-            AddSettingRow(grid, 5, "WinCC 类型", winccFlavorBox, "插件策略", winccPluginPolicyBox);
-            AddSettingRow(grid, 6, "GraphQL URL", winccGraphqlUrlBox, "运行时 MCP", runtimeMcpPathBox);
-            AddSettingRow(grid, 7, "TIA MCP", tiaMcpPathBox, "脚本 Add-In", showScriptsPathBox);
-            AddSettingRow(grid, 8, "界面字体", fontBox, "字号", fontSizeBox);
-            AddSettingRow(grid, 9, "参考图", referenceImageBox, "", NewMenuButton("上传/预览", delegate { BrowseReferenceImage(); }));
-            AddSettingRow(grid, 10, "配置", NewMenuButton("保存配置", delegate { SaveWorkflowConfig(true); }), "插件", NewMenuButton("联网扫描", delegate { StartCommand("wincc-plugins"); }));
-            AddSettingRow(grid, 11, "应用", NewMenuButton("应用字体", delegate { ApplySelectedFont(); }), "推荐", NewMenuButton("自动推荐模型", delegate { ApplyWorkflowDefaults(false); }));
-            AddSettingRow(grid, 12, "生成", NewMenuButton("生成任务草稿", delegate { CreateAiPrompt(); }), "预览", NewMenuButton("查看参考图", delegate { SelectMainTab(4); }));
+            AddSettingRow(grid, 0, "Agent 权限", agentSandboxBox, "Agent 联网", agentSearchBox);
+            AddSettingRow(grid, 1, "代码模型", modelBox, "工作流", workflowSelectBox);
+            AddSettingRow(grid, 2, "API 提供方", apiProviderBox, "API Base", apiBaseBox);
+            AddSettingRow(grid, 3, "Key 环境变量", apiKeyEnvBox, "图像工作流", imageWorkflowBox);
+            AddSettingRow(grid, 4, "图像模型", imageModelBox, "图像质量", imageQualityBox);
+            AddSettingRow(grid, 5, "图像尺寸", imageSizeBox, "组件策略", componentStrategyBox);
+            AddSettingRow(grid, 6, "WinCC 类型", winccFlavorBox, "插件策略", winccPluginPolicyBox);
+            AddSettingRow(grid, 7, "GraphQL URL", winccGraphqlUrlBox, "运行时 MCP", runtimeMcpPathBox);
+            AddSettingRow(grid, 8, "TIA MCP", tiaMcpPathBox, "脚本 Add-In", showScriptsPathBox);
+            AddSettingRow(grid, 9, "界面字体", fontBox, "字号", fontSizeBox);
+            AddSettingRow(grid, 10, "参考图", referenceImageBox, "", NewMenuButton("上传/预览", delegate { BrowseReferenceImage(); }));
+            AddSettingRow(grid, 11, "配置", NewMenuButton("保存配置", delegate { SaveWorkflowConfig(true); }), "插件", NewMenuButton("联网扫描", delegate { StartCommand("wincc-plugins"); }));
+            AddSettingRow(grid, 12, "应用", NewMenuButton("应用字体", delegate { ApplySelectedFont(); }), "推荐", NewMenuButton("自动推荐模型", delegate { ApplyWorkflowDefaults(false); }));
+            AddSettingRow(grid, 13, "会话", NewMenuButton("新建 Agent 会话", delegate { NewAgentSession(); }), "生成", NewMenuButton("生成任务草稿", delegate { CreateAiPrompt(); }));
 
             item.DropDownItems.Add(new ToolStripControlHost(panel)
             {
@@ -998,6 +1103,18 @@ namespace SiemensTiaSkillSuite
             button.Cursor = Cursors.Hand;
             button.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
             return button;
+        }
+
+        private static void StyleActionButton(Button button, Color color)
+        {
+            button.Dock = DockStyle.Fill;
+            button.Margin = new Padding(4);
+            button.FlatStyle = FlatStyle.Flat;
+            button.FlatAppearance.BorderSize = 0;
+            button.BackColor = color;
+            button.ForeColor = Color.White;
+            button.Cursor = Cursors.Hand;
+            button.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
         }
 
         private static void StyleInput(TextBox box)
@@ -1221,12 +1338,18 @@ namespace SiemensTiaSkillSuite
                 json.AppendLine("  \"updatedAt\": " + JsonString(DateTime.Now.ToString("o")) + ",");
                 json.AppendLine("  \"projectRoot\": " + JsonString(root) + ",");
                 json.AppendLine("  \"routing\": {");
-                json.AppendLine("    \"codeModel\": " + JsonString(SelectedText(modelBox, "gpt-5-codex")) + ",");
+                json.AppendLine("    \"codeModel\": " + JsonString(SelectedText(modelBox, "继承 Codex 默认")) + ",");
                 json.AppendLine("    \"workflow\": " + JsonString(SelectedText(workflowSelectBox, "自动选择")) + ",");
                 json.AppendLine("    \"languagePreference\": " + JsonString(SelectedText(languagePreferenceBox, "LAD优先")) + ",");
                 json.AppendLine("    \"apiProvider\": " + JsonString(SelectedText(apiProviderBox, "Codex内置")) + ",");
                 json.AppendLine("    \"apiBase\": " + JsonString(apiBaseBox.Text.Trim()) + ",");
                 json.AppendLine("    \"apiKeyEnvironment\": " + JsonString(EmptyAsDefault(apiKeyEnvBox.Text.Trim(), "OPENAI_API_KEY")));
+                json.AppendLine("  },");
+                json.AppendLine("  \"agent\": {");
+                json.AppendLine("    \"profile\": " + JsonString(SelectedAgentId()) + ",");
+                json.AppendLine("    \"search\": " + (agentSearchBox.Checked ? "true" : "false") + ",");
+                json.AppendLine("    \"sandbox\": " + JsonString(SelectedAgentSandbox()) + ",");
+                json.AppendLine("    \"threadId\": " + JsonString(agentThreadId));
                 json.AppendLine("  },");
                 json.AppendLine("  \"tia\": {");
                 json.AppendLine("    \"sessionMode\": " + JsonString(SelectedText(tiaSessionModeBox, "自动附加")) + ",");
@@ -1296,12 +1419,18 @@ namespace SiemensTiaSkillSuite
             {
                 loadingWorkflowConfig = true;
                 string json = ReadText(workflowConfigPath);
-                SelectCombo(modelBox, JsonStringValue(json, "codeModel", SelectedText(modelBox, "gpt-5-codex")));
+                string configuredCodeModel = JsonStringValue(json, "codeModel", SelectedText(modelBox, "继承 Codex 默认"));
+                if (configuredCodeModel == "gpt-5" || configuredCodeModel == "gpt-5-codex") { configuredCodeModel = "继承 Codex 默认"; }
+                SelectCombo(modelBox, configuredCodeModel);
                 SelectCombo(workflowSelectBox, JsonStringValue(json, "workflow", SelectedText(workflowSelectBox, "自动选择")));
                 SelectCombo(languagePreferenceBox, JsonStringValue(json, "languagePreference", SelectedText(languagePreferenceBox, "LAD优先")));
                 SelectCombo(apiProviderBox, JsonStringValue(json, "apiProvider", SelectedText(apiProviderBox, "Codex内置")));
                 apiBaseBox.Text = JsonStringValue(json, "apiBase", apiBaseBox.Text);
                 apiKeyEnvBox.Text = JsonStringValue(json, "apiKeyEnvironment", apiKeyEnvBox.Text);
+                SelectAgentById(JsonStringValue(json, "profile", "auto", "agent"));
+                agentSearchBox.Checked = JsonBoolValue(json, "search", true, "agent");
+                SelectAgentSandbox(JsonStringValue(json, "sandbox", "workspace-write", "agent"));
+                agentThreadId = JsonStringValue(json, "threadId", "", "agent");
                 SelectCombo(tiaSessionModeBox, JsonStringValue(json, "sessionMode", SelectedText(tiaSessionModeBox, "自动附加")));
                 plcNameBox.Text = JsonStringValue(json, "plcName", PlcName());
                 SelectCombo(timeoutSecondsBox, JsonNumberValue(json, "stepTimeoutSeconds", WorkflowTimeoutSeconds()).ToString());
@@ -1376,6 +1505,57 @@ namespace SiemensTiaSkillSuite
             return int.TryParse(SelectedText(timeoutSecondsBox, "600"), out value) ? value : 600;
         }
 
+        private string SelectedAgentId()
+        {
+            string selected = SelectedText(agentBox, "自动路由 Agent");
+            if (selected == "PLC LAD 工程师") { return "plc-lad"; }
+            if (selected == "PLC SCL 工程师") { return "plc-scl"; }
+            if (selected == "DB 与变量架构师") { return "data-block"; }
+            if (selected == "WinCC 画面工程师") { return "wincc"; }
+            if (selected == "Openness 自动化工程师") { return "openness"; }
+            if (selected == "编译诊断 Agent") { return "diagnostics"; }
+            if (selected == "只读审查 Agent") { return "reviewer"; }
+            return "auto";
+        }
+
+        private void SelectAgentById(string id)
+        {
+            string name = "自动路由 Agent";
+            if (id == "plc-lad") { name = "PLC LAD 工程师"; }
+            else if (id == "plc-scl") { name = "PLC SCL 工程师"; }
+            else if (id == "data-block") { name = "DB 与变量架构师"; }
+            else if (id == "wincc") { name = "WinCC 画面工程师"; }
+            else if (id == "openness") { name = "Openness 自动化工程师"; }
+            else if (id == "diagnostics") { name = "编译诊断 Agent"; }
+            else if (id == "reviewer") { name = "只读审查 Agent"; }
+            SelectCombo(agentBox, name);
+        }
+
+        private string SelectedAgentSandbox()
+        {
+            string selected = SelectedText(agentSandboxBox, "工作区读写");
+            if (selected == "只读") { return "read-only"; }
+            if (selected == "完全访问") { return "danger-full-access"; }
+            return "workspace-write";
+        }
+
+        private void SelectAgentSandbox(string value)
+        {
+            if (value == "read-only") { SelectCombo(agentSandboxBox, "只读"); }
+            else if (value == "danger-full-access") { SelectCombo(agentSandboxBox, "完全访问"); }
+            else { SelectCombo(agentSandboxBox, "工作区读写"); }
+        }
+
+        private string SelectedAgentModel()
+        {
+            string selected = SelectedText(modelBox, "继承 Codex 默认");
+            if (selected.StartsWith("继承", StringComparison.Ordinal) || selected == "本地/手动" || selected == "gpt-5" || selected == "gpt-5-codex")
+            {
+                return "inherit";
+            }
+            return selected;
+        }
+
         private static string JsonString(string value)
         {
             string safe = value ?? "";
@@ -1408,6 +1588,19 @@ namespace SiemensTiaSkillSuite
             Match match = Regex.Match(json ?? "", "\\\"" + Regex.Escape(key) + "\\\"\\s*:\\s*(?<value>\\d+)");
             int value;
             return match.Success && int.TryParse(match.Groups["value"].Value, out value) ? value : fallback;
+        }
+
+        private static bool JsonBoolValue(string json, string key, bool fallback, string section)
+        {
+            string source = json ?? "";
+            if (!string.IsNullOrWhiteSpace(section))
+            {
+                Match sectionMatch = Regex.Match(source, "\\\"" + Regex.Escape(section) + "\\\"\\s*:\\s*\\{(?<body>.*?)\\}", RegexOptions.Singleline);
+                if (sectionMatch.Success) { source = sectionMatch.Groups["body"].Value; }
+            }
+            Match match = Regex.Match(source, "\\\"" + Regex.Escape(key) + "\\\"\\s*:\\s*(?<value>true|false)", RegexOptions.IgnoreCase);
+            bool value;
+            return match.Success && bool.TryParse(match.Groups["value"].Value, out value) ? value : fallback;
         }
 
         private static string UnescapeJson(string value)
@@ -1479,7 +1672,8 @@ namespace SiemensTiaSkillSuite
 
                 if (winccVisual)
                 {
-                    SelectCombo(modelBox, "gpt-5");
+                    if (string.IsNullOrWhiteSpace(agentThreadId)) { SelectAgentById("wincc"); }
+                    SelectCombo(modelBox, "继承 Codex 默认");
                     SelectCombo(apiProviderBox, "Codex内置");
                     SelectCombo(imageWorkflowBox, hasReferenceImage ? "图生图/参考图" : "文生图");
                     SelectCombo(imageModelBox, "内置imagegen");
@@ -1490,14 +1684,16 @@ namespace SiemensTiaSkillSuite
                 }
                 else if (lad)
                 {
-                    SelectCombo(modelBox, "gpt-5-codex");
+                    if (string.IsNullOrWhiteSpace(agentThreadId)) { SelectAgentById(inferred == "DB+程序块协同" ? "data-block" : "plc-lad"); }
+                    SelectCombo(modelBox, "继承 Codex 默认");
                     SelectCombo(imageWorkflowBox, "无图像");
                     SelectCombo(componentStrategyBox, "标准WinCC组件");
                     statusLabel.Text = "已按PLC/LAD任务推荐模型";
                 }
                 else if (ContainsAny(request, new string[] { "故障", "报错", "诊断", "openness" }))
                 {
-                    SelectCombo(modelBox, "gpt-5-codex");
+                    if (string.IsNullOrWhiteSpace(agentThreadId)) { SelectAgentById(ContainsAny(request, new string[] { "openness", "开放性" }) ? "openness" : "diagnostics"); }
+                    SelectCombo(modelBox, "继承 Codex 默认");
                     SelectCombo(imageWorkflowBox, "无图像");
                     statusLabel.Text = "已按诊断任务推荐模型";
                 }
@@ -2113,6 +2309,272 @@ namespace SiemensTiaSkillSuite
             catch (Exception ex)
             {
                 previewBox.Text = ex.Message;
+            }
+        }
+
+        private void BrowseAgentAttachments()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                OpenFileDialog dialog = new OpenFileDialog();
+                dialog.Title = "上传给 Agent 的项目资料";
+                dialog.Filter = "支持的工程资料|*.png;*.jpg;*.jpeg;*.webp;*.gif;*.pdf;*.docx;*.xlsx;*.csv;*.txt;*.md;*.xml;*.scl;*.udt;*.db;*.json;*.log|所有文件|*.*";
+                dialog.Multiselect = true;
+                if (dialog.ShowDialog(this) != DialogResult.OK) { return; }
+
+                string targetRoot = Path.Combine(root, "PLC_Code", "agent-attachments", DateTime.Now.ToString("yyyyMMdd"));
+                Directory.CreateDirectory(targetRoot);
+                foreach (string source in dialog.FileNames)
+                {
+                    string fileName = Path.GetFileName(source);
+                    string destination = Path.Combine(targetRoot, fileName);
+                    if (File.Exists(destination))
+                    {
+                        destination = Path.Combine(targetRoot, Path.GetFileNameWithoutExtension(fileName) + "-" + DateTime.Now.ToString("HHmmssfff") + Path.GetExtension(fileName));
+                    }
+                    File.Copy(source, destination, false);
+                    agentAttachments.Add(destination);
+
+                    string extension = Path.GetExtension(destination).ToLowerInvariant();
+                    if (string.IsNullOrWhiteSpace(referenceImageBox.Text) && (extension == ".png" || extension == ".jpg" || extension == ".jpeg" || extension == ".webp"))
+                    {
+                        referenceImageBox.Text = destination;
+                    }
+                }
+                UpdateAgentAttachmentLabel();
+                statusLabel.Text = "已上传 " + dialog.FileNames.Length.ToString() + " 个附件";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "附件上传失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void ClearAgentAttachments()
+        {
+            agentAttachments.Clear();
+            UpdateAgentAttachmentLabel();
+            statusLabel.Text = "本次待发送附件已清空";
+        }
+
+        private void UpdateAgentAttachmentLabel()
+        {
+            if (agentAttachments.Count == 0)
+            {
+                agentAttachmentLabel.Text = "附件：无，可上传图片、PDF、文档、源码或导出 XML";
+                return;
+            }
+            List<string> names = new List<string>();
+            foreach (string path in agentAttachments) { names.Add(Path.GetFileName(path)); }
+            agentAttachmentLabel.Text = "附件(" + agentAttachments.Count.ToString() + ")：" + string.Join("；", names.ToArray());
+        }
+
+        private void NewAgentSession()
+        {
+            if (agentProcess != null && !agentProcess.HasExited)
+            {
+                MessageBox.Show("请先等待当前 Agent 回合完成或点击停止。", "Agent 正在运行", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            agentThreadId = "";
+            chatBox.AppendText(Environment.NewLine + "--- 已新建 Agent 会话 ---" + Environment.NewLine);
+            SaveWorkflowConfig(false);
+            statusLabel.Text = "已新建 Agent 会话";
+        }
+
+        private void SendAgentMessage()
+        {
+            if (agentProcess != null && !agentProcess.HasExited)
+            {
+                MessageBox.Show("当前 Agent 仍在处理上一条消息。", "Agent 正在运行", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            string userMessage = requestBox.Text.Trim();
+            if (string.IsNullOrWhiteSpace(userMessage))
+            {
+                MessageBox.Show("请输入要发送给 Agent 的内容。", "消息为空", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string agentScript = Path.Combine(Path.GetDirectoryName(invokeScript), "invoke-codex-agent.ps1");
+                if (!File.Exists(agentScript)) { throw new FileNotFoundException("未找到内置 Agent 适配脚本。", agentScript); }
+
+                SaveWorkflowConfig(false);
+                string runRoot = Path.Combine(root, "PLC_Code", "agent-sessions", DateTime.Now.ToString("yyyyMMdd-HHmmss-fff"));
+                Directory.CreateDirectory(runRoot);
+                string promptPath = Path.Combine(runRoot, "user-message.txt");
+                string manifestPath = Path.Combine(runRoot, "attachments.txt");
+                agentStdoutPath = Path.Combine(runRoot, "agent.jsonl");
+                agentStderrPath = Path.Combine(runRoot, "agent.stderr.log");
+                File.WriteAllText(promptPath, userMessage, Encoding.UTF8);
+                File.WriteAllLines(manifestPath, agentAttachments.ToArray(), Encoding.UTF8);
+                File.WriteAllText(agentStdoutPath, "", Encoding.UTF8);
+                File.WriteAllText(agentStderrPath, "", Encoding.UTF8);
+
+                List<string> args = new List<string>();
+                args.Add("-NoProfile");
+                args.Add("-ExecutionPolicy");
+                args.Add("Bypass");
+                args.Add("-File");
+                args.Add(agentScript);
+                args.Add("-ProjectPath");
+                args.Add(root);
+                args.Add("-PromptFile");
+                args.Add(promptPath);
+                args.Add("-AgentId");
+                args.Add(SelectedAgentId());
+                args.Add("-Model");
+                args.Add(SelectedAgentModel());
+                args.Add("-Sandbox");
+                args.Add(SelectedAgentSandbox());
+                args.Add("-AttachmentManifest");
+                args.Add(manifestPath);
+                if (agentSearchBox.Checked) { args.Add("-Search"); }
+                if (!string.IsNullOrWhiteSpace(agentThreadId))
+                {
+                    args.Add("-SessionId");
+                    args.Add(agentThreadId);
+                }
+
+                chatBox.AppendText(Environment.NewLine + "你 · " + SelectedText(agentBox, "自动路由 Agent") + Environment.NewLine + userMessage + Environment.NewLine);
+                if (agentAttachments.Count > 0)
+                {
+                    chatBox.AppendText("附件：" + agentAttachmentLabel.Text + Environment.NewLine);
+                }
+                chatBox.AppendText(Environment.NewLine + "Agent 正在处理..." + Environment.NewLine);
+                mainTabs.SelectedIndex = 0;
+
+                ProcessStartInfo start = new ProcessStartInfo();
+                start.FileName = "powershell.exe";
+                start.Arguments = JoinArgs(args);
+                start.WorkingDirectory = root;
+                start.UseShellExecute = false;
+                start.CreateNoWindow = true;
+                start.RedirectStandardOutput = true;
+                start.RedirectStandardError = true;
+                start.StandardOutputEncoding = Encoding.UTF8;
+                start.StandardErrorEncoding = Encoding.UTF8;
+
+                Process process = new Process();
+                process.StartInfo = start;
+                process.EnableRaisingEvents = true;
+                process.OutputDataReceived += delegate (object sender, DataReceivedEventArgs eventArgs)
+                {
+                    if (eventArgs.Data == null) { return; }
+                    AppendOutput(agentStdoutPath, eventArgs.Data);
+                    HandleAgentJsonLine(eventArgs.Data);
+                };
+                process.ErrorDataReceived += delegate (object sender, DataReceivedEventArgs eventArgs)
+                {
+                    if (eventArgs.Data == null) { return; }
+                    AppendOutput(agentStderrPath, eventArgs.Data);
+                    AppendAgentLog("[stderr] " + eventArgs.Data);
+                };
+                process.Exited += delegate { AgentProcessExited(process); };
+                agentProcess = process;
+                sendAgentButton.Enabled = false;
+                stopAgentButton.Enabled = true;
+                statusLabel.Text = "Agent 运行中";
+                jobBox.Text = "Agent 会话目录：" + runRoot + Environment.NewLine + "Agent：" + SelectedText(agentBox, "自动路由 Agent") + Environment.NewLine + "模型：" + SelectedAgentModel() + Environment.NewLine;
+                process.Start();
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+                requestBox.Clear();
+                agentAttachments.Clear();
+                UpdateAgentAttachmentLabel();
+            }
+            catch (Exception ex)
+            {
+                sendAgentButton.Enabled = true;
+                stopAgentButton.Enabled = false;
+                MessageBox.Show(ex.Message, "Agent 启动失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void HandleAgentJsonLine(string line)
+        {
+            Match threadMatch = Regex.Match(line, "\\\"type\\\"\\s*:\\s*\\\"thread\\.started\\\".*?\\\"thread_id\\\"\\s*:\\s*\\\"(?<id>[^\\\"]+)\\\"");
+            if (threadMatch.Success)
+            {
+                agentThreadId = threadMatch.Groups["id"].Value;
+                BeginInvoke((Action)delegate { SaveWorkflowConfig(false); });
+            }
+
+            Match messageMatch = Regex.Match(line, "\\\"type\\\"\\s*:\\s*\\\"item\\.completed\\\".*?\\\"type\\\"\\s*:\\s*\\\"agent_message\\\".*?\\\"text\\\"\\s*:\\s*\\\"(?<text>(?:\\\\.|[^\\\"])*)\\\"", RegexOptions.Singleline);
+            if (messageMatch.Success)
+            {
+                string message = UnescapeJson(messageMatch.Groups["text"].Value);
+                BeginInvoke((Action)delegate
+                {
+                    chatBox.AppendText(Environment.NewLine + SelectedText(agentBox, "Agent") + Environment.NewLine + message + Environment.NewLine);
+                    chatBox.SelectionStart = chatBox.TextLength;
+                    chatBox.ScrollToCaret();
+                });
+            }
+            AppendAgentLog(line);
+        }
+
+        private void AppendAgentLog(string line)
+        {
+            try
+            {
+                BeginInvoke((Action)delegate
+                {
+                    jobBox.AppendText(line + Environment.NewLine);
+                    if (jobBox.TextLength > 80000) { jobBox.Text = jobBox.Text.Substring(jobBox.TextLength - 60000); }
+                    jobBox.SelectionStart = jobBox.TextLength;
+                    jobBox.ScrollToCaret();
+                });
+            }
+            catch
+            {
+            }
+        }
+
+        private void AgentProcessExited(Process process)
+        {
+            try
+            {
+                int exitCode = process.ExitCode;
+                BeginInvoke((Action)delegate
+                {
+                    if (agentProcess == process) { agentProcess = null; }
+                    sendAgentButton.Enabled = true;
+                    stopAgentButton.Enabled = false;
+                    statusLabel.Text = exitCode == 0 ? "Agent 回合完成" : "Agent 失败，ExitCode=" + exitCode.ToString();
+                    if (exitCode != 0 && File.Exists(agentStderrPath))
+                    {
+                        chatBox.AppendText(Environment.NewLine + "[Agent 错误]" + Environment.NewLine + Tail(ReadText(agentStderrPath), 3000) + Environment.NewLine);
+                    }
+                    SaveWorkflowConfig(false);
+                });
+            }
+            catch
+            {
+            }
+        }
+
+        private void StopAgent()
+        {
+            if (agentProcess == null || agentProcess.HasExited) { return; }
+            try
+            {
+                ProcessStartInfo stop = new ProcessStartInfo();
+                stop.FileName = "taskkill.exe";
+                stop.Arguments = "/PID " + agentProcess.Id.ToString() + " /T /F";
+                stop.UseShellExecute = false;
+                stop.CreateNoWindow = true;
+                Process.Start(stop);
+                statusLabel.Text = "正在停止 Agent";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "停止 Agent 失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 

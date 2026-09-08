@@ -19,6 +19,7 @@ Commands:
   console [-ProjectPath <projectDir|ap16..ap21>] [-Wait] [-ForceBuild]
   console-exe [-ProjectPath <projectDir|ap16..ap21>] [-Wait] [-ForceBuild]
   console-web [-ProjectPath <projectDir|ap16..ap21>] [-Port <n>] [-Background] [-NoOpen]
+  agent-chat -ProjectPath <projectDir|ap16..ap21> -PromptFile <text> [-AgentId <id>] [-Model <id>] [-SessionId <id>] [-AttachmentManifest <text>] [-Sandbox <mode>] [-Search]
   wincc-plugins -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-ReferenceImagePath <image>] [-RefreshCatalog]
   doctor [-ProjectPath <projectDir|ap16..ap21>]
   create-project --name <projectName> [--directory <dir>] [--device-type <typeIdentifier>] [--device-item-type <typeIdentifier>] [--item-name <name>] [--device-name <name>]
@@ -81,6 +82,7 @@ function Invoke-PowerShellFile {
 }
 
 $bridge = Resolve-TiaBridgeSkill -SkillsRoot $skillsRoot
+$codexAgentScript = Join-Path $PSScriptRoot "invoke-codex-agent.ps1"
 $winccPluginScript = Join-Path (Join-Path $skillsRoot "siemens-wincc-hmi-dev") "scripts\resolve-wincc-plugins.ps1"
 
 $opennessScript = Resolve-TiaBridgeScript -SkillPath $bridge.SkillPath -Candidates @(
@@ -151,6 +153,13 @@ switch ($Command.ToLowerInvariant()) {
     }
     "console-web" {
         Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "start-plc-dev-console.ps1") -Arguments $CommandArgs
+        break
+    }
+    "agent-chat" {
+        if (-not (Test-Path -LiteralPath $codexAgentScript)) {
+            throw "Codex agent adapter was not found: $codexAgentScript"
+        }
+        Invoke-PowerShellFile -Path $codexAgentScript -Arguments $CommandArgs
         break
     }
     "wincc-plugins" {

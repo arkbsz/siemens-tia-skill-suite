@@ -22,3 +22,5 @@ The quick row in the AI interaction area edits the code model, workflow, languag
 Both `read-cycle` and `write-cycle` accept `-WorkflowConfigPath`. Each run records the source path and writes a configuration snapshot beside its `workflow-report.json`, so the effective routing and safety settings remain auditable after later configuration changes.
 
 WinCC plugin routing also reads the `wincc` section: flavor, plugin policy, GraphQL URL, and reviewed local adapter paths. The `wincc-plugins` command refreshes compatible plugin metadata and writes `PLC_Code\wincc\plugin-routing.json`; WinCC task drafts embed this routing plan so the selected skills, Openness APIs, or MCP adapters are actually requested during execution.
+
+The native Agent console persists an `agent` section with `profile`, `search`, `sandbox`, and `threadId`. The thread id allows the window to resume a project conversation after restart. Uploaded file paths are not stored in this configuration; each request receives its own attachment manifest under `PLC_Code\agent-sessions`.

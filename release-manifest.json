@@ -39,6 +39,15 @@
                                "relativePath":  "skills\\codex-tia-client"
                            }
                        ],
+    "agentRuntime":  {
+                         "engine":  "Codex CLI",
+                         "profiles":  "skills\\siemens-tia-plc-dev\\agents\\siemens-agent-profiles.json",
+                         "adapter":  "skills\\siemens-tia-plc-dev\\scripts\\invoke-codex-agent.ps1",
+                         "setup":  "setup-siemens-tia-suite.ps1",
+                         "dependencies":  "dependencies.json",
+                         "sessionStorage":  "PLC_Code\\agent-sessions",
+                         "attachmentStorage":  "PLC_Code\\agent-attachments"
+                     },
     "excludedDirectories":  [
                                 "__pycache__",
                                 ".session-cache"
@@ -97,6 +106,8 @@
                   "write-cycle is the preferred generated LAD XML safety gate before applying any release to a production project.",
                   "write-cycle writes current-step.json plus stdout/stderr temp logs and supports StepTimeoutSeconds for no-hang live Openness operation.",
                   "The native PLCDevConsole.exe visual console is available through the console and console-exe commands and provides project tree, runs/logs, workflow buttons, and Codex-ready AI task drafting.",
+                  "The native console embeds selectable Codex CLI Agent profiles, continuous conversations, project-local attachments, JSONL rendering, and auditable session logs.",
+                  "setup-siemens-tia-suite.ps1 installs skills with backup, verifies or installs Codex CLI, records runtime dependencies, builds the EXE, and optionally launches the project console.",
                   "The browser-based console remains available only as the explicit console-web fallback."
               ]
 }

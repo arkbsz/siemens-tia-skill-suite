@@ -47,12 +47,14 @@ Use the local visual console when the user wants a better interaction surface th
 - a draggable left project tree for TIA projects, exported XML/SCL/DB/UDT, reports, and logs
 - switchable center pages for AI chat, command logs, file preview, runs, and reference-image preview
 - a bottom AI task box focused on the user request, with settings moved into the Tools menu to avoid crowding
+- direct built-in Agent conversations through Codex CLI, with Agent profile selection, continuous sessions, stop/new-session controls, and no separate AI window
+- project-local file uploads for images, PDFs, documents, source files, exported XML, and logs
 - a horizontally scrollable quick-configuration row in the AI area for model, workflow, language preference, TIA session mode, safety mode, and step timeout
 - a scrollable Tools settings panel for model/workflow selection, API provider/base/key-env settings, image workflow/model/quality/size, WinCC component strategy, Windows font settings, and uploaded reference image path
 - project-level configuration persistence at `PLC_Code\config\ai-workflow.json`; `read-cycle` and `write-cycle` consume the saved file and copy a snapshot into their run reports
 - common workflow buttons for `doctor`, `read-cycle`, `list-blocks`, and `write-cycle`
 - run and log preview panels for `PLC_Code\runs` and `PLC_Code\console-jobs`
-- a Codex-ready prompt file writer under `PLC_Code\ai-prompts`
+- a Codex-ready prompt file writer under `PLC_Code\ai-prompts`, plus auditable Agent requests and JSONL logs under `PLC_Code\agent-sessions`
 
 Start it with:
 
@@ -60,7 +62,7 @@ Start it with:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" console -ProjectPath "D:\path\to\project"
 ```
 
-Use `console-exe` explicitly when you want the native executable route, or `console-web` only as a fallback browser-based console. The first native version keeps the AI panel as a Codex task composer rather than a hidden cloud agent. Use the generated prompt file in the main Codex thread for code generation, LAD review, and safe write-cycle execution.
+Use `console-exe` explicitly when you want the native executable route, or `console-web` only as a fallback browser-based console. The native console can call the installed Codex CLI directly; it preserves the selected Agent session and separates conversational output from technical logs. Read `references/agent-console.md` for Agent profiles, attachments, session storage, and safety boundaries.
 
 ## Local bridge
 
@@ -72,6 +74,7 @@ Use the wrapper scripts in this skill to stay generic:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\bootstrap-siemens-plc-dev.ps1" -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\refresh-plc-libraries.ps1" -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" console -ProjectPath "D:\path\to\project"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" agent-chat -ProjectPath "D:\path\to\project" -PromptFile "D:\path\to\message.txt" -AgentId plc-lad -Sandbox workspace-write -Search
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" doctor -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" read-cycle -ProjectPath "D:\path\to\project" -UseUi
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" list-blocks --project "D:\path\to\project"

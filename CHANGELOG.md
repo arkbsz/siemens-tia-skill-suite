@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Integrated Codex CLI Agents directly into the native console with selectable Siemens roles, continuous sessions, file attachments, JSONL conversation rendering, stop controls, and project-local audit logs.
+- Added `setup-siemens-tia-suite.ps1`, built-in Agent profiles, and a dependency manifest for one-command skill, Agent runtime, dependency, and EXE setup.
 - Fixed WinCC plugin routing under Windows PowerShell 5.1 by preserving UTF-8 BOM encoding, and normalized missing SiVArc paths to an empty string in generated reports.
 
 - Extended the packaged Openness bridge from a V17-only assumption to version-aware routing across TIA Portal V16 through V21.

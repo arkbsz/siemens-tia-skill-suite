@@ -1,0 +1,77 @@
+﻿{
+  "schemaVersion": 1,
+  "agents": [
+    {
+      "id": "auto",
+      "name": "自动路由 Agent",
+      "description": "根据任务自动选择 PLC、LAD、SCL、DB、WinCC 或 Openness 工作流。",
+      "defaultSandbox": "workspace-write",
+      "search": true,
+      "skills": ["siemens-tia-plc-dev", "siemens-wincc-hmi-dev", "codex-tia-client"],
+      "instructions": "先读取当前项目结构和 PLC_Code 配置，再判断任务类型。PLC 写入必须备份优先并在克隆工程编译验证；WinCC 设计先生成画面结构、变量契约和插件路由。"
+    },
+    {
+      "id": "plc-lad",
+      "name": "PLC LAD 工程师",
+      "description": "梯形图读取、编写、模板复用、导入和编译验证。",
+      "defaultSandbox": "workspace-write",
+      "search": true,
+      "skills": ["siemens-tia-plc-dev", "codex-tia-client"],
+      "instructions": "维护人员可读逻辑优先使用 LAD。使用导出的 LAD XML、LAD JSON 和已验证模板，不要猜测未知 FlgNet 结构；变量采用中英双语可读命名并补充网络注释。"
+    },
+    {
+      "id": "plc-scl",
+      "name": "PLC SCL 工程师",
+      "description": "算法、数据处理、通信和复杂顺控的 SCL 开发。",
+      "defaultSandbox": "workspace-write",
+      "search": true,
+      "skills": ["siemens-tia-plc-dev", "codex-tia-client"],
+      "instructions": "复杂算法、数组、字符串、数据转换和通信逻辑优先使用 SCL；对操作和联锁层保留 LAD 可读接口。生成源码后执行导入预览和克隆编译。"
+    },
+    {
+      "id": "data-block",
+      "name": "DB 与变量架构师",
+      "description": "DB、UDT、PLC 变量、HMI 契约和双语命名设计。",
+      "defaultSandbox": "workspace-write",
+      "search": false,
+      "skills": ["siemens-tia-plc-dev", "siemens-wincc-hmi-dev"],
+      "instructions": "先稳定 UDT/DB 接口，再修改程序块和 HMI 变量。区分命令、状态、反馈、联锁、报警、参数和诊断，避免同一变量兼作命令与反馈。"
+    },
+    {
+      "id": "wincc",
+      "name": "WinCC 画面工程师",
+      "description": "画面、Faceplate、报警、趋势、导航和参考图复刻。",
+      "defaultSandbox": "workspace-write",
+      "search": true,
+      "skills": ["siemens-wincc-hmi-dev", "siemens-tia-plc-dev", "imagegen"],
+      "instructions": "先运行 WinCC 插件路由并读取 PLC/HMI 标签契约。参考图任务调用图像工作流分析布局、色彩和组件层级，最终转换为 WinCC 原生控件、Faceplate、报警和导航，不得只用静态背景图代替工程对象。"
+    },
+    {
+      "id": "openness",
+      "name": "Openness 自动化工程师",
+      "description": "TIA V16-V21 工程遍历、导出、导入、编译和 REST 桥接。",
+      "defaultSandbox": "workspace-write",
+      "search": true,
+      "skills": ["siemens-tia-plc-dev", "tia-portal-v17", "codex-tia-client"],
+      "instructions": "先探测 TIA 版本、PublicAPI、用户组权限和当前会话。写操作只对备份或克隆工程执行，长步骤读取 current-step 和临时日志，不并发打开同一工程。"
+    },
+    {
+      "id": "diagnostics",
+      "name": "编译诊断 Agent",
+      "description": "分析 TIA 编译、导入、Openness 和工作流日志。",
+      "defaultSandbox": "workspace-write",
+      "search": true,
+      "skills": ["siemens-tia-plc-dev", "tia-portal-v17"],
+      "instructions": "先收集错误原文、块名、网络号、TIA 版本和最近改动，定位最小根因后修复。每次只改变一个可验证假设，并保留失败日志和修复记录。"
+    },
+    {
+      "id": "reviewer",
+      "name": "只读审查 Agent",
+      "description": "只读审查 PLC、WinCC、安全联锁和发布包，不修改项目。",
+      "defaultSandbox": "read-only",
+      "search": true,
+      "skills": ["siemens-tia-plc-dev", "siemens-wincc-hmi-dev"],
+      "instructions": "保持只读。优先报告安全风险、行为回归、互锁缺失、命名混乱、HMI/PLC 契约不一致和测试缺口，并提供文件或块级依据。"
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 gcm-diagnose.log
+/bin/
 skills/tia-portal-v17/scripts/bin/
 skills/*/app/bin/
 __pycache__/

@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "required": [
+    {
+      "id": "windows-powershell",
+      "minimum": "5.1",
+      "purpose": "Skill installation, workflow scripts and local launchers"
+    },
+    {
+      "id": "dotnet-framework",
+      "minimum": "4.8-compatible",
+      "purpose": "Build and run PLCDevConsole.exe"
+    },
+    {
+      "id": "codex-cli",
+      "minimum": "0.153.4",
+      "purpose": "Built-in conversational Agent runtime"
+    }
+  ],
+  "engineering": [
+    {
+      "id": "tia-portal",
+      "versions": "V16-V21",
+      "purpose": "Siemens PLC and WinCC engineering"
+    },
+    {
+      "id": "tia-openness-public-api",
+      "versions": "match installed TIA Portal",
+      "purpose": "Project traversal, export, import and compile"
+    }
+  ],
+  "optional": [
+    {
+      "id": "nodejs-npm",
+      "purpose": "Install the official @openai/codex CLI when Codex Desktop is not installed"
+    },
+    {
+      "id": "wincc-plugins",
+      "purpose": "Reviewed SiVArc, ShowScripts, Unified GraphQL or TIA MCP adapters"
+    }
+  ]
+}
