@@ -14,6 +14,7 @@ Prefer these routes:
 - WinCC Unified GraphQL or Open Pipe when the task is runtime read/write/subscribe against a Unified runtime
 - visual AI routing for text-to-image or image-to-image screen concepts, then conversion into WinCC-native components
 - plugin-aware routing that detects the TIA version and locally available imagegen, Openness, SiVArc, TIA MCP, screen-script export, and Unified runtime MCP adapters
+- clone-first Agent queue execution when a screen task spans visual analysis, component selection, tag contract updates, Openness/SiVArc engineering, runtime validation, and safety review
 
 ## Screen quality target
 
@@ -37,4 +38,22 @@ If the exact WinCC flavor or installed API version is unclear, inspect the local
 
 For WinCC design tasks, run `scripts/resolve-wincc-plugins.ps1` before implementation. It refreshes vetted GitHub metadata when requested, writes `PLC_Code\wincc\plugin-routing.json`, and selects only compatible installed adapters. Use the generated invocation plan in the Codex task. Do not execute a downloaded prebuilt community binary until its source and provenance have been reviewed.
 
-Read `references/official-sources.md` for the capability boundaries, `references/workflow.md` for the recommended edit loop, `references/screen-design.md` for layout, navigation, and visual quality rules, `references/visual-ai-workflow.md` when the task uses text descriptions or uploaded reference images, and `references/plugin-routing.md` when selecting or configuring WinCC plugins.
+For reference-image or text-driven HMI design, scaffold a package before engineering writes:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" wincc-visual-package -ProjectPath "D:\path\to\project" -TaskText "Create a station overview screen"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" wincc-component-blueprints -ProjectPath "D:\path\to\project" -TaskText "Create reusable WinCC component blueprints"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" wincc-engineering-scaffold -ProjectPath "D:\path\to\project" -TaskText "Create clone-first WinCC engineering scaffold"
+```
+
+This writes `PLC_Code\wincc\tasks\latest\design-brief.md`, `screen-map.md`, `component-map.md`, `tag-contract.md`, `style-guide.md`, `implementation-plan.md`, and `safety-review.md`.
+
+The current package also includes `reference-analysis.md`, `component-selection-matrix.md`, `component-candidates.json`, `plugin-invocation-plan.md`, `cwc-faceplate-package.md`, and `engineering-tasks.json`. Use these as the workbench-native handoff between visual design, component selection, Openness/SiVArc/CWC engineering and validation. The generated image or uploaded screenshot is a reference target only; final HMI content should remain editable WinCC objects wherever possible.
+
+Run `wincc-component-blueprints` after the visual package when the screen must become a reusable project pattern. It writes `PLC_Code\wincc\component-blueprints\latest\component-blueprints.md/json`, `screen-layout-grid.json`, `sivarc-rule-blueprints.md`, and `cwc-package-manifest.json`. Use these files to map each visual zone to existing faceplates, standard WinCC controls, SiVArc repeated-object rules, custom faceplates, or CWC candidates before any write-like engineering step.
+
+Run `wincc-engineering-scaffold` after the visual package and component blueprints when the design is ready to become engineering work. It writes `PLC_Code\wincc\engineering-scaffold\latest` with preflight checks, HMI tag and alarm import maps, Faceplate build lists, SiVArc generation checks, CWC review notes, Unified runtime smoke plans and clone-validation plans. This is the handoff from visual design into Openness/SiVArc/CWC implementation, not a direct production-screen write.
+
+For larger WinCC work, generate an Agent plan and execution queue from the PLC skill, then run one stage at a time through `queue-run-current`. Keep the visual reference, component map, tag contract, generated assets, Openness/SiVArc scripts, runtime validation notes and safety review as separate evidence files so the workbench can review them like a local pull request.
+
+Read `references/official-sources.md` for the capability boundaries, `references/workflow.md` for the recommended edit loop, `references/screen-design.md` for layout, navigation, and visual quality rules, `references/visual-ai-workflow.md` when the task uses text descriptions or uploaded reference images, `references/visual-to-wincc-pipeline.md` when the result must become editable WinCC objects, and `references/plugin-routing.md` when selecting or configuring WinCC plugins.

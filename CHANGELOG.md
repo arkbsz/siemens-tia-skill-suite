@@ -1,7 +1,44 @@
 # Changelog
 
+## 2026-09-09 - Agent workbench orchestration
+
+- Added `plc-instruction-cookbook`, producing a reusable Siemens instruction route matrix and risk checklist for LAD JSON, generic `CALL`, SCL source import, donor LAD network and technology-object workflows.
+- Added `wincc-component-blueprints`, producing reusable WinCC screen/component blueprints, layout grid JSON, SiVArc rule notes and CWC manifest stubs for reference-image/text-to-editable-HMI work.
+- Added `wincc-engineering-scaffold`, producing WinCC engineering task lists, HMI tag/alarm import maps, faceplate build lists, SiVArc/CWC checklists, runtime smoke plans and clone-validation plans.
+- Added `simulation-package`, producing static validation, clone compile, readback diff, PLCSIM Advanced hook, WinCC Unified GraphQL smoke and release-gate scenarios for project-level verification.
+- Extended `agent-pipeline` so broad PLC/WinCC tasks now generate project model, knowledge pack, capability map, PLC instruction cookbook, instruction plan, WinCC plugin routing, visual package, component blueprints, WinCC engineering scaffold, simulation package, Agent plan, execution queue and workbench dashboard in one auditable pass.
+- Fixed the new Chinese PowerShell workflow scripts for Windows PowerShell 5.1 by avoiding inline object subexpressions and saving the files with UTF-8 BOM to keep bilingual `中文_English` naming safe.
+- Added native workbench task planning through `agent-plan`, producing `PLC_Code\agent-plans\latest-plan.md/json`.
+- Added native workbench execution queues through `agent-queue`, producing `PLC_Code\agent-queues\latest\queue.md/json`, stage prompts, logs and evidence folders.
+- Added queue stage control through `queue-stage`, including start-next, complete-current, fail-current, block-current and reset actions with `current-stage.md/json`.
+- Added workbench review packages through `review-package`, collecting Agent plans, queues, PLC/WinCC packages, artifact hashes, optional git diffs and import-readiness gates.
+- Added `project-model`, producing `PLC_Code\workbench\context\latest\project-model.json`, `agent-context.md`, and `file-index.csv` as the fast project understanding layer for local and cross-platform Agents.
+- Added `knowledge-pack`, producing official-first PLC/WinCC source packs with Siemens documentation anchors, reviewed-community routing notes, task-specific retrieval queries and Agent prompt handoff files.
+- Added `capability-map`, producing `PLC_Code\workbench\capabilities\latest\capability-map.md/json` so the native workbench can honestly track editor-replacement coverage, validation gates, TIA-native gaps and next steps.
+- Added one-click Agent development pipelines through `agent-pipeline`, automatically generating PLC instruction plans, WinCC visual packages, Agent plans, execution queues and dashboard evidence from one broad PLC/WinCC request.
+- Added `任务编排` and `项目模型` tabs, toolbar/menu actions and auto-preview after plan/context generation.
+- Added toolbar/menu/settings-panel entries for execution queue generation, current-stage handling and review-package preview.
+- Added dashboard coverage for the latest `agent-pipeline` summary so the validation panel shows end-to-end pipeline state.
+- Added read-only TIA Viewer / ImportExport adapter discovery and `wincc.tiaViewerPath` configuration for future offline SimaticML, LAD/FBD, GRAPH, SCL, DB and UDT previews.
+- Added editable file preview with backup-on-save and a `lad-preview` action for readable LAD XML summaries.
+- Added `plc-change-package` for structured PLC edit packages with contracts, LAD JSON, SCL/DB folders, import manifests, verification plans and safety notes.
+- Added workflow routes for `工作台自动开发`, `PLC高级指令与工艺对象` and `安全风险评估`.
+- Added dedicated `工作台编排 Agent`, `PLC 高级指令工程师` and `队列执行 Agent` profiles.
+- Added references for agent workbench evolution, advanced PLC instruction/technology-object routing, and visual-to-WinCC engineering.
+- Updated WinCC visual workflow with a multi-stage reference-image/text-to-editable-WinCC pipeline, component selection matrix, plugin invocation plan, CWC/Faceplate package notes and engineering task JSON.
+- Updated the native workbench toolbar, run/tools menus, settings panel, dashboard, capability map and project model previews for WinCC engineering scaffolds and simulation packages.
+
+## 2026-09-09
+
+- Reworked the native console AI interaction area into a responsive two-row settings grid, a non-overlapping attachment/status bar, and compact send/stop/session/draft controls.
+- Added a unified multi-platform Agent router for Codex, Claude Code, Trae Agent, and Qoder with automatic task-based selection and strict manual selection.
+- Added workflow-specific platform priorities, models, Agent profiles, skills, and instructions for project reads, LAD, SCL, DB/HMI contracts, WinCC, Openness, diagnostics, industrial refactors, and reviews.
+- Added persistent platform settings, command overrides, session-platform isolation, custom model IDs, and platform health checks to the native Windows console.
+- Kept third-party CLIs and authentication external: the protected EXE embeds adapters and workflows, not vendor binaries, accounts, models, or API keys.
+
 ## Unreleased
 
+- Added a self-contained `SiemensTIAAgent.exe` protected release path with an encrypted skill/runtime payload, HMAC integrity checks, per-user temporary extraction, cleanup, optional Authenticode signing, and a build-time self-test.
 - Integrated Codex CLI Agents directly into the native console with selectable Siemens roles, continuous sessions, file attachments, JSONL conversation rendering, stop controls, and project-local audit logs.
 - Added `setup-siemens-tia-suite.ps1`, built-in Agent profiles, and a dependency manifest for one-command skill, Agent runtime, dependency, and EXE setup.
 - Fixed WinCC plugin routing under Windows PowerShell 5.1 by preserving UTF-8 BOM encoding, and normalized missing SiVArc paths to an empty string in generated reports.

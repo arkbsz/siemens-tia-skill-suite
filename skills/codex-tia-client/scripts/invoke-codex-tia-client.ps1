@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$ProjectPath = (Get-Location).Path,
 
     [Parameter(ValueFromRemainingArguments = $true)]

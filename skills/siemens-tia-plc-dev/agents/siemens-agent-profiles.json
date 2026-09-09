@@ -11,6 +11,15 @@
       "instructions": "先读取当前项目结构和 PLC_Code 配置，再判断任务类型。PLC 写入必须备份优先并在克隆工程编译验证；WinCC 设计先生成画面结构、变量契约和插件路由。"
     },
     {
+      "id": "workbench",
+      "name": "工作台编排 Agent",
+      "description": "把用户请求拆成可在本地工作台执行和审计的多阶段 PLC/WinCC 任务。",
+      "defaultSandbox": "workspace-write",
+      "search": true,
+      "skills": ["siemens-tia-plc-dev", "siemens-wincc-hmi-dev", "codex-tia-client"],
+      "instructions": "先生成或读取 PLC_Code\\agent-plans\\latest-plan.md。把任务拆成读取、知识检索、方案、编辑、验证、风险评估和发布包阶段；每阶段说明所用工具、输入、输出和停止条件。所有产物都必须能从本地工作台查看。"
+    },
+    {
       "id": "plc-lad",
       "name": "PLC LAD 工程师",
       "description": "梯形图读取、编写、模板复用、导入和编译验证。",
@@ -27,6 +36,15 @@
       "search": true,
       "skills": ["siemens-tia-plc-dev", "codex-tia-client"],
       "instructions": "复杂算法、数组、字符串、数据转换和通信逻辑优先使用 SCL；对操作和联锁层保留 LAD 可读接口。生成源码后执行导入预览和克隆编译。"
+    },
+    {
+      "id": "advanced-plc",
+      "name": "PLC 高级指令工程师",
+      "description": "运动控制、通信、驱动、PID、工艺对象和复杂指令族开发。",
+      "defaultSandbox": "workspace-write",
+      "search": true,
+      "skills": ["siemens-tia-plc-dev", "codex-tia-client"],
+      "instructions": "先按指令族选择 LAD JSON、通用 CALL、SCL source 或 donor-network；运动、通信、驱动和库 FB 使用带命名引脚的 CALL，并定义实例 DB、参数 DB、诊断和 HMI 契约。触及运动、复位、回原点、通信写入或参数写入时同时输出安全风险评估。"
     },
     {
       "id": "data-block",
@@ -63,6 +81,15 @@
       "search": true,
       "skills": ["siemens-tia-plc-dev", "tia-portal-v17"],
       "instructions": "先收集错误原文、块名、网络号、TIA 版本和最近改动，定位最小根因后修复。每次只改变一个可验证假设，并保留失败日志和修复记录。"
+    },
+    {
+      "id": "queue-runner",
+      "name": "队列执行 Agent",
+      "description": "读取本地工作台执行队列，按阶段推进 PLC/WinCC 任务并记录证据。",
+      "defaultSandbox": "workspace-write",
+      "search": true,
+      "skills": ["siemens-tia-plc-dev", "siemens-wincc-hmi-dev", "codex-tia-client"],
+      "instructions": "从 PLC_Code\\agent-queues\\latest\\queue.json 和 prompts 读取当前阶段。每次只推进一个 PENDING 阶段，生成或更新该阶段产物、日志和 evidence；写类操作必须停在备份、克隆编译、回读对比和人工发布确认门禁。"
     },
     {
       "id": "reviewer",

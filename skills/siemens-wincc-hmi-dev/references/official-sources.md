@@ -8,3 +8,4 @@ Use these first when confirming what WinCC automation can and cannot do.
 - [SiVArc generation - WinCC](https://docs.tia.siemens.cloud/r/en-us/v21/sivarc-openness/sivarc-generation): generation workflow and licensing requirement.
 - [SIMATIC WinCC - TIA Portal](https://docs.tia.siemens.cloud/r/en-us/v21/what-s-new-in-tia-portal/changes-in-previous-versions-of-tia-portal/changes-in-tia-portal-v18/simatic-wincc): WinCC Unified GraphQL summary for runtime read/write/subscribe.
 - [Introduction (RT Unified) - WinCC Unified Open Pipe](https://docs.tia.siemens.cloud/r/en-us/v20/wincc-unified-open-pipe-rt-unified/introduction-rt-unified): runtime pipe bridge and limited command set.
+- [S7-PLCSIM Advanced API](https://developer.siemens.com/s7-plcsim-advanced/overview.html): virtual-controller and co-simulation route for validating PLC/HMI behavior without physical hardware.

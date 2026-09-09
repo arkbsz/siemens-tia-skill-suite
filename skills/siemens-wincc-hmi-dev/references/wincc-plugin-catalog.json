@@ -47,6 +47,28 @@
       "notes": "Useful for declarative PLC/HMI generation. Prefer source review and a project clone before enabling its executable."
     },
     {
+      "id": "tia-v20-unified-mcp",
+      "name": "TIA V20 Unified MCP",
+      "kind": "mcp",
+      "role": "engineering",
+      "versions": "V20-oriented; verify V21/V16-V19 before use",
+      "url": "https://github.com/Fanqi-dev/tia-v20-unified-mcp",
+      "license": "verify-before-use",
+      "trust": "community-review-required",
+      "notes": "Useful as a reference for PLC/HMI MCP workflows around project creation, XML analysis, compile diagnostics and rollback. Treat as source pattern until reviewed locally."
+    },
+    {
+      "id": "tia-openness-manager",
+      "name": "TIA Openness Manager",
+      "kind": "desktop-tool",
+      "role": "bulk-import-export-review",
+      "versions": "community-reported multi-version support; verify locally",
+      "url": "https://tiaopenessmanager.ch/en",
+      "license": "verify-before-use",
+      "trust": "community-review-required",
+      "notes": "Community tool pattern, now presented as AnyAutomation Studio, for bulk export/import, HMI assets, dead-code style review and AI-assisted workflows. Do not execute against customer projects before code, license and backup behavior are reviewed."
+    },
+    {
       "id": "show-scripts-addin",
       "name": "TIA Add-In ShowScripts",
       "kind": "tia-addin",
@@ -89,6 +111,28 @@
       "license": "verify-before-use",
       "trust": "community-review-required",
       "notes": "Review license, code and dependency provenance before copying a component into a customer project."
+    },
+    {
+      "id": "tia-import-export-vsext",
+      "name": "TiaImportExport.VSExt",
+      "kind": "vscode-extension-source",
+      "role": "offline-source-preview-import-export",
+      "versions": "V18-V21 reported; verify V16/V17 locally",
+      "url": "https://github.com/cmariusz/TiaImportExport.VSExt",
+      "license": "MIT",
+      "trust": "community-review-required",
+      "notes": "Useful source reference for TIA export/import, SIMATIC SD style editing and preview workflows. Do not install or execute binaries on customer projects until source, license and clone behavior are reviewed."
+    },
+    {
+      "id": "tia-viewer-importexport",
+      "name": "TIA Viewer / ImportExport style tools",
+      "kind": "source-viewer",
+      "role": "offline-graphical-preview",
+      "versions": "project/export dependent",
+      "url": "https://github.com/Parozzz/TiaUtilities",
+      "license": "verify-before-use",
+      "trust": "community-review-required",
+      "notes": "Useful design pattern for rendering SimaticML, SCL, DB, UDT, LAD/FBD and GRAPH exports into a workbench preview. Treat as a viewer/import-export reference, not as a trusted writer until reviewed."
     }
   ]
 }

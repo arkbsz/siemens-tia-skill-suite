@@ -40,14 +40,33 @@
                            }
                        ],
     "agentRuntime":  {
-                         "engine":  "Codex CLI",
+                         "engine":  "Multi-platform CLI router",
+                         "platforms":  ["Codex", "Claude Code", "Trae Agent", "Qoder"],
                          "profiles":  "skills\\siemens-tia-plc-dev\\agents\\siemens-agent-profiles.json",
-                         "adapter":  "skills\\siemens-tia-plc-dev\\scripts\\invoke-codex-agent.ps1",
+                         "platformCatalog":  "skills\\siemens-tia-plc-dev\\agents\\ai-platforms.json",
+                         "workflowRoutes":  "skills\\siemens-tia-plc-dev\\agents\\siemens-workflow-routes.json",
+                         "adapter":  "skills\\siemens-tia-plc-dev\\scripts\\invoke-ai-platform-agent.ps1",
+                         "legacyCodexShim":  "skills\\siemens-tia-plc-dev\\scripts\\invoke-codex-agent.ps1",
                          "setup":  "setup-siemens-tia-suite.ps1",
                          "dependencies":  "dependencies.json",
                          "sessionStorage":  "PLC_Code\\agent-sessions",
                          "attachmentStorage":  "PLC_Code\\agent-attachments"
                      },
+    "protectedRelease":  {
+                              "builder":  "build-protected-exe.ps1",
+                              "documentation":  "PROTECTED_RELEASE.md",
+                              "output":  "protected-release\\SiemensTIAAgent.exe",
+                              "target":  "win-x64",
+                              "selfContained":  true,
+                              "singleFile":  true,
+                              "payloadEncryption":  "AES-256-CBC",
+                              "payloadIntegrity":  "HMAC-SHA256",
+                              "temporaryRuntime":  "%LOCALAPPDATA%\\ArkBSZ\\SiemensTIAAgent\\sessions",
+                              "sourceFilesDistributedBesideExe":  false,
+                              "lastBuiltAt":  "2026-09-09T17:08:00+08:00",
+                              "lastBuildSha256":  "FA9352FB9E0738095C4432242187479A76389780ECE54A36CD0645CB2DE9538D",
+                              "lastBuildSelfTest":  "Passed"
+                          },
     "excludedDirectories":  [
                                 "__pycache__",
                                 ".session-cache"
@@ -89,6 +108,49 @@
                                    "DetectedVersion":  "V17",
                                    "PlcName":  "PLC_1",
                                    "RunRoot":  "D:\\plc\\手动程序\\PLC_Code\\runs\\read-cycle-20260907-134502"
+                               },
+                               {
+                                   "Workflow":  "wincc-engineering-scaffold",
+                                   "Status":  "passed",
+                                   "ValidatedAt":  "2026-09-09T17:00:05+08:00",
+                                   "ProjectPath":  "D:\\plc\\手动程序",
+                                   "Command":  "wincc-engineering-scaffold -ProjectPath \"D:\\plc\\手动程序\"",
+                                   "OutputRoot":  "D:\\plc\\手动程序\\PLC_Code\\wincc\\engineering-scaffold\\latest",
+                                   "TaskCount":  9,
+                                   "ReleaseAllowed":  false
+                               },
+                               {
+                                   "Workflow":  "simulation-package",
+                                   "Status":  "passed",
+                                   "ValidatedAt":  "2026-09-09T17:00:05+08:00",
+                                   "ProjectPath":  "D:\\plc\\手动程序",
+                                   "Command":  "simulation-package -ProjectPath \"D:\\plc\\手动程序\"",
+                                   "OutputRoot":  "D:\\plc\\手动程序\\PLC_Code\\simulation\\latest",
+                                   "ScenarioCount":  6,
+                                   "PlcsimDetected":  false,
+                                   "ReleaseAllowed":  false
+                               },
+                               {
+                                   "Workflow":  "workbench-dashboard",
+                                   "Status":  "passed",
+                                   "ValidatedAt":  "2026-09-09T17:00:06+08:00",
+                                   "ProjectPath":  "D:\\plc\\手动程序",
+                                   "Command":  "workbench-dashboard -ProjectPath \"D:\\plc\\手动程序\"",
+                                   "OutputRoot":  "D:\\plc\\手动程序\\PLC_Code\\workbench\\latest",
+                                   "IncludesWinccEngineeringScaffold":  true,
+                                   "IncludesSimulationPackage":  true
+                               },
+                               {
+                                   "Workflow":  "agent-pipeline",
+                                   "Status":  "passed",
+                                   "ValidatedAt":  "2026-09-09T17:07:25+08:00",
+                                   "ProjectPath":  "D:\\plc\\手动程序",
+                                   "Command":  "agent-pipeline -ProjectPath \"D:\\plc\\手动程序\" -RefreshWinccCatalog",
+                                   "OutputRoot":  "D:\\plc\\手动程序\\PLC_Code\\workbench\\pipelines\\latest",
+                                   "StepCount":  13,
+                                   "IncludesWinccEngineeringScaffold":  true,
+                                   "IncludesSimulationPackage":  true,
+                                   "ReleaseAllowed":  false
                                }
                            ],
     "residualLocalPathHits":  [
@@ -106,8 +168,20 @@
                   "write-cycle is the preferred generated LAD XML safety gate before applying any release to a production project.",
                   "write-cycle writes current-step.json plus stdout/stderr temp logs and supports StepTimeoutSeconds for no-hang live Openness operation.",
                   "The native PLCDevConsole.exe visual console is available through the console and console-exe commands and provides project tree, runs/logs, workflow buttons, and Codex-ready AI task drafting.",
-                  "The native console embeds selectable Codex CLI Agent profiles, continuous conversations, project-local attachments, JSONL rendering, and auditable session logs.",
-                  "setup-siemens-tia-suite.ps1 installs skills with backup, verifies or installs Codex CLI, records runtime dependencies, builds the EXE, and optionally launches the project console.",
+                  "The native console embeds targeted Siemens Agent profiles and routes Codex, Claude Code, Trae Agent, and Qoder through one normalized JSONL adapter.",
+                  "project-model creates PLC_Code\\workbench\\context\\latest\\project-model.json, agent-context.md, and file-index.csv for fast project understanding across local and external Agent engines.",
+                  "knowledge-pack creates PLC_Code\\knowledge\\packs\\latest\\knowledge-brief.md/json with official-first Siemens sources, task search queries, reviewed-community route notes, and Agent retrieval prompts.",
+                  "capability-map creates PLC_Code\\workbench\\capabilities\\latest\\capability-map.md/json to track native workbench editor-replacement coverage, backing commands, verification gates, TIA-native gaps, and next steps.",
+                  "plc-instruction-cookbook creates PLC_Code\\plc\\instruction-cookbook\\latest with reusable Siemens instruction-family routes, example anchors and safety-risk checks.",
+                  "wincc-component-blueprints creates PLC_Code\\wincc\\component-blueprints\\latest with reusable screen shells, component blueprints, layout grids, SiVArc rule notes and CWC manifest stubs.",
+                  "wincc-engineering-scaffold creates PLC_Code\\wincc\\engineering-scaffold\\latest with preflight checks, HMI tag/alarm import maps, faceplate build lists, SiVArc/CWC checklists, runtime smoke plans, and clone validation plans.",
+                  "simulation-package creates PLC_Code\\simulation\\latest with static validation, clone compile, readback diff, PLCSIM Advanced hook, WinCC Unified runtime smoke, and release-gate scenario artifacts.",
+                  "agent-pipeline provides a one-click first-pass PLC/WinCC development pipeline that generates project context, knowledge packs, capability maps, PLC instruction cookbooks, instruction routing, WinCC visual packages, WinCC component blueprints, WinCC engineering scaffolds, simulation packages, Agent plans, queues, and workbench dashboard evidence without production writes.",
+                  "PowerShell scripts that contain bilingual Chinese/English workflow text are saved with UTF-8 BOM for Windows PowerShell 5.1 compatibility.",
+                  "workbench-dashboard now includes the latest agent-pipeline summary together with queue health, instruction routes, safety risks, plugin routing, run reports, and diff evidence.",
+                  "Automatic mode selects the first installed platform preferred by the active PLC/WinCC workflow; manual mode never silently falls back.",
+                  "setup-siemens-tia-suite.ps1 installs skills with backup, detects all supported Agent CLIs, records runtime dependencies, builds the EXE, and optionally launches the project console.",
+                  "build-protected-exe.ps1 produces a self-contained single-file Windows application with an encrypted, authenticated runtime payload and no adjacent source tree.",
                   "The browser-based console remains available only as the explicit console-web fallback."
               ]
 }

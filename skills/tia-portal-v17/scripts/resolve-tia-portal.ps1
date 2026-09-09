@@ -1,4 +1,4 @@
-$script:TiaSupportedVersionMajors = @(16, 17, 18, 19, 20, 21)
+﻿$script:TiaSupportedVersionMajors = @(16, 17, 18, 19, 20, 21)
 
 function Get-TiaSupportedVersionMajors {
     return @($script:TiaSupportedVersionMajors)

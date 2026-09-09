@@ -1,4 +1,4 @@
-function Get-TiaBridgeVersionNumber {
+﻿function Get-TiaBridgeVersionNumber {
     param(
         [string]$Value
     )

@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$ProjectPath = "",
 
     [string]$ListenHost = "127.0.0.1",

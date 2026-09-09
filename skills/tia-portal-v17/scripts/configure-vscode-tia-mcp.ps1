@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$WorkspacePath = (Get-Location).Path,
 
     [string]$ServerExe = "C:\path\to\TiaMcpServer.exe",

@@ -70,3 +70,18 @@ This note captures the version differences that matter most for the packaged Sie
 - do not assume `V21` can safely replace every older live workflow without an intentional migration step
 - for LAD authoring, keep exported XML as the stable reviewable surface across all supported versions
 - treat `SIMATIC SD` as an additive route, not a replacement for XML validation
+
+## Code-Like Editing Strategy
+
+- `V16-V19`: default to Openness XML export/import for LAD/FBD and SCL source import for text blocks. Build repeatable edits around exported block XML, `NetworkSource` / `FlgNet` donor networks, and clone compile readback.
+- `V20`: allow SIMATIC SD/document workflows when the exact installation exports the required object type; keep XML as fallback.
+- `V21`: prefer SIMATIC SD when available for code-like source control and bulk text edits across LAD/FBD/SCL/DB/UDT, then still validate by import/compile/readback through Openness.
+
+The workbench should expose these routes as choices, but automatic mode should pick the oldest reliable route first unless the project version and installed API prove a newer document route is available.
+
+## Source Anchors
+
+- Siemens Openness overview, Entry ID `109792902`
+- Siemens official Openness snippets: `https://github.com/siemens/tia-portal-openness-code-snippets`
+- SIMATIC SD for TIA Portal: `https://github.com/siemens/simatic-sd`
+- Siemens TIA Portal V21 programming guideline: `https://support.industry.siemens.com/cs/document/109974823`

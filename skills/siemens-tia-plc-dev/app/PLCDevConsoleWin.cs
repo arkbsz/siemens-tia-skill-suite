@@ -71,6 +71,12 @@ namespace SiemensTiaSkillSuite
         private readonly RichTextBox previewBox = new RichTextBox();
         private readonly RichTextBox jobBox = new RichTextBox();
         private readonly RichTextBox chatBox = new RichTextBox();
+        private readonly RichTextBox planBox = new RichTextBox();
+        private readonly RichTextBox diffBox = new RichTextBox();
+        private readonly RichTextBox validationBox = new RichTextBox();
+        private readonly RichTextBox contextBox = new RichTextBox();
+        private readonly RichTextBox knowledgeBox = new RichTextBox();
+        private readonly RichTextBox capabilityBox = new RichTextBox();
         private readonly TextBox requestBox = new TextBox();
         private readonly Label statusLabel = new Label();
         private readonly Label projectBadge = new Label();
@@ -79,6 +85,10 @@ namespace SiemensTiaSkillSuite
         private readonly ComboBox workflowSelectBox = new ComboBox();
         private readonly ComboBox quickModelBox = new ComboBox();
         private readonly ComboBox quickWorkflowBox = new ComboBox();
+        private readonly ComboBox routingModeBox = new ComboBox();
+        private readonly ComboBox platformBox = new ComboBox();
+        private readonly ComboBox quickRoutingModeBox = new ComboBox();
+        private readonly ComboBox quickPlatformBox = new ComboBox();
         private readonly ComboBox agentBox = new ComboBox();
         private readonly ComboBox agentSandboxBox = new ComboBox();
         private readonly CheckBox agentSearchBox = new CheckBox();
@@ -98,14 +108,24 @@ namespace SiemensTiaSkillSuite
         private readonly ComboBox fontSizeBox = new ComboBox();
         private readonly TextBox apiBaseBox = new TextBox();
         private readonly TextBox apiKeyEnvBox = new TextBox();
+        private readonly TextBox codexCommandBox = new TextBox();
+        private readonly TextBox claudeCommandBox = new TextBox();
+        private readonly TextBox traeCommandBox = new TextBox();
+        private readonly TextBox qoderCommandBox = new TextBox();
+        private readonly TextBox traeProviderBox = new TextBox();
         private readonly TextBox referenceImageBox = new TextBox();
         private readonly TextBox winccGraphqlUrlBox = new TextBox();
         private readonly TextBox tiaMcpPathBox = new TextBox();
+        private readonly TextBox tiaV20UnifiedMcpPathBox = new TextBox();
+        private readonly TextBox tiaOpennessManagerPathBox = new TextBox();
         private readonly TextBox showScriptsPathBox = new TextBox();
         private readonly TextBox runtimeMcpPathBox = new TextBox();
+        private readonly TextBox tiaViewerPathBox = new TextBox();
         private readonly Label agentAttachmentLabel = new Label();
+        private readonly Label platformStatusLabel = new Label();
         private readonly Button sendAgentButton = new Button();
         private readonly Button stopAgentButton = new Button();
+        private readonly CheckBox editPreviewBox = new CheckBox();
         private readonly PictureBox referencePreviewBox = new PictureBox();
         private readonly TabControl mainTabs = new TabControl();
         private readonly Panel scrollHost = new Panel();
@@ -130,15 +150,20 @@ namespace SiemensTiaSkillSuite
         private string projectRoot = "";
         private string currentStdoutPath = "";
         private string currentStderrPath = "";
+        private string currentPreviewPath = "";
         private Process currentProcess;
         private Process agentProcess;
         private string agentThreadId = "";
+        private string agentSessionPlatform = "";
+        private string activePlatformName = "";
+        private string activePlatformModel = "";
         private string agentStdoutPath = "";
         private string agentStderrPath = "";
         private readonly List<string> agentAttachments = new List<string>();
         private bool applyingWorkflowDefaults;
         private bool synchronizingSettings;
         private bool loadingWorkflowConfig;
+        private bool workflowAutoMode = true;
         private string workflowConfigPath = "";
 
         public MainForm(string projectPath, string invokeScriptArg)
@@ -371,7 +396,37 @@ namespace SiemensTiaSkillSuite
             commandBar.Controls.Add(CommandButton("快速读取", "read-cycle-skip", Teal));
             commandBar.Controls.Add(CommandButton("完整导出", "read-cycle-full", Orange));
             commandBar.Controls.Add(CommandButton("列程序块", "list-blocks", Ink));
+            commandBar.Controls.Add(CommandButton("LAD预览", "lad-preview", Teal));
+            commandBar.Controls.Add(CommandButton("项目模型", "project-model", Teal));
+            commandBar.Controls.Add(CommandButton("知识检索", "knowledge-pack", Teal));
+            commandBar.Controls.Add(CommandButton("能力矩阵", "capability-map", Teal));
+            commandBar.Controls.Add(CommandButton("指令库", "plc-instruction-cookbook", Teal));
+            commandBar.Controls.Add(CommandButton("自动流水线", "agent-pipeline", Gold));
+            commandBar.Controls.Add(CommandButton("PLC改动包", "plc-change-package", Gold));
+            commandBar.Controls.Add(CommandButton("指令方案", "plc-instruction-plan", Teal));
             commandBar.Controls.Add(CommandButton("WinCC插件", "wincc-plugins", Teal));
+            commandBar.Controls.Add(CommandButton("WinCC方案", "wincc-visual-package", Orange));
+            commandBar.Controls.Add(CommandButton("组件蓝图", "wincc-component-blueprints", Orange));
+            commandBar.Controls.Add(CommandButton("WinCC工程", "wincc-engineering-scaffold", Orange));
+            commandBar.Controls.Add(CommandButton("仿真包", "simulation-package", Teal));
+            commandBar.Controls.Add(CommandButton("任务编排", "agent-plan", Gold));
+            commandBar.Controls.Add(CommandButton("执行队列", "agent-queue", Teal));
+            commandBar.Controls.Add(CommandButton("运行阶段", "queue-run-current", Gold));
+            commandBar.Controls.Add(CommandButton("审查包", "review-package", Ink));
+            commandBar.Controls.Add(CommandButton("总览面板", "workbench-dashboard", Teal));
+            editPreviewBox.Text = "编辑预览";
+            editPreviewBox.AutoSize = true;
+            editPreviewBox.Margin = new Padding(10, 8, 6, 4);
+            editPreviewBox.ForeColor = Ink;
+            editPreviewBox.CheckedChanged += delegate { TogglePreviewEditing(); };
+            commandBar.Controls.Add(editPreviewBox);
+            Button savePreview = NewButton("保存文件", Gold);
+            savePreview.ForeColor = Ink;
+            savePreview.Width = 96;
+            savePreview.Height = 34;
+            savePreview.Margin = new Padding(6, 2, 6, 2);
+            savePreview.Click += delegate { SaveCurrentPreviewFile(); };
+            commandBar.Controls.Add(savePreview);
             mainLayout.Controls.Add(commandBar, 0, 0);
 
             TableLayoutPanel writePanel = new TableLayoutPanel();
@@ -434,6 +489,54 @@ namespace SiemensTiaSkillSuite
             chatBox.Font = new Font("Microsoft YaHei UI", 9.4F);
             chatBox.Text = "内置 Agent 对话\n\n选择 Agent、模型和工作流后，可在下方直接发送消息或上传文件。PLC/WinCC 工程写入仍遵循备份优先、克隆编译验证和主工程人工确认策略。\n";
 
+            planBox.Dock = DockStyle.Fill;
+            planBox.ReadOnly = true;
+            planBox.BorderStyle = BorderStyle.None;
+            planBox.BackColor = Color.FromArgb(250, 248, 238);
+            planBox.ForeColor = Ink;
+            planBox.Font = new Font("Microsoft YaHei UI", 9.2F);
+            planBox.Text = "任务编排\n\n这里会显示本地工作台生成的 PLC/WinCC Agent 开发计划：阶段、工具、产物、验证门槛和安全边界。";
+
+            diffBox.Dock = DockStyle.Fill;
+            diffBox.ReadOnly = true;
+            diffBox.BorderStyle = BorderStyle.None;
+            diffBox.BackColor = CodeBack;
+            diffBox.ForeColor = CodeFore;
+            diffBox.Font = new Font("Cascadia Code", 9F);
+            diffBox.Text = "审查 / Diff\n\n这里会显示 Git diff、审查包摘要和即将导入的 PLC/WinCC 变更。";
+
+            validationBox.Dock = DockStyle.Fill;
+            validationBox.ReadOnly = true;
+            validationBox.BorderStyle = BorderStyle.None;
+            validationBox.BackColor = Color.FromArgb(246, 250, 242);
+            validationBox.ForeColor = Ink;
+            validationBox.Font = new Font("Microsoft YaHei UI", 9.2F);
+            validationBox.Text = "验证面板\n\n这里会显示最新 read-cycle、write-cycle、导入就绪、队列健康和安全门禁状态。";
+
+            contextBox.Dock = DockStyle.Fill;
+            contextBox.ReadOnly = true;
+            contextBox.BorderStyle = BorderStyle.None;
+            contextBox.BackColor = Color.FromArgb(244, 249, 247);
+            contextBox.ForeColor = Ink;
+            contextBox.Font = new Font("Microsoft YaHei UI", 9.2F);
+            contextBox.Text = "项目模型\n\n这里会显示可供 Agent 直接使用的项目对象模型：TIA版本、程序块、DB、WinCC包、指令方案、队列、风险和关键工程文件索引。";
+
+            knowledgeBox.Dock = DockStyle.Fill;
+            knowledgeBox.ReadOnly = true;
+            knowledgeBox.BorderStyle = BorderStyle.None;
+            knowledgeBox.BackColor = Color.FromArgb(250, 249, 241);
+            knowledgeBox.ForeColor = Ink;
+            knowledgeBox.Font = new Font("Microsoft YaHei UI", 9.2F);
+            knowledgeBox.Text = "知识库\n\n这里会显示任务相关的官方文档、社区案例、插件路线、检索关键词和当前项目上下文绑定。优先官方资料，社区工具只作为审查后的适配参考。";
+
+            capabilityBox.Dock = DockStyle.Fill;
+            capabilityBox.ReadOnly = true;
+            capabilityBox.BorderStyle = BorderStyle.None;
+            capabilityBox.BackColor = Color.FromArgb(244, 248, 242);
+            capabilityBox.ForeColor = Ink;
+            capabilityBox.Font = new Font("Microsoft YaHei UI", 9.2F);
+            capabilityBox.Text = "能力矩阵\n\n这里会显示本地工作台替代 TIA Portal 原生编辑器的实际覆盖情况：已可用能力、半自动能力、仍需 TIA 原生界面的边界和下一步增强方向。";
+
             referencePreviewBox.Dock = DockStyle.Fill;
             referencePreviewBox.BackColor = Color.FromArgb(28, 47, 48);
             referencePreviewBox.BorderStyle = BorderStyle.None;
@@ -443,9 +546,15 @@ namespace SiemensTiaSkillSuite
             mainTabs.Font = new Font("Microsoft YaHei UI", 9.6F, FontStyle.Bold);
             mainTabs.Appearance = TabAppearance.Normal;
             mainTabs.Controls.Add(NewTab("AI 对话", chatBox));
+            mainTabs.Controls.Add(NewTab("任务编排", planBox));
             mainTabs.Controls.Add(NewTab("日志输出", jobBox));
             mainTabs.Controls.Add(NewTab("文件预览", previewBox));
             mainTabs.Controls.Add(NewTab("Runs", runList));
+            mainTabs.Controls.Add(NewTab("审查/Diff", diffBox));
+            mainTabs.Controls.Add(NewTab("验证面板", validationBox));
+            mainTabs.Controls.Add(NewTab("项目模型", contextBox));
+            mainTabs.Controls.Add(NewTab("知识库", knowledgeBox));
+            mainTabs.Controls.Add(NewTab("能力矩阵", capabilityBox));
             mainTabs.Controls.Add(NewTab("参考图", referencePreviewBox));
             mainLayout.Controls.Add(mainTabs, 0, 2);
 
@@ -457,71 +566,98 @@ namespace SiemensTiaSkillSuite
             aiLayout.Dock = DockStyle.Fill;
             aiLayout.RowCount = 3;
             aiLayout.ColumnCount = 1;
-            aiLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
-            aiLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
+            aiLayout.Padding = new Padding(2, 0, 2, 2);
+            aiLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 84));
+            aiLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
             aiLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             aiInputBox.Controls.Add(aiLayout);
 
-            FlowLayoutPanel configBar = new FlowLayoutPanel();
-            configBar.Dock = DockStyle.Fill;
-            configBar.WrapContents = false;
-            configBar.AutoScroll = true;
-            configBar.FlowDirection = FlowDirection.LeftToRight;
-            configBar.Padding = new Padding(4, 3, 4, 2);
-            configBar.BackColor = CardSoft;
-            configBar.Controls.Add(NewWideLabel("Agent"));
-            configBar.Controls.Add(agentBox);
-            configBar.Controls.Add(NewWideLabel("模型"));
-            configBar.Controls.Add(quickModelBox);
-            configBar.Controls.Add(NewWideLabel("工作流"));
-            configBar.Controls.Add(quickWorkflowBox);
-            configBar.Controls.Add(NewWideLabel("语言"));
-            configBar.Controls.Add(languagePreferenceBox);
-            configBar.Controls.Add(NewWideLabel("TIA连接"));
-            configBar.Controls.Add(tiaSessionModeBox);
-            configBar.Controls.Add(NewWideLabel("安全策略"));
-            configBar.Controls.Add(safetyModeBox);
-            configBar.Controls.Add(NewWideLabel("超时(s)"));
-            configBar.Controls.Add(timeoutSecondsBox);
-            Button saveConfigButton = NewButton("保存配置", Ink);
-            saveConfigButton.Width = 102;
-            saveConfigButton.Click += delegate { SaveWorkflowConfig(true); };
-            configBar.Controls.Add(saveConfigButton);
-            Button viewConfigButton = NewButton("查看配置", Teal);
-            viewConfigButton.Width = 102;
-            viewConfigButton.Click += delegate { ShowWorkflowConfig(); };
-            configBar.Controls.Add(viewConfigButton);
-            Button scanPluginsButton = NewButton("扫描WinCC插件", Orange);
-            scanPluginsButton.Width = 132;
-            scanPluginsButton.Click += delegate { StartCommand("wincc-plugins"); };
-            configBar.Controls.Add(scanPluginsButton);
-            aiLayout.Controls.Add(configBar, 0, 0);
+            TableLayoutPanel configGrid = new TableLayoutPanel();
+            configGrid.Dock = DockStyle.Fill;
+            configGrid.Margin = new Padding(0, 0, 0, 4);
+            configGrid.Padding = new Padding(4, 3, 4, 3);
+            configGrid.BackColor = CardSoft;
+            configGrid.ColumnCount = 5;
+            configGrid.RowCount = 2;
+            for (int configColumn = 0; configColumn < 5; configColumn++)
+            {
+                configGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20));
+            }
+            configGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+            configGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+            AddQuickSettingCell(configGrid, 0, 0, "路由", quickRoutingModeBox);
+            AddQuickSettingCell(configGrid, 1, 0, "平台", quickPlatformBox);
+            AddQuickSettingCell(configGrid, 2, 0, "智能体", agentBox);
+            AddQuickSettingCell(configGrid, 3, 0, "模型", quickModelBox);
+            AddQuickSettingCell(configGrid, 4, 0, "工作流", quickWorkflowBox);
+            AddQuickSettingCell(configGrid, 0, 1, "语言", languagePreferenceBox);
+            AddQuickSettingCell(configGrid, 1, 1, "TIA", tiaSessionModeBox);
+            AddQuickSettingCell(configGrid, 2, 1, "安全", safetyModeBox);
+            AddQuickSettingCell(configGrid, 3, 1, "超时", timeoutSecondsBox);
 
-            FlowLayoutPanel attachmentBar = new FlowLayoutPanel();
+            TableLayoutPanel configActions = new TableLayoutPanel();
+            configActions.Dock = DockStyle.Fill;
+            configActions.Margin = new Padding(3, 2, 3, 2);
+            configActions.ColumnCount = 2;
+            configActions.RowCount = 1;
+            configActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+            configActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+            Button saveConfigButton = NewButton("保存配置", Ink);
+            StyleCompactButton(saveConfigButton);
+            saveConfigButton.Click += delegate { SaveWorkflowConfig(true); };
+            configActions.Controls.Add(saveConfigButton, 0, 0);
+            Button viewConfigButton = NewButton("查看配置", Teal);
+            StyleCompactButton(viewConfigButton);
+            viewConfigButton.Click += delegate { ShowWorkflowConfig(); };
+            configActions.Controls.Add(viewConfigButton, 1, 0);
+            configGrid.Controls.Add(configActions, 4, 1);
+            aiLayout.Controls.Add(configGrid, 0, 0);
+
+            TableLayoutPanel attachmentBar = new TableLayoutPanel();
             attachmentBar.Dock = DockStyle.Fill;
-            attachmentBar.WrapContents = false;
-            attachmentBar.AutoScroll = true;
-            attachmentBar.Padding = new Padding(6, 1, 6, 1);
+            attachmentBar.Margin = new Padding(0);
+            attachmentBar.Padding = new Padding(4, 2, 4, 2);
             attachmentBar.BackColor = Color.FromArgb(238, 243, 235);
+            attachmentBar.ColumnCount = 6;
+            attachmentBar.RowCount = 1;
+            attachmentBar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 86));
+            attachmentBar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 86));
+            attachmentBar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 112));
+            attachmentBar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 104));
+            attachmentBar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 62));
+            attachmentBar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 38));
             Button addAttachmentButton = NewButton("上传文件", Teal);
-            addAttachmentButton.Width = 96;
-            addAttachmentButton.Height = 30;
-            addAttachmentButton.Margin = new Padding(3);
+            StyleCompactButton(addAttachmentButton);
             addAttachmentButton.Click += delegate { BrowseAgentAttachments(); };
-            attachmentBar.Controls.Add(addAttachmentButton);
+            attachmentBar.Controls.Add(addAttachmentButton, 0, 0);
             Button clearAttachmentButton = NewButton("清空附件", Ink);
-            clearAttachmentButton.Width = 96;
-            clearAttachmentButton.Height = 30;
-            clearAttachmentButton.Margin = new Padding(3);
+            StyleCompactButton(clearAttachmentButton);
             clearAttachmentButton.Click += delegate { ClearAgentAttachments(); };
-            attachmentBar.Controls.Add(clearAttachmentButton);
+            attachmentBar.Controls.Add(clearAttachmentButton, 1, 0);
+            Button scanPluginsButton = NewButton("WinCC插件", Orange);
+            StyleCompactButton(scanPluginsButton);
+            scanPluginsButton.Click += delegate { StartCommand("wincc-plugins"); };
+            attachmentBar.Controls.Add(scanPluginsButton, 2, 0);
+            Button probePlatformsButton = NewButton("检测平台", Teal);
+            StyleCompactButton(probePlatformsButton);
+            probePlatformsButton.Click += delegate { StartCommand("probe-ai-platforms"); };
+            attachmentBar.Controls.Add(probePlatformsButton, 3, 0);
             agentAttachmentLabel.AutoSize = false;
-            agentAttachmentLabel.Width = 620;
-            agentAttachmentLabel.Height = 30;
+            agentAttachmentLabel.Dock = DockStyle.Fill;
+            agentAttachmentLabel.Margin = new Padding(8, 0, 4, 0);
             agentAttachmentLabel.TextAlign = ContentAlignment.MiddleLeft;
+            agentAttachmentLabel.AutoEllipsis = true;
             agentAttachmentLabel.ForeColor = MutedInk;
             agentAttachmentLabel.Text = "附件：无，可上传图片、PDF、文档、源码或导出 XML";
-            attachmentBar.Controls.Add(agentAttachmentLabel);
+            attachmentBar.Controls.Add(agentAttachmentLabel, 4, 0);
+            platformStatusLabel.AutoSize = false;
+            platformStatusLabel.Dock = DockStyle.Fill;
+            platformStatusLabel.Margin = new Padding(4, 0, 4, 0);
+            platformStatusLabel.TextAlign = ContentAlignment.MiddleLeft;
+            platformStatusLabel.AutoEllipsis = true;
+            platformStatusLabel.ForeColor = Teal;
+            platformStatusLabel.Text = "平台：等待检测";
+            attachmentBar.Controls.Add(platformStatusLabel, 5, 0);
             aiLayout.Controls.Add(attachmentBar, 0, 1);
 
             TableLayoutPanel inputLayout = new TableLayoutPanel();
@@ -529,25 +665,34 @@ namespace SiemensTiaSkillSuite
             inputLayout.ColumnCount = 2;
             inputLayout.RowCount = 1;
             inputLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            inputLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 230));
+            inputLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 176));
+            inputLayout.Padding = new Padding(0, 4, 0, 0);
             aiLayout.Controls.Add(inputLayout, 0, 2);
 
             requestBox.Dock = DockStyle.Fill;
+            requestBox.Margin = new Padding(4, 2, 6, 4);
             requestBox.Multiline = true;
             requestBox.ScrollBars = ScrollBars.Vertical;
             StyleInput(requestBox);
             requestBox.Text = "例如：读取当前项目并检查电机正反转 LAD、DB 变量和 WinCC 手动画面的联锁是否完整，然后在克隆工程中修复并编译验证。";
             inputLayout.Controls.Add(requestBox, 0, 0);
 
+            Panel actionRail = new Panel();
+            actionRail.Dock = DockStyle.Fill;
+            actionRail.Margin = new Padding(0, 0, 2, 4);
+            actionRail.Padding = new Padding(4);
+            actionRail.BackColor = CardSoft;
+
             TableLayoutPanel agentActions = new TableLayoutPanel();
-            agentActions.Dock = DockStyle.Fill;
+            agentActions.Dock = DockStyle.Top;
+            agentActions.Height = 80;
             agentActions.ColumnCount = 2;
             agentActions.RowCount = 2;
             agentActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
             agentActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-            agentActions.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
-            agentActions.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
-            sendAgentButton.Text = "发送 Agent";
+            agentActions.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+            agentActions.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+            sendAgentButton.Text = "发送";
             StyleActionButton(sendAgentButton, Teal);
             sendAgentButton.Click += delegate { SendAgentMessage(); };
             agentActions.Controls.Add(sendAgentButton, 0, 0);
@@ -567,7 +712,19 @@ namespace SiemensTiaSkillSuite
             promptButton.Margin = new Padding(4);
             promptButton.Click += delegate { CreateAiPrompt(); };
             agentActions.Controls.Add(promptButton, 1, 1);
-            inputLayout.Controls.Add(agentActions, 1, 0);
+            actionRail.Controls.Add(agentActions);
+
+            Label actionHint = new Label();
+            actionHint.Dock = DockStyle.Fill;
+            actionHint.Padding = new Padding(8, 88, 8, 6);
+            actionHint.TextAlign = ContentAlignment.TopLeft;
+            actionHint.ForeColor = MutedInk;
+            actionHint.Font = new Font("Microsoft YaHei UI", 8.5F);
+            actionHint.Text = "Ctrl+Enter 发送\n平台、模型和工作流会随配置保存。";
+            actionRail.Controls.Add(actionHint);
+            actionHint.BringToFront();
+            agentActions.BringToFront();
+            inputLayout.Controls.Add(actionRail, 1, 0);
 
             tailTimer.Interval = 1200;
             tailTimer.Tick += delegate { RefreshCurrentJobTail(); };
@@ -607,6 +764,7 @@ namespace SiemensTiaSkillSuite
                     }
                     else if (Directory.Exists(info.Path))
                     {
+                        currentPreviewPath = "";
                         previewBox.Text = DirectoryListing(info.Path);
                     }
                 }
@@ -620,9 +778,14 @@ namespace SiemensTiaSkillSuite
                 SyncQuickSettingsFromAdvanced();
                 SaveWorkflowConfig(false);
             };
+            modelBox.Leave += delegate { SyncQuickSettingsFromAdvanced(); SaveWorkflowConfig(false); };
             workflowSelectBox.SelectedIndexChanged += delegate
             {
                 if (synchronizingSettings) { return; }
+                if (!loadingWorkflowConfig && !applyingWorkflowDefaults)
+                {
+                    workflowAutoMode = SelectedText(workflowSelectBox, "自动选择") == "自动选择";
+                }
                 if (!loadingWorkflowConfig)
                 {
                     ApplyWorkflowDefaults(false);
@@ -631,12 +794,33 @@ namespace SiemensTiaSkillSuite
                 SaveWorkflowConfig(false);
             };
             quickModelBox.SelectedIndexChanged += delegate { ApplyQuickSettingsToAdvanced(false); };
+            quickModelBox.Leave += delegate { ApplyQuickSettingsToAdvanced(false); };
             quickWorkflowBox.SelectedIndexChanged += delegate { ApplyQuickSettingsToAdvanced(true); };
+            quickRoutingModeBox.SelectedIndexChanged += delegate { ApplyQuickSettingsToAdvanced(false); };
+            quickPlatformBox.SelectedIndexChanged += delegate { ApplyQuickSettingsToAdvanced(false); };
+            routingModeBox.SelectedIndexChanged += delegate
+            {
+                if (synchronizingSettings) { return; }
+                if (SelectedRoutingMode() == "manual" && SelectedPlatformId() == "auto") { SelectPlatformById("codex"); }
+                ResetAgentSessionForRoutingChange("路由模式已切换");
+                SyncQuickSettingsFromAdvanced();
+                SaveWorkflowConfig(false);
+            };
+            platformBox.SelectedIndexChanged += delegate
+            {
+                if (synchronizingSettings) { return; }
+                ResetAgentSessionForRoutingChange("AI平台已切换");
+                SyncQuickSettingsFromAdvanced();
+                SaveWorkflowConfig(false);
+            };
             agentBox.SelectedIndexChanged += delegate
             {
-                if (!loadingWorkflowConfig && !applyingWorkflowDefaults && !string.IsNullOrWhiteSpace(agentThreadId))
+                if (!loadingWorkflowConfig && !applyingWorkflowDefaults && (!string.IsNullOrWhiteSpace(agentThreadId) || !string.IsNullOrWhiteSpace(agentSessionPlatform)))
                 {
                     agentThreadId = "";
+                    agentSessionPlatform = "";
+                    activePlatformName = "";
+                    activePlatformModel = "";
                     chatBox.AppendText(Environment.NewLine + "--- Agent 已切换，自动开始新会话 ---" + Environment.NewLine);
                 }
                 SaveWorkflowConfig(false);
@@ -657,6 +841,11 @@ namespace SiemensTiaSkillSuite
             winccPluginPolicyBox.SelectedIndexChanged += delegate { SaveWorkflowConfig(false); };
             apiBaseBox.Leave += delegate { SaveWorkflowConfig(false); };
             apiKeyEnvBox.Leave += delegate { SaveWorkflowConfig(false); };
+            codexCommandBox.Leave += delegate { SaveWorkflowConfig(false); };
+            claudeCommandBox.Leave += delegate { SaveWorkflowConfig(false); };
+            traeCommandBox.Leave += delegate { SaveWorkflowConfig(false); };
+            qoderCommandBox.Leave += delegate { SaveWorkflowConfig(false); };
+            traeProviderBox.Leave += delegate { SaveWorkflowConfig(false); };
             winccGraphqlUrlBox.Leave += delegate { SaveWorkflowConfig(false); };
             tiaMcpPathBox.Leave += delegate { SaveWorkflowConfig(false); };
             showScriptsPathBox.Leave += delegate { SaveWorkflowConfig(false); };
@@ -742,19 +931,25 @@ namespace SiemensTiaSkillSuite
 
         private void ConfigureSettingsControls()
         {
-            string[] models = new string[] { "继承 Codex 默认", "gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.2", "gpt-5-codex", "gpt-5", "本地/手动" };
-            string[] workflows = new string[] { "自动选择", "读取项目并总结", "LAD编写与验证", "DB+程序块协同", "WinCC画面生成", "WinCC参考图复刻", "故障诊断", "工业化重构" };
-            ConfigureCombo(agentBox, new string[] { "自动路由 Agent", "PLC LAD 工程师", "PLC SCL 工程师", "DB 与变量架构师", "WinCC 画面工程师", "Openness 自动化工程师", "编译诊断 Agent", "只读审查 Agent" }, "自动路由 Agent", 166);
+            string[] models = new string[] { "继承平台/工作流默认", "gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.2", "sonnet", "opus", "自定义模型ID" };
+            string[] workflows = new string[] { "自动选择", "工作台自动开发", "Agent执行队列", "读取项目并总结", "LAD编写与验证", "PLC高级指令与工艺对象", "SCL编写与验证", "DB+程序块协同", "WinCC画面生成", "WinCC参考图复刻", "Openness自动化", "安全风险评估", "故障诊断", "工业化重构", "只读审查" };
+            ConfigureCombo(routingModeBox, new string[] { "自动路由", "手动指定" }, "自动路由", 118);
+            ConfigureCombo(platformBox, new string[] { "自动选择", "Codex", "Claude Code", "Trae Agent", "Qoder" }, "自动选择", 132);
+            ConfigureCombo(quickRoutingModeBox, new string[] { "自动路由", "手动指定" }, "自动路由", 108);
+            ConfigureCombo(quickPlatformBox, new string[] { "自动选择", "Codex", "Claude Code", "Trae Agent", "Qoder" }, "自动选择", 120);
+            ConfigureCombo(agentBox, new string[] { "自动路由 Agent", "工作台编排 Agent", "队列执行 Agent", "PLC LAD 工程师", "PLC SCL 工程师", "PLC 高级指令工程师", "DB 与变量架构师", "WinCC 画面工程师", "Openness 自动化工程师", "编译诊断 Agent", "只读审查 Agent" }, "自动路由 Agent", 166);
             ConfigureCombo(agentSandboxBox, new string[] { "只读", "工作区读写", "完全访问" }, "工作区读写", 142);
             agentSearchBox.Text = "允许联网检索";
             agentSearchBox.Checked = true;
             agentSearchBox.AutoSize = true;
             agentSearchBox.ForeColor = Ink;
             agentSearchBox.Font = new Font("Microsoft YaHei UI", 9F);
-            ConfigureCombo(modelBox, models, "继承 Codex 默认", 150);
+            ConfigureCombo(modelBox, models, "继承平台/工作流默认", 168);
             ConfigureCombo(workflowSelectBox, workflows, "自动选择", 168);
-            ConfigureCombo(quickModelBox, models, "继承 Codex 默认", 132);
+            ConfigureCombo(quickModelBox, models, "继承平台/工作流默认", 152);
             ConfigureCombo(quickWorkflowBox, workflows, "自动选择", 154);
+            modelBox.DropDownStyle = ComboBoxStyle.DropDown;
+            quickModelBox.DropDownStyle = ComboBoxStyle.DropDown;
             ConfigureCombo(languagePreferenceBox, new string[] { "LAD优先", "按项目现有语言", "FBD优先", "SCL优先" }, "LAD优先", 126);
             ConfigureCombo(tiaSessionModeBox, new string[] { "自动附加", "附加当前TIA", "显示TIA界面" }, "自动附加", 126);
             ConfigureCombo(safetyModeBox, new string[] { "只生成不写入", "克隆编译验证", "克隆验证并生成发布包" }, "克隆编译验证", 168);
@@ -776,16 +971,28 @@ namespace SiemensTiaSkillSuite
             apiKeyEnvBox.Width = 160;
             apiKeyEnvBox.Text = "OPENAI_API_KEY";
             StyleInput(apiKeyEnvBox);
+            ConfigureCommandBox(codexCommandBox, "留空自动检测 Codex");
+            ConfigureCommandBox(claudeCommandBox, "留空自动检测 Claude Code");
+            ConfigureCommandBox(traeCommandBox, "留空自动检测 Trae Agent");
+            ConfigureCommandBox(qoderCommandBox, "留空自动检测 Qoder");
+            traeProviderBox.Width = 160;
+            StyleInput(traeProviderBox);
             referenceImageBox.Width = 330;
             StyleInput(referenceImageBox);
             winccGraphqlUrlBox.Width = 260;
             StyleInput(winccGraphqlUrlBox);
             tiaMcpPathBox.Width = 260;
             StyleInput(tiaMcpPathBox);
+            tiaV20UnifiedMcpPathBox.Width = 260;
+            StyleInput(tiaV20UnifiedMcpPathBox);
+            tiaOpennessManagerPathBox.Width = 260;
+            StyleInput(tiaOpennessManagerPathBox);
             showScriptsPathBox.Width = 260;
             StyleInput(showScriptsPathBox);
             runtimeMcpPathBox.Width = 260;
             StyleInput(runtimeMcpPathBox);
+            tiaViewerPathBox.Width = 260;
+            StyleInput(tiaViewerPathBox);
         }
 
         private void BuildMainMenu()
@@ -837,10 +1044,15 @@ namespace SiemensTiaSkillSuite
         {
             ToolStripMenuItem view = NewMenu("视图(&V)");
             view.DropDownItems.Add(NewMenuItem("AI 对话", delegate { SelectMainTab(0); }));
-            view.DropDownItems.Add(NewMenuItem("日志输出", delegate { SelectMainTab(1); }));
-            view.DropDownItems.Add(NewMenuItem("文件预览", delegate { SelectMainTab(2); }));
-            view.DropDownItems.Add(NewMenuItem("Runs 列表", delegate { SelectMainTab(3); }));
-            view.DropDownItems.Add(NewMenuItem("参考图", delegate { SelectMainTab(4); }));
+            view.DropDownItems.Add(NewMenuItem("任务编排", delegate { SelectMainTab(1); }));
+            view.DropDownItems.Add(NewMenuItem("日志输出", delegate { SelectMainTab(2); }));
+            view.DropDownItems.Add(NewMenuItem("文件预览", delegate { SelectMainTab(3); }));
+            view.DropDownItems.Add(NewMenuItem("Runs 列表", delegate { SelectMainTab(4); }));
+            view.DropDownItems.Add(NewMenuItem("审查 / Diff", delegate { SelectMainTab(5); }));
+            view.DropDownItems.Add(NewMenuItem("验证面板", delegate { SelectMainTab(6); }));
+            view.DropDownItems.Add(NewMenuItem("项目模型", delegate { SelectMainTab(7); }));
+            view.DropDownItems.Add(NewMenuItem("知识库", delegate { SelectMainTab(8); }));
+            view.DropDownItems.Add(NewMenuItem("参考图", delegate { SelectMainTab(9); }));
             view.DropDownItems.Add(new ToolStripSeparator());
             view.DropDownItems.Add(NewMenuItem("恢复默认布局", delegate { RestoreDefaultLayout(); }));
             return view;
@@ -850,6 +1062,9 @@ namespace SiemensTiaSkillSuite
         {
             ToolStripMenuItem code = NewMenu("代码(&C)");
             code.DropDownItems.Add(NewMenuItem("LAD 编写与验证", delegate { SelectCombo(workflowSelectBox, "LAD编写与验证"); ApplyWorkflowDefaults(false); }));
+            code.DropDownItems.Add(NewMenuItem("生成当前 LAD 预览", delegate { StartCommand("lad-preview"); }));
+            code.DropDownItems.Add(NewMenuItem("PLC 高级指令与工艺对象", delegate { SelectCombo(workflowSelectBox, "PLC高级指令与工艺对象"); ApplyWorkflowDefaults(false); }));
+            code.DropDownItems.Add(NewMenuItem("生成 PLC 指令/工艺对象方案", delegate { StartCommand("plc-instruction-plan"); }));
             code.DropDownItems.Add(NewMenuItem("DB + 程序块协同", delegate { SelectCombo(workflowSelectBox, "DB+程序块协同"); ApplyWorkflowDefaults(false); }));
             code.DropDownItems.Add(NewMenuItem("WinCC 画面生成", delegate { SelectCombo(workflowSelectBox, "WinCC画面生成"); ApplyWorkflowDefaults(false); }));
             code.DropDownItems.Add(NewMenuItem("WinCC 参考图复刻", delegate { SelectCombo(workflowSelectBox, "WinCC参考图复刻"); ApplyWorkflowDefaults(false); }));
@@ -863,7 +1078,27 @@ namespace SiemensTiaSkillSuite
             run.DropDownItems.Add(NewMenuItem("快速读取", delegate { StartCommand("read-cycle-skip"); }));
             run.DropDownItems.Add(NewMenuItem("完整导出", delegate { StartCommand("read-cycle-full"); }));
             run.DropDownItems.Add(NewMenuItem("列程序块", delegate { StartCommand("list-blocks"); }));
+            run.DropDownItems.Add(NewMenuItem("生成 LAD 可读预览", delegate { StartCommand("lad-preview"); }));
+            run.DropDownItems.Add(NewMenuItem("生成项目对象模型", delegate { StartCommand("project-model"); }));
+            run.DropDownItems.Add(NewMenuItem("生成任务知识检索包", delegate { StartCommand("knowledge-pack"); }));
+            run.DropDownItems.Add(NewMenuItem("生成工作台能力矩阵", delegate { StartCommand("capability-map"); }));
+            run.DropDownItems.Add(NewMenuItem("一键生成自动开发流水线", delegate { StartCommand("agent-pipeline"); }));
+            run.DropDownItems.Add(NewMenuItem("生成 PLC 改动包", delegate { StartCommand("plc-change-package"); }));
+            run.DropDownItems.Add(NewMenuItem("生成 PLC 指令模板库", delegate { StartCommand("plc-instruction-cookbook"); }));
+            run.DropDownItems.Add(NewMenuItem("生成 PLC 指令/工艺对象方案", delegate { StartCommand("plc-instruction-plan"); }));
             run.DropDownItems.Add(NewMenuItem("扫描 WinCC 插件", delegate { StartCommand("wincc-plugins"); }));
+            run.DropDownItems.Add(NewMenuItem("生成 WinCC 视觉工程包", delegate { StartCommand("wincc-visual-package"); }));
+            run.DropDownItems.Add(NewMenuItem("生成 WinCC 组件蓝图", delegate { StartCommand("wincc-component-blueprints"); }));
+            run.DropDownItems.Add(NewMenuItem("生成 WinCC 工程脚手架", delegate { StartCommand("wincc-engineering-scaffold"); }));
+            run.DropDownItems.Add(NewMenuItem("生成仿真/运行验证包", delegate { StartCommand("simulation-package"); }));
+            run.DropDownItems.Add(NewMenuItem("生成 Agent 任务编排", delegate { StartCommand("agent-plan"); }));
+            run.DropDownItems.Add(NewMenuItem("生成 Agent 执行队列", delegate { StartCommand("agent-queue"); }));
+            run.DropDownItems.Add(NewMenuItem("队列：开始下一阶段", delegate { StartCommand("queue-start-next"); }));
+            run.DropDownItems.Add(NewMenuItem("队列：运行当前阶段", delegate { StartCommand("queue-run-current"); }));
+            run.DropDownItems.Add(NewMenuItem("队列：完成当前阶段", delegate { StartCommand("queue-complete-current"); }));
+            run.DropDownItems.Add(NewMenuItem("队列：标记当前阶段失败", delegate { StartCommand("queue-fail-current"); }));
+            run.DropDownItems.Add(NewMenuItem("生成工作台审查包", delegate { StartCommand("review-package"); }));
+            run.DropDownItems.Add(NewMenuItem("刷新工作台总览", delegate { StartCommand("workbench-dashboard"); }));
             run.DropDownItems.Add(NewMenuItem("克隆验证 LAD", delegate { StartCommand("write-cycle"); }));
             return run;
         }
@@ -871,18 +1106,48 @@ namespace SiemensTiaSkillSuite
         private ToolStripMenuItem BuildToolsMenu()
         {
             ToolStripMenuItem tools = NewMenu("工具(&T)");
-            tools.DropDownItems.Add(BuildSettingsPanelMenu("AI / API / 图像 / WinCC 设置"));
+            tools.DropDownItems.Add(BuildSettingsPanelMenu("AI平台 / Agent / 工作流 / WinCC 设置"));
             tools.DropDownItems.Add(new ToolStripSeparator());
             tools.DropDownItems.Add(NewMenuItem("上传 Agent 附件...", delegate { BrowseAgentAttachments(); }));
             tools.DropDownItems.Add(NewMenuItem("发送当前消息", delegate { SendAgentMessage(); }));
             tools.DropDownItems.Add(NewMenuItem("新建 Agent 会话", delegate { NewAgentSession(); }));
             tools.DropDownItems.Add(NewMenuItem("停止 Agent", delegate { StopAgent(); }));
             tools.DropDownItems.Add(new ToolStripSeparator());
+            tools.DropDownItems.Add(NewMenuItem("切换文件预览编辑", delegate { editPreviewBox.Checked = !editPreviewBox.Checked; }));
+            tools.DropDownItems.Add(NewMenuItem("保存当前预览文件", delegate { SaveCurrentPreviewFile(); }));
+            tools.DropDownItems.Add(NewMenuItem("生成项目对象模型", delegate { StartCommand("project-model"); }));
+            tools.DropDownItems.Add(NewMenuItem("查看项目对象模型", delegate { ShowProjectObjectModel(); }));
+            tools.DropDownItems.Add(NewMenuItem("生成任务知识检索包", delegate { StartCommand("knowledge-pack"); }));
+            tools.DropDownItems.Add(NewMenuItem("查看任务知识检索包", delegate { ShowKnowledgePack(); }));
+            tools.DropDownItems.Add(NewMenuItem("生成工作台能力矩阵", delegate { StartCommand("capability-map"); }));
+            tools.DropDownItems.Add(NewMenuItem("查看工作台能力矩阵", delegate { ShowWorkbenchCapabilityMap(); }));
+            tools.DropDownItems.Add(NewMenuItem("一键生成自动开发流水线", delegate { StartCommand("agent-pipeline"); }));
+            tools.DropDownItems.Add(NewMenuItem("生成 PLC 改动包", delegate { StartCommand("plc-change-package"); }));
+            tools.DropDownItems.Add(NewMenuItem("生成 PLC 指令模板库", delegate { StartCommand("plc-instruction-cookbook"); }));
+            tools.DropDownItems.Add(NewMenuItem("查看 PLC 指令模板库", delegate { ShowPlcInstructionCookbook(); }));
+            tools.DropDownItems.Add(NewMenuItem("生成 PLC 指令/工艺对象方案", delegate { StartCommand("plc-instruction-plan"); }));
+            tools.DropDownItems.Add(new ToolStripSeparator());
             tools.DropDownItems.Add(NewMenuItem("上传 WinCC 参考图...", delegate { BrowseReferenceImage(); }));
             tools.DropDownItems.Add(NewMenuItem("联网扫描 WinCC 插件", delegate { StartCommand("wincc-plugins"); }));
             tools.DropDownItems.Add(NewMenuItem("查看 WinCC 插件路由", delegate { ShowWinccPluginRouting(); }));
+            tools.DropDownItems.Add(NewMenuItem("生成 WinCC 视觉工程包", delegate { StartCommand("wincc-visual-package"); }));
+            tools.DropDownItems.Add(NewMenuItem("生成 WinCC 组件蓝图", delegate { StartCommand("wincc-component-blueprints"); }));
+            tools.DropDownItems.Add(NewMenuItem("查看 WinCC 组件蓝图", delegate { ShowWinccComponentBlueprints(); }));
+            tools.DropDownItems.Add(NewMenuItem("生成 WinCC 工程脚手架", delegate { StartCommand("wincc-engineering-scaffold"); }));
+            tools.DropDownItems.Add(NewMenuItem("查看 WinCC 工程脚手架", delegate { ShowWinccEngineeringScaffold(); }));
+            tools.DropDownItems.Add(NewMenuItem("生成仿真/运行验证包", delegate { StartCommand("simulation-package"); }));
+            tools.DropDownItems.Add(NewMenuItem("查看仿真/运行验证包", delegate { ShowSimulationPackage(); }));
+            tools.DropDownItems.Add(NewMenuItem("生成 Agent 任务编排", delegate { StartCommand("agent-plan"); }));
+            tools.DropDownItems.Add(NewMenuItem("生成 Agent 执行队列", delegate { StartCommand("agent-queue"); }));
+            tools.DropDownItems.Add(NewMenuItem("查看当前队列阶段", delegate { ShowCurrentQueueStage(); }));
+            tools.DropDownItems.Add(NewMenuItem("运行当前队列阶段", delegate { StartCommand("queue-run-current"); }));
+            tools.DropDownItems.Add(NewMenuItem("生成工作台审查包", delegate { StartCommand("review-package"); }));
+            tools.DropDownItems.Add(NewMenuItem("查看工作台审查包", delegate { ShowWorkbenchReviewPackage(); }));
+            tools.DropDownItems.Add(NewMenuItem("刷新工作台总览", delegate { StartCommand("workbench-dashboard"); }));
+            tools.DropDownItems.Add(NewMenuItem("查看工作台总览", delegate { ShowWorkbenchDashboard(); }));
             tools.DropDownItems.Add(NewMenuItem("应用字体设置", delegate { ApplySelectedFont(); }));
-            tools.DropDownItems.Add(NewMenuItem("按任务自动推荐模型", delegate { ApplyWorkflowDefaults(false); }));
+            tools.DropDownItems.Add(NewMenuItem("按任务自动路由", delegate { ApplyWorkflowDefaults(false); }));
+            tools.DropDownItems.Add(NewMenuItem("检测 Codex / Claude / Trae / Qoder", delegate { StartCommand("probe-ai-platforms"); }));
             return tools;
         }
 
@@ -930,7 +1195,7 @@ namespace SiemensTiaSkillSuite
             ToolStripMenuItem item = NewMenu(title);
             Panel panel = new Panel();
             panel.Width = 620;
-            panel.Height = 460;
+            panel.Height = 560;
             panel.AutoScroll = true;
             panel.BackColor = Color.FromArgb(35, 39, 43);
 
@@ -938,7 +1203,7 @@ namespace SiemensTiaSkillSuite
             grid.Dock = DockStyle.Top;
             grid.AutoSize = true;
             grid.ColumnCount = 4;
-            grid.RowCount = 14;
+            grid.RowCount = 30;
             grid.Padding = new Padding(12);
             grid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 96));
             grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
@@ -946,20 +1211,36 @@ namespace SiemensTiaSkillSuite
             grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
             panel.Controls.Add(grid);
 
-            AddSettingRow(grid, 0, "Agent 权限", agentSandboxBox, "Agent 联网", agentSearchBox);
-            AddSettingRow(grid, 1, "代码模型", modelBox, "工作流", workflowSelectBox);
-            AddSettingRow(grid, 2, "API 提供方", apiProviderBox, "API Base", apiBaseBox);
-            AddSettingRow(grid, 3, "Key 环境变量", apiKeyEnvBox, "图像工作流", imageWorkflowBox);
-            AddSettingRow(grid, 4, "图像模型", imageModelBox, "图像质量", imageQualityBox);
-            AddSettingRow(grid, 5, "图像尺寸", imageSizeBox, "组件策略", componentStrategyBox);
-            AddSettingRow(grid, 6, "WinCC 类型", winccFlavorBox, "插件策略", winccPluginPolicyBox);
-            AddSettingRow(grid, 7, "GraphQL URL", winccGraphqlUrlBox, "运行时 MCP", runtimeMcpPathBox);
-            AddSettingRow(grid, 8, "TIA MCP", tiaMcpPathBox, "脚本 Add-In", showScriptsPathBox);
-            AddSettingRow(grid, 9, "界面字体", fontBox, "字号", fontSizeBox);
-            AddSettingRow(grid, 10, "参考图", referenceImageBox, "", NewMenuButton("上传/预览", delegate { BrowseReferenceImage(); }));
-            AddSettingRow(grid, 11, "配置", NewMenuButton("保存配置", delegate { SaveWorkflowConfig(true); }), "插件", NewMenuButton("联网扫描", delegate { StartCommand("wincc-plugins"); }));
-            AddSettingRow(grid, 12, "应用", NewMenuButton("应用字体", delegate { ApplySelectedFont(); }), "推荐", NewMenuButton("自动推荐模型", delegate { ApplyWorkflowDefaults(false); }));
-            AddSettingRow(grid, 13, "会话", NewMenuButton("新建 Agent 会话", delegate { NewAgentSession(); }), "生成", NewMenuButton("生成任务草稿", delegate { CreateAiPrompt(); }));
+            AddSettingRow(grid, 0, "路由模式", routingModeBox, "执行平台", platformBox);
+            AddSettingRow(grid, 1, "Agent 权限", agentSandboxBox, "Agent 联网", agentSearchBox);
+            AddSettingRow(grid, 2, "代码模型", modelBox, "工作流", workflowSelectBox);
+            AddSettingRow(grid, 3, "Codex 命令", codexCommandBox, "Claude 命令", claudeCommandBox);
+            AddSettingRow(grid, 4, "Trae 命令", traeCommandBox, "Qoder 命令", qoderCommandBox);
+            AddSettingRow(grid, 5, "Trae Provider", traeProviderBox, "平台检测", NewMenuButton("立即检测", delegate { StartCommand("probe-ai-platforms"); }));
+            AddSettingRow(grid, 6, "API 提供方", apiProviderBox, "API Base", apiBaseBox);
+            AddSettingRow(grid, 7, "Key 环境变量", apiKeyEnvBox, "图像工作流", imageWorkflowBox);
+            AddSettingRow(grid, 8, "图像模型", imageModelBox, "图像质量", imageQualityBox);
+            AddSettingRow(grid, 9, "图像尺寸", imageSizeBox, "组件策略", componentStrategyBox);
+            AddSettingRow(grid, 10, "WinCC 类型", winccFlavorBox, "插件策略", winccPluginPolicyBox);
+            AddSettingRow(grid, 11, "GraphQL URL", winccGraphqlUrlBox, "运行时 MCP", runtimeMcpPathBox);
+            AddSettingRow(grid, 12, "TIA MCP", tiaMcpPathBox, "脚本 Add-In", showScriptsPathBox);
+            AddSettingRow(grid, 13, "V20 MCP", tiaV20UnifiedMcpPathBox, "OpennessMgr", tiaOpennessManagerPathBox);
+            AddSettingRow(grid, 14, "离线预览", tiaViewerPathBox, "界面字体", fontBox);
+            AddSettingRow(grid, 15, "字号", fontSizeBox, "参考图", referenceImageBox);
+            AddSettingRow(grid, 16, "参考图", NewMenuButton("上传/预览", delegate { BrowseReferenceImage(); }), "配置", NewMenuButton("保存配置", delegate { SaveWorkflowConfig(true); }));
+            AddSettingRow(grid, 17, "插件", NewMenuButton("联网扫描", delegate { StartCommand("wincc-plugins"); }), "应用", NewMenuButton("应用字体", delegate { ApplySelectedFont(); }));
+            AddSettingRow(grid, 18, "路由", NewMenuButton("按任务推荐", delegate { ApplyWorkflowDefaults(false); }), "会话", NewMenuButton("新建 Agent 会话", delegate { NewAgentSession(); }));
+            AddSettingRow(grid, 19, "模型", NewMenuButton("生成上下文", delegate { StartCommand("project-model"); }), "知识", NewMenuButton("生成知识包", delegate { StartCommand("knowledge-pack"); }));
+            AddSettingRow(grid, 20, "能力", NewMenuButton("生成矩阵", delegate { StartCommand("capability-map"); }), "预览", NewMenuButton("查看矩阵", delegate { ShowWorkbenchCapabilityMap(); }));
+            AddSettingRow(grid, 21, "指令库", NewMenuButton("生成", delegate { StartCommand("plc-instruction-cookbook"); }), "蓝图", NewMenuButton("生成组件", delegate { StartCommand("wincc-component-blueprints"); }));
+            AddSettingRow(grid, 22, "流水线", NewMenuButton("一键生成", delegate { StartCommand("agent-pipeline"); }), "草稿", NewMenuButton("生成任务草稿", delegate { CreateAiPrompt(); }));
+            AddSettingRow(grid, 23, "WinCC工程", NewMenuButton("生成", delegate { StartCommand("wincc-engineering-scaffold"); }), "仿真", NewMenuButton("生成验证包", delegate { StartCommand("simulation-package"); }));
+            AddSettingRow(grid, 24, "编排", NewMenuButton("生成计划", delegate { StartCommand("agent-plan"); }), "队列", NewMenuButton("生成队列", delegate { StartCommand("agent-queue"); }));
+            AddSettingRow(grid, 25, "预览", NewMenuButton("查看计划", delegate { ShowAgentTaskPlan(); }), "阶段", NewMenuButton("开始下一步", delegate { StartCommand("queue-start-next"); }));
+            AddSettingRow(grid, 26, "预览", NewMenuButton("查看队列", delegate { ShowAgentExecutionQueue(); }), "执行", NewMenuButton("运行当前", delegate { StartCommand("queue-run-current"); }));
+            AddSettingRow(grid, 27, "阶段", NewMenuButton("完成当前", delegate { StartCommand("queue-complete-current"); }), "审查", NewMenuButton("生成审查包", delegate { StartCommand("review-package"); }));
+            AddSettingRow(grid, 28, "预览", NewMenuButton("查看审查包", delegate { ShowWorkbenchReviewPackage(); }), "总览", NewMenuButton("刷新总览", delegate { StartCommand("workbench-dashboard"); }));
+            AddSettingRow(grid, 29, "预览", NewMenuButton("查看总览", delegate { ShowWorkbenchDashboard(); }), "WinCC", NewMenuButton("生成视觉包", delegate { StartCommand("wincc-visual-package"); }));
 
             item.DropDownItems.Add(new ToolStripControlHost(panel)
             {
@@ -978,6 +1259,30 @@ namespace SiemensTiaSkillSuite
             AddSettingCell(grid, rightLabel, 2, row);
             grid.Controls.Add(rightControl, 3, row);
             rightControl.Dock = DockStyle.Fill;
+        }
+
+        private static void AddQuickSettingCell(TableLayoutPanel grid, int column, int row, string labelText, Control control)
+        {
+            TableLayoutPanel cell = new TableLayoutPanel();
+            cell.Dock = DockStyle.Fill;
+            cell.Margin = new Padding(2, 1, 2, 1);
+            cell.ColumnCount = 2;
+            cell.RowCount = 1;
+            cell.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 58));
+            cell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+
+            Label label = new Label();
+            label.Text = labelText;
+            label.Dock = DockStyle.Fill;
+            label.TextAlign = ContentAlignment.MiddleRight;
+            label.ForeColor = MutedInk;
+            label.Margin = new Padding(0, 1, 5, 1);
+            cell.Controls.Add(label, 0, 0);
+
+            control.Dock = DockStyle.Fill;
+            control.Margin = new Padding(0, 3, 0, 3);
+            cell.Controls.Add(control, 1, 0);
+            grid.Controls.Add(cell, column, row);
         }
 
         private static void AddSettingCell(TableLayoutPanel grid, string text, int col, int row)
@@ -1029,7 +1334,7 @@ namespace SiemensTiaSkillSuite
 
         private void ShowSettingsTabHint()
         {
-            statusLabel.Text = "设置位于 工具 > AI / API / 图像 / WinCC 设置";
+            statusLabel.Text = "设置位于 工具 > AI平台 / Agent / 工作流 / WinCC 设置";
         }
 
         private void SelectMainTab(int index)
@@ -1117,12 +1422,27 @@ namespace SiemensTiaSkillSuite
             button.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
         }
 
+        private static void StyleCompactButton(Button button)
+        {
+            button.Dock = DockStyle.Fill;
+            button.Height = 30;
+            button.Margin = new Padding(3, 2, 3, 2);
+            button.Font = new Font("Microsoft YaHei UI", 8.5F, FontStyle.Bold);
+        }
+
         private static void StyleInput(TextBox box)
         {
             box.BorderStyle = BorderStyle.FixedSingle;
             box.BackColor = Color.FromArgb(255, 254, 248);
             box.ForeColor = Ink;
             box.Font = new Font("Microsoft YaHei UI", 9F);
+        }
+
+        private static void ConfigureCommandBox(TextBox box, string description)
+        {
+            box.Width = 220;
+            box.AccessibleDescription = description;
+            StyleInput(box);
         }
 
         private static TabPage NewTab(string title, Control inner)
@@ -1251,9 +1571,9 @@ namespace SiemensTiaSkillSuite
                     referencePreviewBox.Image = new Bitmap(loaded);
                 }
 
-                if (mainTabs.TabPages.Count >= 5)
+                if (mainTabs.TabPages.Count >= 11)
                 {
-                    mainTabs.SelectedIndex = 4;
+                    mainTabs.SelectedIndex = 10;
                 }
                 statusLabel.Text = "参考图已加载";
             }
@@ -1270,17 +1590,29 @@ namespace SiemensTiaSkillSuite
                 return;
             }
 
+            string previousRouting = SelectedRoutingMode();
+            string previousPlatform = SelectedPlatformId();
+            if (applyWorkflowDefaults && !loadingWorkflowConfig)
+            {
+                workflowAutoMode = SelectedText(quickWorkflowBox, "自动选择") == "自动选择";
+            }
             try
             {
                 synchronizingSettings = true;
-                SelectCombo(modelBox, Convert.ToString(quickModelBox.SelectedItem));
-                SelectCombo(workflowSelectBox, Convert.ToString(quickWorkflowBox.SelectedItem));
+                SelectCombo(routingModeBox, quickRoutingModeBox.Text);
+                SelectCombo(platformBox, quickPlatformBox.Text);
+                SelectCombo(modelBox, quickModelBox.Text);
+                SelectCombo(workflowSelectBox, quickWorkflowBox.Text);
             }
             finally
             {
                 synchronizingSettings = false;
             }
 
+            if (previousRouting != SelectedRoutingMode() || previousPlatform != SelectedPlatformId())
+            {
+                ResetAgentSessionForRoutingChange("快速栏路由设置已切换");
+            }
             if (applyWorkflowDefaults && !loadingWorkflowConfig)
             {
                 ApplyWorkflowDefaults(false);
@@ -1299,8 +1631,10 @@ namespace SiemensTiaSkillSuite
             try
             {
                 synchronizingSettings = true;
-                SelectCombo(quickModelBox, Convert.ToString(modelBox.SelectedItem));
-                SelectCombo(quickWorkflowBox, Convert.ToString(workflowSelectBox.SelectedItem));
+                SelectCombo(quickRoutingModeBox, routingModeBox.Text);
+                SelectCombo(quickPlatformBox, platformBox.Text);
+                SelectCombo(quickModelBox, modelBox.Text);
+                SelectCombo(quickWorkflowBox, workflowSelectBox.Text);
             }
             finally
             {
@@ -1334,12 +1668,23 @@ namespace SiemensTiaSkillSuite
                 string safetyMode = SelectedText(safetyModeBox, "克隆编译验证");
                 StringBuilder json = new StringBuilder();
                 json.AppendLine("{");
-                json.AppendLine("  \"schemaVersion\": 1,");
+                json.AppendLine("  \"schemaVersion\": 2,");
                 json.AppendLine("  \"updatedAt\": " + JsonString(DateTime.Now.ToString("o")) + ",");
                 json.AppendLine("  \"projectRoot\": " + JsonString(root) + ",");
+                json.AppendLine("  \"platform\": {");
+                json.AppendLine("    \"routingMode\": " + JsonString(SelectedRoutingMode()) + ",");
+                json.AppendLine("    \"selected\": " + JsonString(SelectedPlatformId()) + ",");
+                json.AppendLine("    \"sessionPlatform\": " + JsonString(agentSessionPlatform) + ",");
+                json.AppendLine("    \"codexCommand\": " + JsonString(codexCommandBox.Text.Trim()) + ",");
+                json.AppendLine("    \"claudeCommand\": " + JsonString(claudeCommandBox.Text.Trim()) + ",");
+                json.AppendLine("    \"traeCommand\": " + JsonString(traeCommandBox.Text.Trim()) + ",");
+                json.AppendLine("    \"qoderCommand\": " + JsonString(qoderCommandBox.Text.Trim()) + ",");
+                json.AppendLine("    \"traeProvider\": " + JsonString(traeProviderBox.Text.Trim()));
+                json.AppendLine("  },");
                 json.AppendLine("  \"routing\": {");
-                json.AppendLine("    \"codeModel\": " + JsonString(SelectedText(modelBox, "继承 Codex 默认")) + ",");
+                json.AppendLine("    \"codeModel\": " + JsonString(SelectedText(modelBox, "继承平台/工作流默认")) + ",");
                 json.AppendLine("    \"workflow\": " + JsonString(SelectedText(workflowSelectBox, "自动选择")) + ",");
+                json.AppendLine("    \"workflowAuto\": " + (workflowAutoMode ? "true" : "false") + ",");
                 json.AppendLine("    \"languagePreference\": " + JsonString(SelectedText(languagePreferenceBox, "LAD优先")) + ",");
                 json.AppendLine("    \"apiProvider\": " + JsonString(SelectedText(apiProviderBox, "Codex内置")) + ",");
                 json.AppendLine("    \"apiBase\": " + JsonString(apiBaseBox.Text.Trim()) + ",");
@@ -1370,7 +1715,10 @@ namespace SiemensTiaSkillSuite
                 json.AppendLine("    \"graphqlUrl\": " + JsonString(winccGraphqlUrlBox.Text.Trim()) + ",");
                 json.AppendLine("    \"runtimeMcpPath\": " + JsonString(runtimeMcpPathBox.Text.Trim()) + ",");
                 json.AppendLine("    \"tiaMcpPath\": " + JsonString(tiaMcpPathBox.Text.Trim()) + ",");
-                json.AppendLine("    \"showScriptsPath\": " + JsonString(showScriptsPathBox.Text.Trim()));
+                json.AppendLine("    \"tiaV20UnifiedMcpPath\": " + JsonString(tiaV20UnifiedMcpPathBox.Text.Trim()) + ",");
+                json.AppendLine("    \"tiaOpennessManagerPath\": " + JsonString(tiaOpennessManagerPathBox.Text.Trim()) + ",");
+                json.AppendLine("    \"showScriptsPath\": " + JsonString(showScriptsPathBox.Text.Trim()) + ",");
+                json.AppendLine("    \"tiaViewerPath\": " + JsonString(tiaViewerPathBox.Text.Trim()));
                 json.AppendLine("  },");
                 json.AppendLine("  \"image\": {");
                 json.AppendLine("    \"workflow\": " + JsonString(SelectedText(imageWorkflowBox, "自动")) + ",");
@@ -1391,7 +1739,7 @@ namespace SiemensTiaSkillSuite
                 {
                     statusLabel.Text = "工作流配置已保存";
                     previewBox.Text = ReadText(workflowConfigPath);
-                    SelectMainTab(2);
+                    SelectMainTab(3);
                 }
                 return workflowConfigPath;
             }
@@ -1419,10 +1767,20 @@ namespace SiemensTiaSkillSuite
             {
                 loadingWorkflowConfig = true;
                 string json = ReadText(workflowConfigPath);
-                string configuredCodeModel = JsonStringValue(json, "codeModel", SelectedText(modelBox, "继承 Codex 默认"));
-                if (configuredCodeModel == "gpt-5" || configuredCodeModel == "gpt-5-codex") { configuredCodeModel = "继承 Codex 默认"; }
+                SelectRoutingMode(JsonStringValue(json, "routingMode", "auto", "platform"));
+                SelectPlatformById(JsonStringValue(json, "selected", "auto", "platform"));
+                agentSessionPlatform = JsonStringValue(json, "sessionPlatform", "", "platform");
+                codexCommandBox.Text = JsonStringValue(json, "codexCommand", "", "platform");
+                claudeCommandBox.Text = JsonStringValue(json, "claudeCommand", "", "platform");
+                traeCommandBox.Text = JsonStringValue(json, "traeCommand", "", "platform");
+                qoderCommandBox.Text = JsonStringValue(json, "qoderCommand", "", "platform");
+                traeProviderBox.Text = JsonStringValue(json, "traeProvider", "", "platform");
+                string configuredCodeModel = JsonStringValue(json, "codeModel", SelectedText(modelBox, "继承平台/工作流默认"));
+                if (configuredCodeModel == "继承 Codex 默认" || configuredCodeModel == "gpt-5" || configuredCodeModel == "gpt-5-codex") { configuredCodeModel = "继承平台/工作流默认"; }
                 SelectCombo(modelBox, configuredCodeModel);
-                SelectCombo(workflowSelectBox, JsonStringValue(json, "workflow", SelectedText(workflowSelectBox, "自动选择")));
+                string configuredWorkflow = JsonStringValue(json, "workflow", SelectedText(workflowSelectBox, "自动选择"));
+                workflowAutoMode = JsonBoolValue(json, "workflowAuto", configuredWorkflow == "自动选择", "routing");
+                SelectCombo(workflowSelectBox, configuredWorkflow);
                 SelectCombo(languagePreferenceBox, JsonStringValue(json, "languagePreference", SelectedText(languagePreferenceBox, "LAD优先")));
                 SelectCombo(apiProviderBox, JsonStringValue(json, "apiProvider", SelectedText(apiProviderBox, "Codex内置")));
                 apiBaseBox.Text = JsonStringValue(json, "apiBase", apiBaseBox.Text);
@@ -1431,6 +1789,7 @@ namespace SiemensTiaSkillSuite
                 agentSearchBox.Checked = JsonBoolValue(json, "search", true, "agent");
                 SelectAgentSandbox(JsonStringValue(json, "sandbox", "workspace-write", "agent"));
                 agentThreadId = JsonStringValue(json, "threadId", "", "agent");
+                if (!string.IsNullOrWhiteSpace(agentThreadId) && string.IsNullOrWhiteSpace(agentSessionPlatform)) { agentSessionPlatform = "codex"; }
                 SelectCombo(tiaSessionModeBox, JsonStringValue(json, "sessionMode", SelectedText(tiaSessionModeBox, "自动附加")));
                 plcNameBox.Text = JsonStringValue(json, "plcName", PlcName());
                 SelectCombo(timeoutSecondsBox, JsonNumberValue(json, "stepTimeoutSeconds", WorkflowTimeoutSeconds()).ToString());
@@ -1440,7 +1799,10 @@ namespace SiemensTiaSkillSuite
                 winccGraphqlUrlBox.Text = JsonStringValue(json, "graphqlUrl", winccGraphqlUrlBox.Text, "wincc");
                 runtimeMcpPathBox.Text = JsonStringValue(json, "runtimeMcpPath", runtimeMcpPathBox.Text, "wincc");
                 tiaMcpPathBox.Text = JsonStringValue(json, "tiaMcpPath", tiaMcpPathBox.Text, "wincc");
+                tiaV20UnifiedMcpPathBox.Text = JsonStringValue(json, "tiaV20UnifiedMcpPath", tiaV20UnifiedMcpPathBox.Text, "wincc");
+                tiaOpennessManagerPathBox.Text = JsonStringValue(json, "tiaOpennessManagerPath", tiaOpennessManagerPathBox.Text, "wincc");
                 showScriptsPathBox.Text = JsonStringValue(json, "showScriptsPath", showScriptsPathBox.Text, "wincc");
+                tiaViewerPathBox.Text = JsonStringValue(json, "tiaViewerPath", tiaViewerPathBox.Text, "wincc");
                 SelectCombo(imageWorkflowBox, JsonStringValue(json, "workflow", SelectedText(imageWorkflowBox, "自动"), "image"));
                 SelectCombo(imageModelBox, JsonStringValue(json, "model", SelectedText(imageModelBox, "内置imagegen")));
                 SelectCombo(imageQualityBox, JsonStringValue(json, "quality", SelectedText(imageQualityBox, "auto")));
@@ -1472,6 +1834,31 @@ namespace SiemensTiaSkillSuite
             }
         }
 
+        private void UpdatePlatformProbeStatus(string reportPath)
+        {
+            try
+            {
+                string json = ReadText(reportPath);
+                List<string> ready = new List<string>();
+                MatchCollection matches = Regex.Matches(json, "\\\"name\\\"\\s*:\\s*\\\"(?<name>[^\\\"]+)\\\"[\\s\\S]*?\\\"installed\\\"\\s*:\\s*(?<installed>true|false)", RegexOptions.IgnoreCase);
+                foreach (Match match in matches)
+                {
+                    if (string.Equals(match.Groups["installed"].Value, "true", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ready.Add(match.Groups["name"].Value);
+                    }
+                }
+                platformStatusLabel.Text = ready.Count > 0 ? "可用平台：" + string.Join(" / ", ready.ToArray()) : "未检测到可用AI平台";
+                statusLabel.Text = "AI平台检测完成";
+                ShowFile(reportPath);
+            }
+            catch (Exception ex)
+            {
+                platformStatusLabel.Text = "平台检测结果读取失败";
+                statusLabel.Text = ex.Message;
+            }
+        }
+
         private void ShowWinccPluginRouting()
         {
             try
@@ -1493,10 +1880,475 @@ namespace SiemensTiaSkillSuite
             }
         }
 
+        private void ShowAgentTaskPlan()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string path = Path.Combine(root, "PLC_Code", "agent-plans", "latest-plan.md");
+                if (!File.Exists(path))
+                {
+                    statusLabel.Text = "尚未生成任务编排，正在创建";
+                    StartCommand("agent-plan");
+                    return;
+                }
+                string text = ReadText(path);
+                planBox.Text = text;
+                previewBox.Text = text;
+                SelectMainTab(1);
+                statusLabel.Text = "已打开 Agent 任务编排";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "打开任务编排失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void ShowAgentExecutionQueue()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string path = Path.Combine(root, "PLC_Code", "agent-queues", "latest", "queue.md");
+                if (!File.Exists(path))
+                {
+                    statusLabel.Text = "尚未生成执行队列，正在创建";
+                    StartCommand("agent-queue");
+                    return;
+                }
+                string text = ReadText(path);
+                planBox.Text = text;
+                previewBox.Text = text;
+                SelectMainTab(1);
+                statusLabel.Text = "已打开 Agent 执行队列";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "打开执行队列失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void ShowCurrentQueueStage()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string path = Path.Combine(root, "PLC_Code", "agent-queues", "latest", "current-stage.md");
+                if (!File.Exists(path))
+                {
+                    statusLabel.Text = "尚未开始队列阶段，正在启动下一阶段";
+                    StartCommand("queue-start-next");
+                    return;
+                }
+                string text = ReadText(path);
+                planBox.Text = text;
+                previewBox.Text = text;
+                SelectMainTab(1);
+                statusLabel.Text = "已打开当前队列阶段";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "打开当前队列阶段失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void ShowWorkbenchReviewPackage()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string path = Path.Combine(root, "PLC_Code", "review-packages", "latest", "review-summary.md");
+                if (!File.Exists(path))
+                {
+                    statusLabel.Text = "尚未生成工作台审查包，正在创建";
+                    StartCommand("review-package");
+                    return;
+                }
+                ShowFile(path);
+                statusLabel.Text = "已打开工作台审查包";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "打开工作台审查包失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void ShowWorkbenchDashboard()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string dashboardPath = Path.Combine(root, "PLC_Code", "workbench", "latest", "dashboard.md");
+                string validationPath = Path.Combine(root, "PLC_Code", "workbench", "latest", "validation-summary.md");
+                string diffPath = Path.Combine(root, "PLC_Code", "workbench", "latest", "diff-summary.patch");
+                string contextPath = Path.Combine(root, "PLC_Code", "workbench", "context", "latest", "agent-context.md");
+                string knowledgePath = Path.Combine(root, "PLC_Code", "knowledge", "packs", "latest", "knowledge-brief.md");
+                string capabilityPath = Path.Combine(root, "PLC_Code", "workbench", "capabilities", "latest", "capability-map.md");
+                if (!File.Exists(dashboardPath))
+                {
+                    statusLabel.Text = "尚未生成工作台总览，正在创建";
+                    StartCommand("workbench-dashboard");
+                    return;
+                }
+
+                validationBox.Text = File.Exists(validationPath) ? ReadText(validationPath) : ReadText(dashboardPath);
+                diffBox.Text = File.Exists(diffPath) ? ReadText(diffPath) : "尚未生成 diff 摘要。";
+                contextBox.Text = File.Exists(contextPath) ? ReadText(contextPath) : "尚未生成项目对象模型。";
+                knowledgeBox.Text = File.Exists(knowledgePath) ? ReadText(knowledgePath) : "尚未生成任务知识检索包。";
+                capabilityBox.Text = File.Exists(capabilityPath) ? ReadText(capabilityPath) : "尚未生成工作台能力矩阵。";
+                planBox.Text = ReadText(dashboardPath);
+                SelectMainTab(6);
+                statusLabel.Text = "已打开工作台总览、Diff 与验证面板";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "打开工作台总览失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void ShowProjectObjectModel()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string contextPath = Path.Combine(root, "PLC_Code", "workbench", "context", "latest", "agent-context.md");
+                string modelPath = Path.Combine(root, "PLC_Code", "workbench", "context", "latest", "project-model.json");
+                if (!File.Exists(contextPath))
+                {
+                    statusLabel.Text = "尚未生成项目对象模型，正在创建";
+                    StartCommand("project-model");
+                    return;
+                }
+
+                contextBox.Text = ReadText(contextPath);
+                previewBox.Text = File.Exists(modelPath) ? ReadText(modelPath) : contextBox.Text;
+                SelectMainTab(7);
+                statusLabel.Text = "已打开项目对象模型和 Agent 上下文包";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "打开项目对象模型失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void ShowKnowledgePack()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string briefPath = Path.Combine(root, "PLC_Code", "knowledge", "packs", "latest", "knowledge-brief.md");
+                string jsonPath = Path.Combine(root, "PLC_Code", "knowledge", "packs", "latest", "knowledge-pack.json");
+                if (!File.Exists(briefPath))
+                {
+                    statusLabel.Text = "尚未生成任务知识检索包，正在创建";
+                    StartCommand("knowledge-pack");
+                    return;
+                }
+
+                knowledgeBox.Text = ReadText(briefPath);
+                previewBox.Text = File.Exists(jsonPath) ? ReadText(jsonPath) : knowledgeBox.Text;
+                SelectMainTab(8);
+                statusLabel.Text = "已打开任务知识检索包";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "打开任务知识检索包失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void ShowWorkbenchCapabilityMap()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string mapPath = Path.Combine(root, "PLC_Code", "workbench", "capabilities", "latest", "capability-map.md");
+                string jsonPath = Path.Combine(root, "PLC_Code", "workbench", "capabilities", "latest", "capability-map.json");
+                if (!File.Exists(mapPath))
+                {
+                    statusLabel.Text = "尚未生成工作台能力矩阵，正在创建";
+                    StartCommand("capability-map");
+                    return;
+                }
+
+                capabilityBox.Text = ReadText(mapPath);
+                previewBox.Text = File.Exists(jsonPath) ? ReadText(jsonPath) : capabilityBox.Text;
+                SelectMainTab(9);
+                statusLabel.Text = "已打开工作台能力矩阵";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "打开工作台能力矩阵失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void ShowWinccVisualPackage()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string path = Path.Combine(root, "PLC_Code", "wincc", "tasks", "latest", "README.md");
+                if (!File.Exists(path))
+                {
+                    statusLabel.Text = "尚未生成WinCC视觉包，正在创建";
+                    StartCommand("wincc-visual-package");
+                    return;
+                }
+                ShowFile(path);
+                statusLabel.Text = "已打开WinCC视觉工程包";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "打开WinCC视觉包失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void ShowPlcChangePackage()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string path = Path.Combine(root, "PLC_Code", "changes", "latest-plc-change-package", "README.md");
+                if (!File.Exists(path))
+                {
+                    statusLabel.Text = "尚未生成PLC改动包，正在创建";
+                    StartCommand("plc-change-package");
+                    return;
+                }
+                ShowFile(path);
+                statusLabel.Text = "已打开PLC改动包";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "打开PLC改动包失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void ShowPlcInstructionPlan()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string routePath = Path.Combine(root, "PLC_Code", "plc", "instruction-plans", "latest", "instruction-route-table.md");
+                string riskPath = Path.Combine(root, "PLC_Code", "plc", "instruction-plans", "latest", "safety-risk-assessment.md");
+                if (!File.Exists(routePath))
+                {
+                    statusLabel.Text = "尚未生成PLC指令方案，正在创建";
+                    StartCommand("plc-instruction-plan");
+                    return;
+                }
+                planBox.Text = ReadText(routePath);
+                validationBox.Text = File.Exists(riskPath) ? ReadText(riskPath) : "尚未生成安全风险评估。";
+                previewBox.Text = planBox.Text;
+                SelectMainTab(1);
+                statusLabel.Text = "已打开PLC指令/工艺对象方案";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "打开PLC指令方案失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void ShowPlcInstructionCookbook()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string cookbookPath = Path.Combine(root, "PLC_Code", "plc", "instruction-cookbook", "latest", "instruction-cookbook.md");
+                string jsonPath = Path.Combine(root, "PLC_Code", "plc", "instruction-cookbook", "latest", "instruction-cookbook.json");
+                if (!File.Exists(cookbookPath))
+                {
+                    statusLabel.Text = "尚未生成PLC指令模板库，正在创建";
+                    StartCommand("plc-instruction-cookbook");
+                    return;
+                }
+
+                planBox.Text = ReadText(cookbookPath);
+                previewBox.Text = File.Exists(jsonPath) ? ReadText(jsonPath) : planBox.Text;
+                SelectMainTab(1);
+                statusLabel.Text = "已打开PLC指令模板库";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "打开PLC指令模板库失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void ShowWinccComponentBlueprints()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string blueprintPath = Path.Combine(root, "PLC_Code", "wincc", "component-blueprints", "latest", "component-blueprints.md");
+                string jsonPath = Path.Combine(root, "PLC_Code", "wincc", "component-blueprints", "latest", "component-blueprints.json");
+                if (!File.Exists(blueprintPath))
+                {
+                    statusLabel.Text = "尚未生成WinCC组件蓝图，正在创建";
+                    StartCommand("wincc-component-blueprints");
+                    return;
+                }
+
+                planBox.Text = ReadText(blueprintPath);
+                previewBox.Text = File.Exists(jsonPath) ? ReadText(jsonPath) : planBox.Text;
+                SelectMainTab(1);
+                statusLabel.Text = "已打开WinCC组件蓝图";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "打开WinCC组件蓝图失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void ShowWinccEngineeringScaffold()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string scaffoldPath = Path.Combine(root, "PLC_Code", "wincc", "engineering-scaffold", "latest", "wincc-engineering-scaffold.md");
+                string jsonPath = Path.Combine(root, "PLC_Code", "wincc", "engineering-scaffold", "latest", "wincc-engineering-scaffold.json");
+                if (!File.Exists(scaffoldPath))
+                {
+                    statusLabel.Text = "尚未生成WinCC工程脚手架，正在创建";
+                    StartCommand("wincc-engineering-scaffold");
+                    return;
+                }
+
+                planBox.Text = ReadText(scaffoldPath);
+                previewBox.Text = File.Exists(jsonPath) ? ReadText(jsonPath) : planBox.Text;
+                SelectMainTab(1);
+                statusLabel.Text = "已打开WinCC工程脚手架";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "打开WinCC工程脚手架失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void ShowSimulationPackage()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string packagePath = Path.Combine(root, "PLC_Code", "simulation", "latest", "simulation-package.md");
+                string jsonPath = Path.Combine(root, "PLC_Code", "simulation", "latest", "simulation-package.json");
+                if (!File.Exists(packagePath))
+                {
+                    statusLabel.Text = "尚未生成仿真/运行验证包，正在创建";
+                    StartCommand("simulation-package");
+                    return;
+                }
+
+                validationBox.Text = ReadText(packagePath);
+                previewBox.Text = File.Exists(jsonPath) ? ReadText(jsonPath) : validationBox.Text;
+                SelectMainTab(3);
+                statusLabel.Text = "已打开仿真/运行验证包";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "打开仿真/运行验证包失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void ShowLadPreview()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string path = Path.Combine(root, "PLC_Code", "lad-previews", "latest-lad-preview.md");
+                if (!File.Exists(path))
+                {
+                    statusLabel.Text = "尚未生成LAD预览，正在创建";
+                    StartCommand("lad-preview");
+                    return;
+                }
+                ShowFile(path);
+                statusLabel.Text = "已打开LAD可读预览";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "打开LAD预览失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void TogglePreviewEditing()
+        {
+            previewBox.ReadOnly = !editPreviewBox.Checked;
+            previewBox.BackColor = editPreviewBox.Checked ? Color.FromArgb(255, 252, 235) : CodeBack;
+            previewBox.ForeColor = editPreviewBox.Checked ? Ink : CodeFore;
+            statusLabel.Text = editPreviewBox.Checked ? "文件预览已进入可编辑模式" : "文件预览已切回只读模式";
+        }
+
+        private void SaveCurrentPreviewFile()
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(currentPreviewPath) || !File.Exists(currentPreviewPath))
+                {
+                    MessageBox.Show("当前预览不是可保存的文件。", "保存文件", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string backupDir = Path.Combine(root, "PLC_Code", "file-backups", DateTime.Now.ToString("yyyyMMdd-HHmmss"));
+                Directory.CreateDirectory(backupDir);
+                string backupPath = Path.Combine(backupDir, Path.GetFileName(currentPreviewPath));
+                File.Copy(currentPreviewPath, backupPath, true);
+                File.WriteAllText(currentPreviewPath, previewBox.Text, Encoding.UTF8);
+                statusLabel.Text = "文件已保存，原文件已备份";
+                jobBox.AppendText(Environment.NewLine + "已保存：" + currentPreviewPath + Environment.NewLine + "备份：" + backupPath + Environment.NewLine);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "保存文件失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         private static string SelectedText(ComboBox combo, string fallback)
         {
-            string value = Convert.ToString(combo.SelectedItem);
+            string value = combo.Text;
             return string.IsNullOrWhiteSpace(value) ? fallback : value;
+        }
+
+        private string SelectedRoutingMode()
+        {
+            return SelectedText(routingModeBox, "自动路由") == "手动指定" ? "manual" : "auto";
+        }
+
+        private void SelectRoutingMode(string value)
+        {
+            SelectCombo(routingModeBox, value == "manual" ? "手动指定" : "自动路由");
+        }
+
+        private string SelectedPlatformId()
+        {
+            string selected = SelectedText(platformBox, "自动选择");
+            if (selected == "Codex") { return "codex"; }
+            if (selected == "Claude Code") { return "claude-code"; }
+            if (selected == "Trae Agent") { return "trae-agent"; }
+            if (selected == "Qoder") { return "qoder"; }
+            return "auto";
+        }
+
+        private void SelectPlatformById(string id)
+        {
+            string name = "自动选择";
+            if (id == "codex") { name = "Codex"; }
+            else if (id == "claude-code") { name = "Claude Code"; }
+            else if (id == "trae-agent") { name = "Trae Agent"; }
+            else if (id == "qoder") { name = "Qoder"; }
+            SelectCombo(platformBox, name);
+        }
+
+        private void ResetAgentSessionForRoutingChange(string reason)
+        {
+            if (loadingWorkflowConfig || applyingWorkflowDefaults) { return; }
+            if (!string.IsNullOrWhiteSpace(agentThreadId) || !string.IsNullOrWhiteSpace(agentSessionPlatform))
+            {
+                agentThreadId = "";
+                agentSessionPlatform = "";
+                activePlatformName = "";
+                activePlatformModel = "";
+                chatBox.AppendText(Environment.NewLine + "--- " + reason + "，已自动开始新会话 ---" + Environment.NewLine);
+            }
         }
 
         private int WorkflowTimeoutSeconds()
@@ -1508,8 +2360,11 @@ namespace SiemensTiaSkillSuite
         private string SelectedAgentId()
         {
             string selected = SelectedText(agentBox, "自动路由 Agent");
+            if (selected == "工作台编排 Agent") { return "workbench"; }
+            if (selected == "队列执行 Agent") { return "queue-runner"; }
             if (selected == "PLC LAD 工程师") { return "plc-lad"; }
             if (selected == "PLC SCL 工程师") { return "plc-scl"; }
+            if (selected == "PLC 高级指令工程师") { return "advanced-plc"; }
             if (selected == "DB 与变量架构师") { return "data-block"; }
             if (selected == "WinCC 画面工程师") { return "wincc"; }
             if (selected == "Openness 自动化工程师") { return "openness"; }
@@ -1521,8 +2376,11 @@ namespace SiemensTiaSkillSuite
         private void SelectAgentById(string id)
         {
             string name = "自动路由 Agent";
-            if (id == "plc-lad") { name = "PLC LAD 工程师"; }
+            if (id == "workbench") { name = "工作台编排 Agent"; }
+            else if (id == "queue-runner") { name = "队列执行 Agent"; }
+            else if (id == "plc-lad") { name = "PLC LAD 工程师"; }
             else if (id == "plc-scl") { name = "PLC SCL 工程师"; }
+            else if (id == "advanced-plc") { name = "PLC 高级指令工程师"; }
             else if (id == "data-block") { name = "DB 与变量架构师"; }
             else if (id == "wincc") { name = "WinCC 画面工程师"; }
             else if (id == "openness") { name = "Openness 自动化工程师"; }
@@ -1548,8 +2406,8 @@ namespace SiemensTiaSkillSuite
 
         private string SelectedAgentModel()
         {
-            string selected = SelectedText(modelBox, "继承 Codex 默认");
-            if (selected.StartsWith("继承", StringComparison.Ordinal) || selected == "本地/手动" || selected == "gpt-5" || selected == "gpt-5-codex")
+            string selected = SelectedText(modelBox, "继承平台/工作流默认");
+            if (selected.StartsWith("继承", StringComparison.Ordinal) || selected == "自定义模型ID")
             {
                 return "inherit";
             }
@@ -1658,51 +2516,66 @@ namespace SiemensTiaSkillSuite
             {
                 applyingWorkflowDefaults = true;
                 string request = requestBox.Text ?? "";
-                string workflow = Convert.ToString(workflowSelectBox.SelectedItem);
+                string workflow = workflowAutoMode ? "自动选择" : SelectedText(workflowSelectBox, "自动选择");
                 string inferred = InferWorkflow(request, workflow);
 
-                if (!inferFromTextOnly || workflow == "自动选择")
+                if (!inferFromTextOnly || workflowAutoMode)
                 {
                     SelectCombo(workflowSelectBox, inferred);
                 }
 
                 bool hasReferenceImage = File.Exists(referenceImageBox.Text);
                 bool winccVisual = inferred.IndexOf("WinCC", StringComparison.OrdinalIgnoreCase) >= 0 || ContainsAny(request, new string[] { "画面", "界面", "hmi", "wincc", "参考图", "截图", "复刻" });
-                bool lad = inferred.IndexOf("LAD", StringComparison.OrdinalIgnoreCase) >= 0 || ContainsAny(request, new string[] { "lad", "梯形图", "程序块", "db", "变量块" });
+                bool lad = inferred == "LAD编写与验证" || inferred == "DB+程序块协同";
+
+                SelectAgentForWorkflow(inferred);
 
                 if (winccVisual)
                 {
-                    if (string.IsNullOrWhiteSpace(agentThreadId)) { SelectAgentById("wincc"); }
-                    SelectCombo(modelBox, "继承 Codex 默认");
-                    SelectCombo(apiProviderBox, "Codex内置");
                     SelectCombo(imageWorkflowBox, hasReferenceImage ? "图生图/参考图" : "文生图");
                     SelectCombo(imageModelBox, "内置imagegen");
                     SelectCombo(imageQualityBox, "high");
                     SelectCombo(imageSizeBox, "1536x1024");
                     SelectCombo(componentStrategyBox, hasReferenceImage ? "自动匹配+自定义" : "Faceplate优先");
-                    statusLabel.Text = hasReferenceImage ? "已按参考图复刻任务推荐模型" : "已按WinCC画面设计推荐模型";
+                    statusLabel.Text = hasReferenceImage ? "已按参考图任务推荐 Agent 与平台路由" : "已按WinCC设计任务推荐 Agent 与平台路由";
                 }
                 else if (lad)
                 {
-                    if (string.IsNullOrWhiteSpace(agentThreadId)) { SelectAgentById(inferred == "DB+程序块协同" ? "data-block" : "plc-lad"); }
-                    SelectCombo(modelBox, "继承 Codex 默认");
                     SelectCombo(imageWorkflowBox, "无图像");
                     SelectCombo(componentStrategyBox, "标准WinCC组件");
-                    statusLabel.Text = "已按PLC/LAD任务推荐模型";
+                    statusLabel.Text = "已按PLC/LAD任务推荐 Agent 与平台路由";
+                }
+                else if (inferred == "SCL编写与验证")
+                {
+                    SelectCombo(imageWorkflowBox, "无图像");
+                    statusLabel.Text = "已按SCL任务推荐 Agent 与平台路由";
                 }
                 else if (ContainsAny(request, new string[] { "故障", "报错", "诊断", "openness" }))
                 {
-                    if (string.IsNullOrWhiteSpace(agentThreadId)) { SelectAgentById(ContainsAny(request, new string[] { "openness", "开放性" }) ? "openness" : "diagnostics"); }
-                    SelectCombo(modelBox, "继承 Codex 默认");
                     SelectCombo(imageWorkflowBox, "无图像");
-                    statusLabel.Text = "已按诊断任务推荐模型";
+                    statusLabel.Text = "已按诊断任务推荐 Agent 与平台路由";
                 }
+                if (SelectedRoutingMode() == "auto") { SelectPlatformById("auto"); }
             }
             finally
             {
                 applyingWorkflowDefaults = false;
             }
             SyncQuickSettingsFromAdvanced();
+        }
+
+        private void SelectAgentForWorkflow(string workflow)
+        {
+            if (workflow == "工作台自动开发") { SelectAgentById("workbench"); }
+            else if (workflow == "Agent执行队列") { SelectAgentById("queue-runner"); }
+            else if (workflow == "LAD编写与验证") { SelectAgentById("plc-lad"); }
+            else if (workflow == "SCL编写与验证") { SelectAgentById("plc-scl"); }
+            else if (workflow == "PLC高级指令与工艺对象") { SelectAgentById("advanced-plc"); }
+            else if (workflow == "DB+程序块协同") { SelectAgentById("data-block"); }
+            else if (workflow == "WinCC画面生成" || workflow == "WinCC参考图复刻") { SelectAgentById("wincc"); }
+            else if (workflow == "Openness自动化") { SelectAgentById("openness"); }
+            else if (workflow == "故障诊断") { SelectAgentById("diagnostics"); }
+            else if (workflow == "只读审查" || workflow == "安全风险评估") { SelectAgentById("reviewer"); }
         }
 
         private static string InferWorkflow(string request, string currentWorkflow)
@@ -1715,23 +2588,73 @@ namespace SiemensTiaSkillSuite
             {
                 return "WinCC参考图复刻";
             }
+            if (ContainsAny(request, new string[] { "执行队列", "队列", "阶段", "证据", "stage", "queue" }))
+            {
+                return "Agent执行队列";
+            }
+            if (ContainsAny(request, new string[] { "工作台", "agent应用", "智能体应用", "替代codex", "替代编辑器" }))
+            {
+                return "工作台自动开发";
+            }
             if (ContainsAny(request, new string[] { "wincc", "hmi", "画面", "界面", "faceplate", "报警画面", "趋势" }))
             {
                 return "WinCC画面生成";
             }
-            if (ContainsAny(request, new string[] { "lad", "梯形图", "程序块", "导入", "编译验证" }))
+            if (ContainsAny(request, new string[] { "高级指令", "工艺对象", "technology", "motion", "pid", "modbus", "通信", "伺服", "变频" }))
             {
-                return "LAD编写与验证";
+                return "PLC高级指令与工艺对象";
+            }
+            if (ContainsAny(request, new string[] { "安全", "风险", "联锁审查", "安全评估" }))
+            {
+                return "安全风险评估";
+            }
+            if (ContainsAny(request, new string[] { "工业化", "成熟项目", "架构重构", "标准化改造" }))
+            {
+                return "工业化重构";
             }
             if (ContainsAny(request, new string[] { "db", "变量块", "数据块" }))
             {
                 return "DB+程序块协同";
             }
+            if (ContainsAny(request, new string[] { "scl", "结构化文本", "算法", "数组", "字符串" }))
+            {
+                return "SCL编写与验证";
+            }
+            if (ContainsAny(request, new string[] { "lad", "梯形图", "程序块", "导入", "编译验证" }))
+            {
+                return "LAD编写与验证";
+            }
             if (ContainsAny(request, new string[] { "故障", "报错", "诊断", "异常" }))
             {
                 return "故障诊断";
             }
+            if (ContainsAny(request, new string[] { "openness", "开放性", "publicapi" }))
+            {
+                return "Openness自动化";
+            }
+            if (ContainsAny(request, new string[] { "审查", "review", "只读检查" }))
+            {
+                return "只读审查";
+            }
             return "读取项目并总结";
+        }
+
+        private static string WorkflowId(string workflow)
+        {
+            if (workflow == "LAD编写与验证") { return "plc-lad"; }
+            if (workflow == "工作台自动开发") { return "agent-workbench"; }
+            if (workflow == "Agent执行队列") { return "agent-queue"; }
+            if (workflow == "PLC高级指令与工艺对象") { return "advanced-plc"; }
+            if (workflow == "SCL编写与验证") { return "plc-scl"; }
+            if (workflow == "DB+程序块协同") { return "data-contract"; }
+            if (workflow == "WinCC画面生成") { return "wincc-visual"; }
+            if (workflow == "WinCC参考图复刻") { return "wincc-reference"; }
+            if (workflow == "Openness自动化") { return "openness"; }
+            if (workflow == "安全风险评估") { return "safety-risk"; }
+            if (workflow == "故障诊断") { return "diagnostics"; }
+            if (workflow == "工业化重构") { return "industrial-refactor"; }
+            if (workflow == "只读审查") { return "review"; }
+            return "project-read";
         }
 
         private static bool ContainsAny(string text, string[] needles)
@@ -1753,6 +2676,10 @@ namespace SiemensTiaSkillSuite
             {
                 combo.SelectedItem = value;
             }
+            else if (combo.DropDownStyle != ComboBoxStyle.DropDownList)
+            {
+                combo.Text = value;
+            }
         }
 
         private void ApplySelectedFont()
@@ -1768,6 +2695,8 @@ namespace SiemensTiaSkillSuite
                 ApplyFontRecursive(this, uiFont);
                 previewBox.Font = codeFont;
                 jobBox.Font = codeFont;
+                diffBox.Font = codeFont;
+                validationBox.Font = uiFont;
                 runList.Font = new Font(FontFamilyExists("Cascadia Mono") ? "Cascadia Mono" : family, Math.Max(8F, size - 0.5F), FontStyle.Regular);
                 projectTree.ItemHeight = Math.Max(22, (int)(size * 2.4F));
                 statusLabel.Text = "字体已应用：" + family + " " + size.ToString("0");
@@ -2290,9 +3219,9 @@ namespace SiemensTiaSkillSuite
             {
                 runList.Items.Add(row);
             }
-            if (mainTabs.TabPages.Count >= 4)
+            if (mainTabs.TabPages.Count >= 5)
             {
-                mainTabs.SelectedIndex = 3;
+                mainTabs.SelectedIndex = 4;
             }
         }
 
@@ -2300,14 +3229,16 @@ namespace SiemensTiaSkillSuite
         {
             try
             {
+                currentPreviewPath = File.Exists(path) ? path : "";
                 previewBox.Text = ReadText(path);
-                if (mainTabs.TabPages.Count >= 3)
+                if (mainTabs.TabPages.Count >= 4)
                 {
-                    mainTabs.SelectedIndex = 2;
+                    mainTabs.SelectedIndex = 3;
                 }
             }
             catch (Exception ex)
             {
+                currentPreviewPath = "";
                 previewBox.Text = ex.Message;
             }
         }
@@ -2378,6 +3309,10 @@ namespace SiemensTiaSkillSuite
                 return;
             }
             agentThreadId = "";
+            agentSessionPlatform = "";
+            activePlatformName = "";
+            activePlatformModel = "";
+            platformStatusLabel.Text = "平台：等待下一次路由";
             chatBox.AppendText(Environment.NewLine + "--- 已新建 Agent 会话 ---" + Environment.NewLine);
             SaveWorkflowConfig(false);
             statusLabel.Text = "已新建 Agent 会话";
@@ -2401,10 +3336,11 @@ namespace SiemensTiaSkillSuite
             try
             {
                 string root = ResolveProjectRoot(projectPathBox.Text);
-                string agentScript = Path.Combine(Path.GetDirectoryName(invokeScript), "invoke-codex-agent.ps1");
-                if (!File.Exists(agentScript)) { throw new FileNotFoundException("未找到内置 Agent 适配脚本。", agentScript); }
+                ApplyWorkflowDefaults(true);
+                string agentScript = Path.Combine(Path.GetDirectoryName(invokeScript), "invoke-ai-platform-agent.ps1");
+                if (!File.Exists(agentScript)) { throw new FileNotFoundException("未找到统一 AI 平台适配脚本。", agentScript); }
 
-                SaveWorkflowConfig(false);
+                string configPath = SaveWorkflowConfig(false);
                 string runRoot = Path.Combine(root, "PLC_Code", "agent-sessions", DateTime.Now.ToString("yyyyMMdd-HHmmss-fff"));
                 Directory.CreateDirectory(runRoot);
                 string promptPath = Path.Combine(runRoot, "user-message.txt");
@@ -2428,20 +3364,36 @@ namespace SiemensTiaSkillSuite
                 args.Add(promptPath);
                 args.Add("-AgentId");
                 args.Add(SelectedAgentId());
+                args.Add("-Workflow");
+                args.Add(WorkflowId(SelectedText(workflowSelectBox, "读取项目并总结")));
+                args.Add("-RoutingMode");
+                args.Add(SelectedRoutingMode());
+                args.Add("-Platform");
+                args.Add(SelectedPlatformId());
                 args.Add("-Model");
                 args.Add(SelectedAgentModel());
                 args.Add("-Sandbox");
                 args.Add(SelectedAgentSandbox());
                 args.Add("-AttachmentManifest");
                 args.Add(manifestPath);
+                if (!string.IsNullOrWhiteSpace(configPath))
+                {
+                    args.Add("-WorkflowConfigPath");
+                    args.Add(configPath);
+                }
                 if (agentSearchBox.Checked) { args.Add("-Search"); }
                 if (!string.IsNullOrWhiteSpace(agentThreadId))
                 {
                     args.Add("-SessionId");
                     args.Add(agentThreadId);
+                    if (!string.IsNullOrWhiteSpace(agentSessionPlatform))
+                    {
+                        args.Add("-SessionPlatform");
+                        args.Add(agentSessionPlatform);
+                    }
                 }
 
-                chatBox.AppendText(Environment.NewLine + "你 · " + SelectedText(agentBox, "自动路由 Agent") + Environment.NewLine + userMessage + Environment.NewLine);
+                chatBox.AppendText(Environment.NewLine + "你 · " + SelectedText(agentBox, "自动路由 Agent") + " · " + SelectedText(platformBox, "自动选择") + Environment.NewLine + userMessage + Environment.NewLine);
                 if (agentAttachments.Count > 0)
                 {
                     chatBox.AppendText("附件：" + agentAttachmentLabel.Text + Environment.NewLine);
@@ -2479,8 +3431,9 @@ namespace SiemensTiaSkillSuite
                 agentProcess = process;
                 sendAgentButton.Enabled = false;
                 stopAgentButton.Enabled = true;
-                statusLabel.Text = "Agent 运行中";
-                jobBox.Text = "Agent 会话目录：" + runRoot + Environment.NewLine + "Agent：" + SelectedText(agentBox, "自动路由 Agent") + Environment.NewLine + "模型：" + SelectedAgentModel() + Environment.NewLine;
+                statusLabel.Text = "Agent 路由与执行中";
+                platformStatusLabel.Text = "平台：正在选择...";
+                jobBox.Text = "Agent 会话目录：" + runRoot + Environment.NewLine + "路由模式：" + SelectedText(routingModeBox, "自动路由") + Environment.NewLine + "请求平台：" + SelectedText(platformBox, "自动选择") + Environment.NewLine + "Agent：" + SelectedText(agentBox, "自动路由 Agent") + Environment.NewLine + "模型：" + SelectedAgentModel() + Environment.NewLine + "工作流：" + WorkflowId(SelectedText(workflowSelectBox, "读取项目并总结")) + Environment.NewLine;
                 process.Start();
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
@@ -2498,6 +3451,27 @@ namespace SiemensTiaSkillSuite
 
         private void HandleAgentJsonLine(string line)
         {
+            if (Regex.IsMatch(line, "\\\"type\\\"\\s*:\\s*\\\"platform\\.selected\\\"", RegexOptions.IgnoreCase))
+            {
+                string platformId = JsonStringValue(line, "platform", "");
+                string platformName = JsonStringValue(line, "platform_name", platformId);
+                string platformModel = JsonStringValue(line, "model", "inherit");
+                string routedAgent = JsonStringValue(line, "agent", SelectedAgentId());
+                if (!string.IsNullOrWhiteSpace(agentSessionPlatform) && agentSessionPlatform != platformId)
+                {
+                    agentThreadId = "";
+                }
+                agentSessionPlatform = platformId;
+                activePlatformName = platformName;
+                activePlatformModel = platformModel;
+                BeginInvoke((Action)delegate
+                {
+                    platformStatusLabel.Text = "平台：" + platformName + " · 模型：" + platformModel + " · Agent：" + routedAgent;
+                    statusLabel.Text = "已路由到 " + platformName;
+                    SaveWorkflowConfig(false);
+                });
+            }
+
             Match threadMatch = Regex.Match(line, "\\\"type\\\"\\s*:\\s*\\\"thread\\.started\\\".*?\\\"thread_id\\\"\\s*:\\s*\\\"(?<id>[^\\\"]+)\\\"");
             if (threadMatch.Success)
             {
@@ -2511,7 +3485,8 @@ namespace SiemensTiaSkillSuite
                 string message = UnescapeJson(messageMatch.Groups["text"].Value);
                 BeginInvoke((Action)delegate
                 {
-                    chatBox.AppendText(Environment.NewLine + SelectedText(agentBox, "Agent") + Environment.NewLine + message + Environment.NewLine);
+                    string heading = string.IsNullOrWhiteSpace(activePlatformName) ? SelectedText(agentBox, "Agent") : activePlatformName + " · " + SelectedText(agentBox, "Agent");
+                    chatBox.AppendText(Environment.NewLine + heading + Environment.NewLine + message + Environment.NewLine);
                     chatBox.SelectionStart = chatBox.TextLength;
                     chatBox.ScrollToCaret();
                 });
@@ -2664,13 +3639,89 @@ namespace SiemensTiaSkillSuite
                         {
                             ShowWinccPluginRouting();
                         }
+                        if (command == "agent-plan" && currentProcess.ExitCode == 0)
+                        {
+                            ShowAgentTaskPlan();
+                        }
+                        if (command == "agent-queue" && currentProcess.ExitCode == 0)
+                        {
+                            ShowAgentExecutionQueue();
+                        }
+                        if (command.StartsWith("queue-", StringComparison.OrdinalIgnoreCase) && currentProcess.ExitCode == 0)
+                        {
+                            ShowCurrentQueueStage();
+                        }
+                        if (command == "queue-run-current" && currentProcess.ExitCode == 0)
+                        {
+                            StartCommand("workbench-dashboard");
+                        }
+                        if (command == "agent-pipeline" && currentProcess.ExitCode == 0)
+                        {
+                            ShowWorkbenchDashboard();
+                        }
+                        if (command == "project-model" && currentProcess.ExitCode == 0)
+                        {
+                            ShowProjectObjectModel();
+                        }
+                        if (command == "knowledge-pack" && currentProcess.ExitCode == 0)
+                        {
+                            ShowKnowledgePack();
+                        }
+                        if (command == "capability-map" && currentProcess.ExitCode == 0)
+                        {
+                            ShowWorkbenchCapabilityMap();
+                        }
+                        if (command == "review-package" && currentProcess.ExitCode == 0)
+                        {
+                            ShowWorkbenchReviewPackage();
+                        }
+                        if (command == "workbench-dashboard" && currentProcess.ExitCode == 0)
+                        {
+                            ShowWorkbenchDashboard();
+                        }
+                        if (command == "wincc-visual-package" && currentProcess.ExitCode == 0)
+                        {
+                            ShowWinccVisualPackage();
+                        }
+                        if (command == "lad-preview" && currentProcess.ExitCode == 0)
+                        {
+                            ShowLadPreview();
+                        }
+                        if (command == "plc-change-package" && currentProcess.ExitCode == 0)
+                        {
+                            ShowPlcChangePackage();
+                        }
+                        if (command == "plc-instruction-cookbook" && currentProcess.ExitCode == 0)
+                        {
+                            ShowPlcInstructionCookbook();
+                        }
+                        if (command == "plc-instruction-plan" && currentProcess.ExitCode == 0)
+                        {
+                            ShowPlcInstructionPlan();
+                        }
+                        if (command == "wincc-component-blueprints" && currentProcess.ExitCode == 0)
+                        {
+                            ShowWinccComponentBlueprints();
+                        }
+                        if (command == "wincc-engineering-scaffold" && currentProcess.ExitCode == 0)
+                        {
+                            ShowWinccEngineeringScaffold();
+                        }
+                        if (command == "simulation-package" && currentProcess.ExitCode == 0)
+                        {
+                            ShowSimulationPackage();
+                        }
+                        if (command == "probe-ai-platforms" && currentProcess.ExitCode == 0)
+                        {
+                            UpdatePlatformProbeStatus(currentStdoutPath);
+                        }
                     });
                 };
 
                 jobBox.Text = "启动命令：" + command + Environment.NewLine + start.Arguments + Environment.NewLine + "工作流配置：" + configPath + Environment.NewLine + "日志：" + currentStdoutPath + Environment.NewLine;
                 if (mainTabs.TabPages.Count >= 2)
                 {
-                    mainTabs.SelectedIndex = 1;
+                    mainTabs.SelectedIndex = 2;
                 }
                 statusLabel.Text = "运行中：" + command;
                 currentProcess.Start();
@@ -2693,6 +3744,11 @@ namespace SiemensTiaSkillSuite
                 args.Add("-ProjectPath");
                 args.Add(root);
             }
+            else if (command == "probe-ai-platforms")
+            {
+                args.Add("probe-ai-platforms");
+                AddWorkflowConfigArg(args, configPath);
+            }
             else if (command == "read-cycle-skip")
             {
                 args.AddRange(new string[] { "read-cycle", "-ProjectPath", root, "-SkipExport" });
@@ -2710,9 +3766,162 @@ namespace SiemensTiaSkillSuite
                 args.AddRange(new string[] { "list-blocks", "--project", root, "--plc", PlcName() });
                 args.Add(SelectedText(tiaSessionModeBox, "自动附加") == "显示TIA界面" ? "--ui" : "--attach");
             }
+            else if (command == "lad-preview")
+            {
+                if (string.IsNullOrWhiteSpace(inputXmlBox.Text) || !File.Exists(inputXmlBox.Text))
+                {
+                    throw new FileNotFoundException("请先在项目树中选择一个LAD XML文件。", inputXmlBox.Text);
+                }
+                string previewDir = Path.Combine(root, "PLC_Code", "lad-previews");
+                Directory.CreateDirectory(previewDir);
+                string latest = Path.Combine(previewDir, "latest-lad-preview.md");
+                args.AddRange(new string[] { "summarize-lad", "-Path", inputXmlBox.Text, "-OutputPath", latest });
+            }
+            else if (command == "plc-change-package")
+            {
+                args.AddRange(new string[] { "plc-change-package", "-ProjectPath", root, "-TaskText", requestBox.Text.Trim(), "-Workflow", WorkflowId(SelectedText(workflowSelectBox, "读取项目并总结")) });
+                AddWorkflowConfigArg(args, configPath);
+                if (!string.IsNullOrWhiteSpace(inputXmlBox.Text) && File.Exists(inputXmlBox.Text))
+                {
+                    args.Add("-SourceXml");
+                    args.Add(inputXmlBox.Text);
+                }
+            }
+            else if (command == "agent-pipeline")
+            {
+                args.AddRange(new string[] { "agent-pipeline", "-ProjectPath", root, "-TaskText", requestBox.Text.Trim() });
+                AddWorkflowConfigArg(args, configPath);
+                if (!string.IsNullOrWhiteSpace(inputXmlBox.Text) && File.Exists(inputXmlBox.Text))
+                {
+                    args.Add("-SourceXml");
+                    args.Add(inputXmlBox.Text);
+                }
+                if (File.Exists(referenceImageBox.Text.Trim()))
+                {
+                    args.Add("-ReferenceImagePath");
+                    args.Add(referenceImageBox.Text.Trim());
+                }
+            }
+            else if (command == "project-model")
+            {
+                args.AddRange(new string[] { "project-model", "-ProjectPath", root, "-TaskText", requestBox.Text.Trim() });
+                AddWorkflowConfigArg(args, configPath);
+            }
+            else if (command == "knowledge-pack")
+            {
+                args.AddRange(new string[] { "knowledge-pack", "-ProjectPath", root, "-TaskText", requestBox.Text.Trim(), "-RefreshOnline" });
+                AddWorkflowConfigArg(args, configPath);
+            }
+            else if (command == "capability-map")
+            {
+                args.AddRange(new string[] { "capability-map", "-ProjectPath", root, "-TaskText", requestBox.Text.Trim() });
+                AddWorkflowConfigArg(args, configPath);
+            }
+            else if (command == "plc-instruction-plan")
+            {
+                args.AddRange(new string[] { "plc-instruction-plan", "-ProjectPath", root, "-TaskText", requestBox.Text.Trim() });
+                AddWorkflowConfigArg(args, configPath);
+                if (!string.IsNullOrWhiteSpace(inputXmlBox.Text) && File.Exists(inputXmlBox.Text))
+                {
+                    args.Add("-SourceXml");
+                    args.Add(inputXmlBox.Text);
+                }
+            }
+            else if (command == "plc-instruction-cookbook")
+            {
+                args.AddRange(new string[] { "plc-instruction-cookbook", "-ProjectPath", root, "-TaskText", requestBox.Text.Trim() });
+                AddWorkflowConfigArg(args, configPath);
+            }
             else if (command == "wincc-plugins")
             {
                 args.AddRange(new string[] { "wincc-plugins", "-ProjectPath", root, "-TaskText", requestBox.Text.Trim(), "-RefreshCatalog" });
+                AddWorkflowConfigArg(args, configPath);
+                if (File.Exists(referenceImageBox.Text.Trim()))
+                {
+                    args.Add("-ReferenceImagePath");
+                    args.Add(referenceImageBox.Text.Trim());
+                }
+            }
+            else if (command == "wincc-component-blueprints")
+            {
+                args.AddRange(new string[] { "wincc-component-blueprints", "-ProjectPath", root, "-TaskText", requestBox.Text.Trim() });
+                AddWorkflowConfigArg(args, configPath);
+                if (File.Exists(referenceImageBox.Text.Trim()))
+                {
+                    args.Add("-ReferenceImagePath");
+                    args.Add(referenceImageBox.Text.Trim());
+                }
+            }
+            else if (command == "wincc-engineering-scaffold")
+            {
+                args.AddRange(new string[] { "wincc-engineering-scaffold", "-ProjectPath", root, "-TaskText", requestBox.Text.Trim() });
+                AddWorkflowConfigArg(args, configPath);
+                if (File.Exists(referenceImageBox.Text.Trim()))
+                {
+                    args.Add("-ReferenceImagePath");
+                    args.Add(referenceImageBox.Text.Trim());
+                }
+            }
+            else if (command == "simulation-package")
+            {
+                args.AddRange(new string[] { "simulation-package", "-ProjectPath", root, "-TaskText", requestBox.Text.Trim() });
+                AddWorkflowConfigArg(args, configPath);
+            }
+            else if (command == "agent-plan")
+            {
+                args.AddRange(new string[] { "agent-plan", "-ProjectPath", root, "-TaskText", requestBox.Text.Trim(), "-Workflow", WorkflowId(SelectedText(workflowSelectBox, "读取项目并总结")), "-AgentId", SelectedAgentId() });
+                AddWorkflowConfigArg(args, configPath);
+                if (File.Exists(referenceImageBox.Text.Trim()))
+                {
+                    args.Add("-ReferenceImagePath");
+                    args.Add(referenceImageBox.Text.Trim());
+                }
+            }
+            else if (command == "agent-queue")
+            {
+                string latestPlan = Path.Combine(root, "PLC_Code", "agent-plans", "latest-plan.json");
+                args.AddRange(new string[] { "agent-queue", "-ProjectPath", root, "-TaskText", requestBox.Text.Trim(), "-PlanPath", latestPlan });
+                AddWorkflowConfigArg(args, configPath);
+            }
+            else if (command == "queue-start-next")
+            {
+                args.AddRange(new string[] { "queue-stage", "-ProjectPath", root, "-Action", "start-next", "-Note", "Started from PLCDevConsole workbench." });
+            }
+            else if (command == "queue-run-current")
+            {
+                args.AddRange(new string[] {
+                    "queue-run-current",
+                    "-ProjectPath", root,
+                    "-RoutingMode", SelectedRoutingMode(),
+                    "-Platform", SelectedPlatformId(),
+                    "-Model", SelectedAgentModel(),
+                    "-Sandbox", SelectedAgentSandbox(),
+                    "-TimeoutSeconds", WorkflowTimeoutSeconds().ToString()
+                });
+                AddWorkflowConfigArg(args, configPath);
+                if (agentSearchBox.Checked) { args.Add("-Search"); }
+            }
+            else if (command == "queue-complete-current")
+            {
+                args.AddRange(new string[] { "queue-stage", "-ProjectPath", root, "-Action", "complete-current", "-Note", "Marked complete from PLCDevConsole workbench." });
+            }
+            else if (command == "queue-fail-current")
+            {
+                args.AddRange(new string[] { "queue-stage", "-ProjectPath", root, "-Action", "fail-current", "-Note", "Marked failed from PLCDevConsole workbench. Inspect logs and evidence before retry." });
+            }
+            else if (command == "review-package")
+            {
+                args.AddRange(new string[] { "review-package", "-ProjectPath", root });
+                AddWorkflowConfigArg(args, configPath);
+            }
+            else if (command == "workbench-dashboard")
+            {
+                args.AddRange(new string[] { "workbench-dashboard", "-ProjectPath", root });
+                AddWorkflowConfigArg(args, configPath);
+            }
+            else if (command == "wincc-visual-package")
+            {
+                args.AddRange(new string[] { "wincc-visual-package", "-ProjectPath", root, "-TaskText", requestBox.Text.Trim() });
                 AddWorkflowConfigArg(args, configPath);
                 if (File.Exists(referenceImageBox.Text.Trim()))
                 {
@@ -2871,6 +4080,10 @@ namespace SiemensTiaSkillSuite
                 string workflow = Convert.ToString(workflowSelectBox.SelectedItem);
                 string referenceImage = referenceImageBox.Text.Trim();
                 bool hasReferenceImage = File.Exists(referenceImage);
+                string agentContextPath = Path.Combine(root, "PLC_Code", "workbench", "context", "latest", "agent-context.md");
+                string projectModelPath = Path.Combine(root, "PLC_Code", "workbench", "context", "latest", "project-model.json");
+                string knowledgeBriefPath = Path.Combine(root, "PLC_Code", "knowledge", "packs", "latest", "knowledge-brief.md");
+                string knowledgePackPath = Path.Combine(root, "PLC_Code", "knowledge", "packs", "latest", "knowledge-pack.json");
                 string winccPluginRouting = "";
                 if (workflow.IndexOf("WinCC", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
@@ -2901,6 +4114,32 @@ namespace SiemensTiaSkillSuite
                 content.AppendLine("- Image size: `" + Convert.ToString(imageSizeBox.SelectedItem) + "`");
                 content.AppendLine("- Component strategy: `" + Convert.ToString(componentStrategyBox.SelectedItem) + "`");
                 content.AppendLine("- Reference image: `" + (hasReferenceImage ? referenceImage : "none") + "`");
+                content.AppendLine();
+                content.AppendLine("## Project Context And Knowledge");
+                content.AppendLine();
+                content.AppendLine("- Agent context: `" + (File.Exists(agentContextPath) ? agentContextPath : "missing, run project-model") + "`");
+                content.AppendLine("- Project model JSON: `" + (File.Exists(projectModelPath) ? projectModelPath : "missing, run project-model") + "`");
+                content.AppendLine("- Knowledge brief: `" + (File.Exists(knowledgeBriefPath) ? knowledgeBriefPath : "missing, run knowledge-pack") + "`");
+                content.AppendLine("- Knowledge pack JSON: `" + (File.Exists(knowledgePackPath) ? knowledgePackPath : "missing, run knowledge-pack") + "`");
+                content.AppendLine();
+                if (File.Exists(agentContextPath))
+                {
+                    content.AppendLine("### Agent Context Excerpt");
+                    content.AppendLine();
+                    content.AppendLine("```text");
+                    content.AppendLine(Tail(ReadText(agentContextPath), 3500));
+                    content.AppendLine("```");
+                    content.AppendLine();
+                }
+                if (File.Exists(knowledgeBriefPath))
+                {
+                    content.AppendLine("### Knowledge Brief Excerpt");
+                    content.AppendLine();
+                    content.AppendLine("```text");
+                    content.AppendLine(Tail(ReadText(knowledgeBriefPath), 3500));
+                    content.AppendLine("```");
+                    content.AppendLine();
+                }
                 content.AppendLine();
                 content.AppendLine("## User Request");
                 content.AppendLine();
@@ -2940,10 +4179,11 @@ namespace SiemensTiaSkillSuite
                 content.AppendLine();
                 content.AppendLine("## Suggested Workflow");
                 content.AppendLine();
-                content.AppendLine("1. Run `read-cycle -Attach -SkipExport` if the project structure is stale.");
-                content.AppendLine("2. Edit exported LAD XML, LAD JSON specs, SCL sources, or DB sources.");
-                content.AppendLine("3. For WinCC visual tasks, first produce a screen map and component/tag contract, then generate or update screens through Openness/SiVArc where available.");
-                content.AppendLine("4. Use `write-cycle` on a cloned project before applying PLC-side generated LAD XML to the real project.");
+                content.AppendLine("1. Run `project-model` and `knowledge-pack` if the context or sources are stale.");
+                content.AppendLine("2. Run `read-cycle -Attach -SkipExport` if the project structure is stale.");
+                content.AppendLine("3. Edit exported LAD XML, LAD JSON specs, SCL sources, or DB sources.");
+                content.AppendLine("4. For WinCC visual tasks, first produce a screen map and component/tag contract, then generate or update screens through Openness/SiVArc where available.");
+                content.AppendLine("5. Use `write-cycle` on a cloned project before applying PLC-side generated LAD XML to the real project.");
                 File.WriteAllText(path, content.ToString(), Encoding.UTF8);
                 chatBox.AppendText(Environment.NewLine + "用户任务：" + requestBox.Text.Trim() + Environment.NewLine);
                 chatBox.AppendText("模型：" + Convert.ToString(modelBox.SelectedItem) + "    工作流：" + workflow + "    语言：" + SelectedText(languagePreferenceBox, "LAD优先") + "    安全：" + SelectedText(safetyModeBox, "克隆编译验证") + Environment.NewLine);

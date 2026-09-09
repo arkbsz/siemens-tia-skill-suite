@@ -35,6 +35,7 @@ Treat PLC work like software work:
 
 For the generic workflow, read `references/workflow.md`.
 For the native console configuration schema and execution mapping, read `references/ai-workflow-config.md`.
+For the long-term native Agent workbench target and task planning gate, read `references/agent-workbench.md`.
 
 ## Native visual console
 
@@ -47,14 +48,31 @@ Use the local visual console when the user wants a better interaction surface th
 - a draggable left project tree for TIA projects, exported XML/SCL/DB/UDT, reports, and logs
 - switchable center pages for AI chat, command logs, file preview, runs, and reference-image preview
 - a bottom AI task box focused on the user request, with settings moved into the Tools menu to avoid crowding
-- direct built-in Agent conversations through Codex CLI, with Agent profile selection, continuous sessions, stop/new-session controls, and no separate AI window
+- direct built-in Agent conversations through Codex, Claude Code, Trae Agent, or Qoder, with automatic task routing, manual platform/model overrides, compatible session handling, stop/new-session controls, and no separate AI window
 - project-local file uploads for images, PDFs, documents, source files, exported XML, and logs
-- a horizontally scrollable quick-configuration row in the AI area for model, workflow, language preference, TIA session mode, safety mode, and step timeout
-- a scrollable Tools settings panel for model/workflow selection, API provider/base/key-env settings, image workflow/model/quality/size, WinCC component strategy, Windows font settings, and uploaded reference image path
+- a responsive two-row quick-configuration grid in the AI area for routing mode, platform, Agent, model, workflow, language preference, TIA session mode, safety mode, and step timeout, without horizontal control overlap
+- a scrollable Tools settings panel for platform command overrides, model/workflow selection, API provider/base/key-env settings, image workflow/model/quality/size, WinCC component strategy, Windows font settings, and uploaded reference image path
 - project-level configuration persistence at `PLC_Code\config\ai-workflow.json`; `read-cycle` and `write-cycle` consume the saved file and copy a snapshot into their run reports
 - common workflow buttons for `doctor`, `read-cycle`, `list-blocks`, and `write-cycle`
+- native task orchestration through `agent-plan`, with a center `任务编排` tab that shows stages, tools, outputs, verification gates, safety gates, and release boundaries
+- native execution queue generation through `agent-queue`, converting a plan into stage prompts, command suggestions, verification gates, logs and evidence folders
+- queue state control through `queue-stage`, supporting start-next, complete-current, fail-current, block-current and reset transitions with current-stage previews
+- one-click current-stage Agent execution through `queue-run-current`, which reads the active stage prompt, routes it to the configured platform/model, records stdout/stderr plus evidence, and keeps production writes behind review gates
+- project object models through `project-model`, generating `PLC_Code\workbench\context\latest\project-model.json`, `agent-context.md`, and `file-index.csv` for fast cross-Agent understanding of TIA version, blocks, DBs, exported artifacts, WinCC packages, queues and safety gates
+- task knowledge packs through `knowledge-pack`, generating official-first source lists, community adapter notes, task-specific search queries, implementation patterns, and Agent retrieval prompts under `PLC_Code\knowledge\packs\latest`
+- editor-replacement capability maps through `capability-map`, generating a concrete matrix of native workbench coverage, backing commands, validation gates, TIA-native gaps, and next engineering steps under `PLC_Code\workbench\capabilities\latest`
+- one-click Agent development pipeline through `agent-pipeline`, which detects PLC/WinCC scope from the task, generates instruction routing, WinCC visual packages, Agent plans, execution queues and dashboard evidence in one auditable pass
+- workbench review packages through `review-package`, collecting plans, queues, PLC/WinCC packages, artifact hashes, git diffs and import-readiness gates
+- workbench dashboard generation through `workbench-dashboard`, feeding the native validation and diff panels with queue health, latest run reports, import readiness, plugin routing and Git diff summaries
+- PLC instruction and technology-object route planning through `plc-instruction-plan`, producing instruction families, preferred authoring surfaces, verification gates and safety-risk notes
+- PLC instruction cookbooks through `plc-instruction-cookbook`, producing a reusable route matrix for bit logic, compares, timers, counters, motion, drives, communication, PID, diagnostics, arrays, recipes, math and conversion families
+- WinCC component blueprints through `wincc-component-blueprints`, producing reusable screen shells, alarm strips, station cards, motor/cylinder/drive panels, trends, parameter panels, diagnostics tables, SiVArc rule notes and CWC manifest stubs
+- WinCC engineering scaffolds through `wincc-engineering-scaffold`, producing preflight checks, HMI tag/alarm import maps, faceplate build lists, SiVArc/CWC checklists, runtime smoke plans and clone-validation plans
+- simulation and runtime validation packages through `simulation-package`, producing clone compile scenarios, I/O simulation contracts, PLCSIM Advanced hook notes, WinCC Unified smoke notes and release-gate evidence
+- editable file preview with backup-on-save to `PLC_Code\file-backups`, plus `lad-preview` for readable LAD XML summaries
+- PLC change packages through `plc-change-package`, creating a structured editing workspace for DB contracts, LAD JSON, SCL sources, import manifests, verification plans, and safety risk notes
 - run and log preview panels for `PLC_Code\runs` and `PLC_Code\console-jobs`
-- a Codex-ready prompt file writer under `PLC_Code\ai-prompts`, plus auditable Agent requests and JSONL logs under `PLC_Code\agent-sessions`
+- an AI-platform-ready prompt file writer under `PLC_Code\ai-prompts`, plus auditable Agent requests, selected-platform events, and JSONL logs under `PLC_Code\agent-sessions`
 
 Start it with:
 
@@ -62,7 +80,7 @@ Start it with:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" console -ProjectPath "D:\path\to\project"
 ```
 
-Use `console-exe` explicitly when you want the native executable route, or `console-web` only as a fallback browser-based console. The native console can call the installed Codex CLI directly; it preserves the selected Agent session and separates conversational output from technical logs. Read `references/agent-console.md` for Agent profiles, attachments, session storage, and safety boundaries.
+Use `console-exe` explicitly when you want the native executable route, or `console-web` only as a fallback browser-based console. The native console uses `agents/ai-platforms.json`, `agents/siemens-workflow-routes.json`, and `scripts/invoke-ai-platform-agent.ps1` to route each task to an installed platform. Automatic mode skips unavailable platforms; manual mode fails clearly instead of falling back. Read `references/agent-console.md` for platform adapters, Agent profiles, attachments, sessions, and safety boundaries.
 
 ## Local bridge
 
@@ -74,7 +92,24 @@ Use the wrapper scripts in this skill to stay generic:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\bootstrap-siemens-plc-dev.ps1" -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\refresh-plc-libraries.ps1" -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" console -ProjectPath "D:\path\to\project"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" agent-chat -ProjectPath "D:\path\to\project" -PromptFile "D:\path\to\message.txt" -AgentId plc-lad -Sandbox workspace-write -Search
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" agent-chat -ProjectPath "D:\path\to\project" -PromptFile "D:\path\to\message.txt" -AgentId auto -Workflow plc-lad -RoutingMode auto -Platform auto -Sandbox workspace-write -Search
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" agent-plan -ProjectPath "D:\path\to\project" -TaskText "Generate an industrial PLC and WinCC upgrade plan" -Workflow agent-workbench
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" agent-queue -ProjectPath "D:\path\to\project" -TaskText "Generate auditable execution queue from the latest plan"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" queue-stage -ProjectPath "D:\path\to\project" -Action start-next
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" queue-run-current -ProjectPath "D:\path\to\project" -RoutingMode auto -Platform auto -Sandbox workspace-write -TimeoutSeconds 900 -Search
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" project-model -ProjectPath "D:\path\to\project" -TaskText "Build Agent context for this project"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" knowledge-pack -ProjectPath "D:\path\to\project" -TaskText "Build official-first PLC/WinCC knowledge pack" -RefreshOnline
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" capability-map -ProjectPath "D:\path\to\project" -TaskText "Assess local workbench replacement coverage"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" agent-pipeline -ProjectPath "D:\path\to\project" -TaskText "Generate PLC/WinCC engineering plan, queue and dashboard" -RefreshWinccCatalog
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" review-package -ProjectPath "D:\path\to\project"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" workbench-dashboard -ProjectPath "D:\path\to\project"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" plc-instruction-cookbook -ProjectPath "D:\path\to\project" -TaskText "Build reusable Siemens instruction cookbook"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" plc-instruction-plan -ProjectPath "D:\path\to\project" -TaskText "Add Modbus drive control with HMI diagnostics"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" wincc-component-blueprints -ProjectPath "D:\path\to\project" -TaskText "Build reusable WinCC component blueprints"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" wincc-engineering-scaffold -ProjectPath "D:\path\to\project" -TaskText "Build WinCC engineering scaffold"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" simulation-package -ProjectPath "D:\path\to\project" -TaskText "Build simulation and runtime validation package"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" plc-change-package -ProjectPath "D:\path\to\project" -TaskText "Add a motor interlock change" -Workflow plc-lad
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" probe-ai-platforms
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" doctor -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" read-cycle -ProjectPath "D:\path\to\project" -UseUi
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" list-blocks --project "D:\path\to\project"
@@ -134,6 +169,7 @@ Use LAD exports as structured XML, not as casual free text.
 
 For ladder-specific reading, summaries, template generation, and import preview, read `references/lad-and-templates.md`.
 For how to cover most Siemens instruction families without forcing every case through one fragile LAD syntax, read `references/instruction-routing.md`.
+For advanced instructions, technology objects, drives, communication and risk gates, read `references/advanced-plc-automation.md`.
 For how to retrieve official and community knowledge during authoring, read `references/knowledge-retrieval.md`.
 For naming and comment style, read `references/naming-and-comments.md`.
 For training notes and the latest ladder-writing lessons, read `references/lad-training-notes.md`.
@@ -190,6 +226,8 @@ Current practical route for "most instructions":
 - motion, communication, drive, and technology/library blocks: generic `CALL` from exported interfaces
 - arithmetic, scaling, conversion, string, word-packing, array, and bulk data handling: SCL source import by default
 - unsupported LAD box shapes: export one donor network, then patch `NetworkSource` / `FlgNet`
+
+For advanced or mixed-instruction tasks, run `plc-instruction-plan` before authoring. It writes `PLC_Code\plc\instruction-plans\latest\instruction-route-table.md/json`, `technology-object-plan.md`, and `safety-risk-assessment.md`. Use it to decide which parts belong in LAD JSON, generic `CALL`, SCL source import, donor LAD networks, or technology-object configuration before creating the actual change package.
 
 For a generated LAD XML block, prefer `write-cycle` as the safe default before any real import. It verifies the block on a cloned project, compiles, re-exports, writes a readable summary, and prepares a release package only when compile succeeds. It does not write directly to the production project.
 
@@ -264,6 +302,43 @@ The skill now includes small reusable source examples under:
 - `examples/classic-lad/mixed-direct-branch-step`
 - `examples/classic-lad/sequence-branch-ton-batch`
 
+## Agent workbench target
+
+When the user asks to replace separate AI clients with the native workbench, use `agent-plan` before large changes. The current workbench can host Agent chat, attachments, routing controls, logs, file previews, WinCC plugin scans and generated task plans. Treat full editor replacement as an incremental target: keep adding real workbench functions only when they call a script, save config, show an artifact, or run a verification gate.
+
+Current workbench planning output:
+
+- `PLC_Code\agent-plans\latest-plan.md`
+- `PLC_Code\agent-plans\latest-plan.json`
+
+The plan should become the execution backbone for multi-stage PLC/WinCC work: context read, knowledge retrieval, contract design, authoring, validation, risk review and release. Use `plc-change-package` as the source-editing unit for real PLC changes; use the workbench editable preview only for exported source/XML/Markdown/JSON artifacts, never for TIA internal binary storage.
+
+Use `agent-queue` after or alongside `agent-plan` when the workbench should turn a plan into executable stage records. It writes `PLC_Code\agent-queues\latest\queue.md`, `queue.json`, stage prompts under `prompts`, log folders and evidence folders. Queue items are not production writes; they are an auditable backbone for one-stage-at-a-time Agent execution, verification and release gating.
+
+Use `queue-stage` to move one queue stage at a time. `start-next` creates `current-stage.md/json` for the next pending stage, `record-current` records evidence without completing the stage, `complete-current` marks it done, and `fail-current` or `block-current` records a stop state for inspection.
+
+Use `queue-run-current` when the workbench should act like the main AI client. It runs the current stage through `invoke-ai-platform-agent.ps1`, honors the saved routing/platform/model/sandbox/search/timeout settings, writes logs under `PLC_Code\agent-queues\latest\logs`, writes evidence under `PLC_Code\agent-queues\latest\evidence`, and leaves the stage `IN_PROGRESS` by default for human review. Add `-CompleteOnSuccess` only for low-risk read-only or documentation stages where automatic completion is acceptable.
+
+Use `project-model` before broad edits or cross-platform Agent execution. It creates a lightweight project index from the latest read/export/package artifacts without scanning bulky release folders, and writes the engineer-readable context file that Agent stages should load first.
+
+Use `knowledge-pack` before authoring or when the user asks for research-driven work. It prioritizes Siemens official docs and official GitHub examples, then current project artifacts, then reviewed community source. It writes `knowledge-brief.md`, `knowledge-pack.json`, and `agent-retrieval-prompt.md`; downloaded community binaries remain disabled until source, license, provenance and clone behavior are reviewed.
+
+Use `capability-map` when the user asks whether the workbench can replace TIA Portal editing or when planning another major workbench increment. It writes `capability-map.md/json` with each capability's status, UI entry, backing command, validation gate, remaining native-TIA dependency and next step. Do not claim full editor replacement beyond the capabilities marked ready or clone-verified in this map.
+
+Use `plc-instruction-cookbook` when the user wants broader Siemens instruction coverage. It writes `PLC_Code\plc\instruction-cookbook\latest\instruction-cookbook.md/json` and `instruction-risk-checklist.md`. Treat it as the reusable map from a requested instruction family to LAD JSON, generic `CALL`, SCL source import, donor LAD network or technology-object configuration.
+
+Use `wincc-component-blueprints` when the user wants reusable HMI design building blocks or a reference-image-to-editable-WinCC workflow. It writes `PLC_Code\wincc\component-blueprints\latest\component-blueprints.md/json`, `screen-layout-grid.json`, `sivarc-rule-blueprints.md`, and `cwc-package-manifest.json`. These are design and engineering handoff artifacts, not direct production screen writes.
+
+Use `wincc-engineering-scaffold` when a visual package or component blueprint needs to become a concrete WinCC engineering backlog. It writes `PLC_Code\wincc\engineering-scaffold\latest\wincc-engineering-scaffold.md/json`, `engineering-task-list.csv`, `hmi-tag-import-map.csv`, `alarm-import-map.csv`, `faceplate-build-list.md`, `sivarc-generation-checklist.md`, `cwc-build-review.md`, `wincc-runtime-smoke-plan.md`, and `clone-validation-plan.md`. Treat it as the bridge from design intent to clone-first Openness/SiVArc/CWC implementation.
+
+Use `simulation-package` when the user asks for simulation, virtual commissioning, verification, or a mature project-level validation loop. It writes `PLC_Code\simulation\latest\simulation-package.md/json`, `simulation-scenarios.csv`, `plcsim-advanced-hook-notes.md`, and `wincc-runtime-smoke-notes.md`. It prepares scenarios and hooks; it does not download to a PLC or run unsafe runtime writes by default.
+
+Use `agent-pipeline` when the user wants the native workbench to own the first pass of a PLC/WinCC task. It classifies the task, generates the project model, knowledge pack, capability map, PLC instruction cookbook, PLC instruction plan, WinCC plugin routing, WinCC visual package, WinCC component blueprints, WinCC engineering scaffold, simulation package, Agent plan, Agent queue and dashboard. It does not import, download, or write to the production project.
+
+Use `review-package` before release or after a substantial Agent run. It writes `PLC_Code\review-packages\latest\review-summary.md`, artifact indexes, optional `git-diff.patch`, and `import-readiness.json`. Treat it like a local PLC/WinCC pull-request bundle.
+
+Use `workbench-dashboard` to refresh the native validation and diff panels after any read, write, queue, WinCC or review action. It writes `PLC_Code\workbench\latest\dashboard.md`, `validation-summary.md`, `diff-summary.patch`, and `dashboard.json`.
+
 ## Guardrails
 
 - Prefer backup projects for first imports.
@@ -293,3 +368,5 @@ The skill now includes small reusable source examples under:
 - VS Code client template: `references/vscode-client-template.md`
 - GUI download bridge: `references/gui-download-bridge.md`
 - AI workflow configuration: `references/ai-workflow-config.md`
+- Agent workbench: `references/agent-workbench.md`
+- Advanced PLC automation: `references/advanced-plc-automation.md`

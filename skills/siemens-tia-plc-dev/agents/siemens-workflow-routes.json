@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "routes": [
+    {
+      "id": "project-read",
+      "name": "读取项目并总结",
+      "agent": "auto",
+      "preferredPlatforms": ["codex", "claude-code", "qoder", "trae-agent"],
+      "models": { "codex": "inherit", "claude-code": "sonnet", "qoder": "inherit", "trae-agent": "inherit" },
+      "skills": ["siemens-tia-plc-dev", "codex-tia-client"],
+      "instructions": "先以只读方式识别 TIA 版本、PLC、块、DB、HMI 和 PLC_Code 目录，再给出结构摘要、风险和下一步。不要在读取任务中改写生产工程。"
+    },
+    {
+      "id": "agent-workbench",
+      "name": "工作台自动开发",
+      "agent": "workbench",
+      "preferredPlatforms": ["codex", "qoder", "claude-code", "trae-agent"],
+      "models": { "codex": "inherit", "claude-code": "sonnet", "qoder": "inherit", "trae-agent": "inherit" },
+      "skills": ["siemens-tia-plc-dev", "siemens-wincc-hmi-dev", "codex-tia-client"],
+      "instructions": "把任务拆成工作台可审计阶段：读取上下文、知识检索、方案、编辑、验证、风险评估和发布包。优先生成 PLC_Code\\agent-plans\\latest-plan.md，再按阶段执行；所有文件、配置、日志和产物必须能从本地工作台查看。"
+    },
+    {
+      "id": "agent-queue",
+      "name": "Agent执行队列",
+      "agent": "queue-runner",
+      "preferredPlatforms": ["codex", "qoder", "claude-code", "trae-agent"],
+      "models": { "codex": "inherit", "claude-code": "sonnet", "qoder": "inherit", "trae-agent": "inherit" },
+      "skills": ["siemens-tia-plc-dev", "siemens-wincc-hmi-dev", "codex-tia-client"],
+      "instructions": "先生成或读取 PLC_Code\\agent-queues\\latest\\queue.json。每次只推进一个阶段，读取对应 prompts，执行建议命令或生成产物，把日志和证据写回队列目录；遇到写入、下载、运行时写标签或安全风险时停在明确门禁。"
+    },
+    {
+      "id": "plc-lad",
+      "name": "LAD编写与验证",
+      "agent": "plc-lad",
+      "preferredPlatforms": ["codex", "claude-code", "qoder", "trae-agent"],
+      "models": { "codex": "inherit", "claude-code": "sonnet", "qoder": "inherit", "trae-agent": "inherit" },
+      "skills": ["siemens-tia-plc-dev", "codex-tia-client"],
+      "instructions": "优先使用可维护的 LAD。先导出和总结现有 LAD，再用已验证 LAD JSON、模板或 donor network 修改；变量和网络标题采用易懂的中英双语风格，写入前必须备份并在克隆工程编译。"
+    },
+    {
+      "id": "advanced-plc",
+      "name": "PLC高级指令与工艺对象",
+      "agent": "advanced-plc",
+      "preferredPlatforms": ["codex", "claude-code", "qoder", "trae-agent"],
+      "models": { "codex": "inherit", "claude-code": "sonnet", "qoder": "inherit", "trae-agent": "inherit" },
+      "skills": ["siemens-tia-plc-dev", "codex-tia-client"],
+      "instructions": "先按指令族选择 LAD JSON、通用 CALL、SCL source 或 donor-network。运动控制、通信、驱动和库 FB 走带命名引脚的 CALL；PID、工艺对象和设备对象先建立 DB/UDT 契约与实例策略；算法、缩放、转换、数组、字符串和报文处理保持 SCL-first，并在操作/联锁层提供 LAD 可读网络。"
+    },
+    {
+      "id": "plc-scl",
+      "name": "SCL编写与验证",
+      "agent": "plc-scl",
+      "preferredPlatforms": ["claude-code", "codex", "qoder", "trae-agent"],
+      "models": { "codex": "inherit", "claude-code": "sonnet", "qoder": "inherit", "trae-agent": "inherit" },
+      "skills": ["siemens-tia-plc-dev", "codex-tia-client"],
+      "instructions": "复杂算法、数组、字符串、协议和数据转换使用 SCL，操作与联锁层保留 LAD 可读接口。生成源码后执行导入预览、克隆编译和回读比较。"
+    },
+    {
+      "id": "data-contract",
+      "name": "DB+程序块协同",
+      "agent": "data-block",
+      "preferredPlatforms": ["claude-code", "codex", "qoder", "trae-agent"],
+      "models": { "codex": "inherit", "claude-code": "sonnet", "qoder": "inherit", "trae-agent": "inherit" },
+      "skills": ["siemens-tia-plc-dev", "siemens-wincc-hmi-dev"],
+      "instructions": "先定义 UDT/DB 与 PLC-HMI 契约，再同步程序块和 HMI 标签。命令、状态、反馈、联锁、报警、参数和诊断必须分层，避免同一变量兼作命令与反馈。"
+    },
+    {
+      "id": "wincc-visual",
+      "name": "WinCC画面生成",
+      "agent": "wincc",
+      "preferredPlatforms": ["codex", "qoder", "claude-code", "trae-agent"],
+      "models": { "codex": "inherit", "claude-code": "sonnet", "qoder": "inherit", "trae-agent": "inherit" },
+      "skills": ["siemens-wincc-hmi-dev", "siemens-tia-plc-dev", "imagegen"],
+      "instructions": "先读取 PLC/HMI 标签契约和目标 WinCC 类型，再规划导航、画面层级、Faceplate、报警、趋势、权限和配色。图像只用于分析和设计参考，最终必须落成可编辑的 WinCC 工程对象。"
+    },
+    {
+      "id": "wincc-reference",
+      "name": "WinCC参考图复刻",
+      "agent": "wincc",
+      "preferredPlatforms": ["codex", "qoder", "claude-code", "trae-agent"],
+      "models": { "codex": "inherit", "claude-code": "sonnet", "qoder": "inherit", "trae-agent": "inherit" },
+      "skills": ["siemens-wincc-hmi-dev", "siemens-tia-plc-dev", "imagegen"],
+      "instructions": "读取上传的参考图，提炼布局、层级、色彩、字体、状态和交互，再映射到标准控件、Faceplate 或自定义组件。禁止用整张静态图片伪装成可操作 HMI。"
+    },
+    {
+      "id": "openness",
+      "name": "Openness自动化",
+      "agent": "openness",
+      "preferredPlatforms": ["codex", "claude-code", "qoder", "trae-agent"],
+      "models": { "codex": "inherit", "claude-code": "sonnet", "qoder": "inherit", "trae-agent": "inherit" },
+      "skills": ["siemens-tia-plc-dev", "tia-portal-v17", "codex-tia-client"],
+      "instructions": "先探测 TIA V16-V21、PublicAPI、用户组和当前会话。导入、保存和编译仅对备份或克隆工程执行，同一工程不得并发打开。"
+    },
+    {
+      "id": "safety-risk",
+      "name": "安全风险评估",
+      "agent": "reviewer",
+      "preferredPlatforms": ["claude-code", "codex", "qoder", "trae-agent"],
+      "models": { "codex": "inherit", "claude-code": "sonnet", "qoder": "inherit", "trae-agent": "inherit" },
+      "skills": ["siemens-tia-plc-dev", "siemens-wincc-hmi-dev"],
+      "instructions": "保持风险评估优先。检查命令/反馈一致性、互锁覆盖、报警可见性、复位/回原点/配方写入确认、手自动切换、故障保持、HMI权限和安全功能边界。不要生成或声称替代认证安全 PLC 程序；发现 E-stop、STO、门锁、光栅等安全假设缺失时必须标为待工程确认。"
+    },
+    {
+      "id": "diagnostics",
+      "name": "故障诊断",
+      "agent": "diagnostics",
+      "preferredPlatforms": ["claude-code", "codex", "qoder", "trae-agent"],
+      "models": { "codex": "inherit", "claude-code": "sonnet", "qoder": "inherit", "trae-agent": "inherit" },
+      "skills": ["siemens-tia-plc-dev", "tia-portal-v17"],
+      "instructions": "先收集完整错误、块名、网络号、TIA 版本、日志和最近改动，定位最小根因。每轮只验证一个明确假设，并保存失败与修复证据。"
+    },
+    {
+      "id": "industrial-refactor",
+      "name": "工业化重构",
+      "agent": "auto",
+      "preferredPlatforms": ["claude-code", "codex", "qoder", "trae-agent"],
+      "models": { "codex": "inherit", "claude-code": "sonnet", "qoder": "inherit", "trae-agent": "inherit" },
+      "skills": ["siemens-tia-plc-dev", "siemens-wincc-hmi-dev", "codex-tia-client"],
+      "instructions": "从架构、状态机、设备模板、报警诊断、参数、权限、HMI 契约、命名注释和测试仿真整体升级。先给出影响面，再分批在克隆工程中实施和编译。"
+    },
+    {
+      "id": "review",
+      "name": "只读审查",
+      "agent": "reviewer",
+      "preferredPlatforms": ["claude-code", "qoder", "codex", "trae-agent"],
+      "models": { "codex": "inherit", "claude-code": "sonnet", "qoder": "inherit", "trae-agent": "inherit" },
+      "skills": ["siemens-tia-plc-dev", "siemens-wincc-hmi-dev"],
+      "instructions": "保持只读，优先报告安全风险、行为回归、互锁缺失、PLC-HMI 契约不一致和验证缺口，并给出块、网络或文件依据。"
+    }
+  ]
+}

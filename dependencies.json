@@ -12,9 +12,9 @@
       "purpose": "Build and run PLCDevConsole.exe"
     },
     {
-      "id": "codex-cli",
-      "minimum": "0.153.4",
-      "purpose": "Built-in conversational Agent runtime"
+      "id": "ai-agent-cli",
+      "minimum": "one supported platform",
+      "purpose": "Codex, Claude Code, Trae Agent or Qoder conversational runtime"
     }
   ],
   "engineering": [
@@ -32,7 +32,27 @@
   "optional": [
     {
       "id": "nodejs-npm",
-      "purpose": "Install the official @openai/codex CLI when Codex Desktop is not installed"
+      "purpose": "Install Codex, Claude Code or Qoder CLI when explicitly requested"
+    },
+    {
+      "id": "codex-cli",
+      "minimum": "0.153.4",
+      "purpose": "Default local Agent platform with sessions, image attachments and native search"
+    },
+    {
+      "id": "claude-code",
+      "package": "@anthropic-ai/claude-code",
+      "purpose": "Optional SCL, diagnostics, data-contract and review Agent platform"
+    },
+    {
+      "id": "trae-agent",
+      "source": "https://github.com/bytedance/trae-agent",
+      "purpose": "Optional provider-neutral research Agent platform"
+    },
+    {
+      "id": "qoder-cli",
+      "package": "@qoder-ai/qodercli",
+      "purpose": "Optional Agent platform with session and stream-json support"
     },
     {
       "id": "wincc-plugins",

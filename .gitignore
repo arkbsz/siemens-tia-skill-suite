@@ -1,5 +1,10 @@
 gcm-diagnose.log
 /bin/
+/packaging/SiemensTIAAgent/Generated/
+/packaging/**/bin/
+/packaging/**/obj/
+/protected-release/
+/backups/
 skills/tia-portal-v17/scripts/bin/
 skills/*/app/bin/
 __pycache__/

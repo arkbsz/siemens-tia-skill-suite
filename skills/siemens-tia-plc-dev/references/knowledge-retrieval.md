@@ -81,3 +81,19 @@ For this skill suite, knowledge retrieval should prioritize:
 - official Siemens tutorials and manuals
 - community case studies and open-source tooling
 - the structure and naming already present in the active TIA project
+
+## 2026-09-09 Retrieval Notes
+
+- TIA Portal Openness import/export is the authoritative engineering bridge for exported PLC/HMI artifacts. Siemens documents that export formats are internal and version-specific, so generated XML or document-style sources must be validated against the target TIA version before reuse across V16-V21.
+- SiVArc is the preferred official route for rule-based WinCC generation, but generation should preflight the SiVArc license, valid HMI device name, valid PLC device name and supported device types before planning an automated HMI write.
+- WinCC Unified GraphQL is useful for trusted runtime read/write/subscribe smoke tests after engineering generation, not as a replacement for engineering-time Openness/SiVArc screen creation.
+- Community tools and MCP servers are useful patterns for bulk export/import, AI adapter routing, XML snapshots and semantic diffs. Treat them as source references or reviewed adapters first; do not execute downloaded binaries in a production project without source, license, provenance and clone behavior review.
+- For "replace TIA editor" goals, prefer the proven loop: export blocks or SimaticML, normalize into code-like artifacts, generate small LAD/SCL/DB/HMI deltas, import on a clone, compile, re-export/readback, generate a review package, then wait for explicit production-apply intent.
+
+Source anchors checked on 2026-09-09:
+
+- `https://docs.tia.siemens.cloud/r/en-us/v21/tia-portal-openness-api-for-automation-of-engineering-workflows/export/import/overview/basic-principles-of-importing/exporting`
+- `https://docs.tia.siemens.cloud/r/en-us/v21/sivarc-openness/sivarc-generation`
+- `https://docs.tia.siemens.cloud/r/en-us/v20/wincc-unified-graphql-rt-unified`
+- `https://github.com/siemens/tia-portal-openness-code-snippets`
+- `https://github.com/tia-portal-applications/CWC-in-WinCC-Unified`

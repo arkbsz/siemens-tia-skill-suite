@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$AllArgs
 )
@@ -19,8 +19,26 @@ Commands:
   console [-ProjectPath <projectDir|ap16..ap21>] [-Wait] [-ForceBuild]
   console-exe [-ProjectPath <projectDir|ap16..ap21>] [-Wait] [-ForceBuild]
   console-web [-ProjectPath <projectDir|ap16..ap21>] [-Port <n>] [-Background] [-NoOpen]
-  agent-chat -ProjectPath <projectDir|ap16..ap21> -PromptFile <text> [-AgentId <id>] [-Model <id>] [-SessionId <id>] [-AttachmentManifest <text>] [-Sandbox <mode>] [-Search]
+  agent-chat -ProjectPath <projectDir|ap16..ap21> -PromptFile <text> [-AgentId <id>] [-Workflow <id>] [-RoutingMode auto|manual] [-Platform auto|codex|claude-code|trae-agent|qoder] [-Model <id>] [-SessionId <id>] [-AttachmentManifest <text>] [-Sandbox <mode>] [-Search]
+  agent-plan -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-Workflow <id>] [-AgentId <id>] [-ReferenceImagePath <image>] [-OutputDirectory <dir>]
+  agent-queue -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-PlanPath <json>] [-TaskText <text>] [-OutputDirectory <dir>]
+  queue-stage -ProjectPath <projectDir|ap16..ap21> [-Action start-next|record-current|complete-current|fail-current|block-current|reset] [-QueuePath <json>] [-Note <text>] [-EvidencePath <path>]
+  queue-run-current -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-QueuePath <json>] [-RoutingMode auto|manual] [-Platform auto|codex|claude-code|trae-agent|qoder] [-Model <id>] [-Sandbox read-only|workspace-write|danger-full-access] [-TimeoutSeconds <n>] [-Search] [-CompleteOnSuccess]
+  review-package -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-OutputDirectory <dir>]
+  workbench-dashboard -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-OutputDirectory <dir>]
+  capability-map -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-OutputDirectory <dir>]
+  project-model -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-OutputDirectory <dir>]
+  knowledge-pack -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-OutputDirectory <dir>] [-RefreshOnline]
+  plc-instruction-cookbook -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-OutputDirectory <dir>]
+  simulation-package -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-OutputDirectory <dir>]
+  agent-pipeline -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-ReferenceImagePath <image>] [-SourceXml <xml>] [-OutputDirectory <dir>] [-RefreshWinccCatalog] [-SkipAgentQueue]
+  plc-instruction-plan -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-SourceXml <xml>] [-OutputDirectory <dir>]
+  plc-change-package -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-Workflow <id>] [-SourceXml <xml>] [-OutputDirectory <dir>]
+  probe-ai-platforms [-WorkflowConfigPath <json>]
   wincc-plugins -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-ReferenceImagePath <image>] [-RefreshCatalog]
+  wincc-visual-package -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-ReferenceImagePath <image>] [-OutputDirectory <dir>]
+  wincc-component-blueprints -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-ReferenceImagePath <image>] [-OutputDirectory <dir>]
+  wincc-engineering-scaffold -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-ReferenceImagePath <image>] [-OutputDirectory <dir>]
   doctor [-ProjectPath <projectDir|ap16..ap21>]
   create-project --name <projectName> [--directory <dir>] [--device-type <typeIdentifier>] [--device-item-type <typeIdentifier>] [--item-name <name>] [--device-name <name>]
   hold-project --project <projectDir|ap16..ap21> [--ui] [--lease-file <path>] [--poll-ms <ms>]
@@ -82,8 +100,11 @@ function Invoke-PowerShellFile {
 }
 
 $bridge = Resolve-TiaBridgeSkill -SkillsRoot $skillsRoot
-$codexAgentScript = Join-Path $PSScriptRoot "invoke-codex-agent.ps1"
+$aiPlatformAgentScript = Join-Path $PSScriptRoot "invoke-ai-platform-agent.ps1"
 $winccPluginScript = Join-Path (Join-Path $skillsRoot "siemens-wincc-hmi-dev") "scripts\resolve-wincc-plugins.ps1"
+$winccVisualPackageScript = Join-Path (Join-Path $skillsRoot "siemens-wincc-hmi-dev") "scripts\scaffold-wincc-visual-package.ps1"
+$winccComponentBlueprintScript = Join-Path (Join-Path $skillsRoot "siemens-wincc-hmi-dev") "scripts\scaffold-wincc-component-blueprints.ps1"
+$winccEngineeringScaffoldScript = Join-Path (Join-Path $skillsRoot "siemens-wincc-hmi-dev") "scripts\scaffold-wincc-engineering-package.ps1"
 
 $opennessScript = Resolve-TiaBridgeScript -SkillPath $bridge.SkillPath -Candidates @(
     "scripts\invoke-tia-openness.ps1"
@@ -156,10 +177,70 @@ switch ($Command.ToLowerInvariant()) {
         break
     }
     "agent-chat" {
-        if (-not (Test-Path -LiteralPath $codexAgentScript)) {
-            throw "Codex agent adapter was not found: $codexAgentScript"
+        if (-not (Test-Path -LiteralPath $aiPlatformAgentScript)) {
+            throw "Unified AI platform adapter was not found: $aiPlatformAgentScript"
         }
-        Invoke-PowerShellFile -Path $codexAgentScript -Arguments $CommandArgs
+        Invoke-PowerShellFile -Path $aiPlatformAgentScript -Arguments $CommandArgs
+        break
+    }
+    "agent-plan" {
+        Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "generate-agent-task-plan.ps1") -Arguments $CommandArgs
+        break
+    }
+    "agent-queue" {
+        Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "generate-agent-execution-queue.ps1") -Arguments $CommandArgs
+        break
+    }
+    "queue-stage" {
+        Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "update-agent-execution-queue.ps1") -Arguments $CommandArgs
+        break
+    }
+    "queue-run-current" {
+        Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "run-agent-queue-stage.ps1") -Arguments $CommandArgs
+        break
+    }
+    "review-package" {
+        Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "generate-workbench-review-package.ps1") -Arguments $CommandArgs
+        break
+    }
+    "workbench-dashboard" {
+        Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "generate-workbench-dashboard.ps1") -Arguments $CommandArgs
+        break
+    }
+    "capability-map" {
+        Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "generate-workbench-capability-map.ps1") -Arguments $CommandArgs
+        break
+    }
+    "project-model" {
+        Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "generate-project-object-model.ps1") -Arguments $CommandArgs
+        break
+    }
+    "knowledge-pack" {
+        Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "generate-knowledge-pack.ps1") -Arguments $CommandArgs
+        break
+    }
+    "plc-instruction-cookbook" {
+        Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "generate-plc-instruction-cookbook.ps1") -Arguments $CommandArgs
+        break
+    }
+    "simulation-package" {
+        Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "generate-simulation-package.ps1") -Arguments $CommandArgs
+        break
+    }
+    "agent-pipeline" {
+        Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "run-agent-development-pipeline.ps1") -Arguments $CommandArgs
+        break
+    }
+    "plc-instruction-plan" {
+        Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "generate-plc-instruction-plan.ps1") -Arguments $CommandArgs
+        break
+    }
+    "plc-change-package" {
+        Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "scaffold-plc-change-package.ps1") -Arguments $CommandArgs
+        break
+    }
+    "probe-ai-platforms" {
+        Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "probe-ai-platforms.ps1") -Arguments $CommandArgs
         break
     }
     "wincc-plugins" {
@@ -167,6 +248,27 @@ switch ($Command.ToLowerInvariant()) {
             throw "WinCC plugin resolver was not found: $winccPluginScript"
         }
         Invoke-PowerShellFile -Path $winccPluginScript -Arguments $CommandArgs
+        break
+    }
+    "wincc-visual-package" {
+        if (-not (Test-Path -LiteralPath $winccVisualPackageScript)) {
+            throw "WinCC visual package scaffold was not found: $winccVisualPackageScript"
+        }
+        Invoke-PowerShellFile -Path $winccVisualPackageScript -Arguments $CommandArgs
+        break
+    }
+    "wincc-component-blueprints" {
+        if (-not (Test-Path -LiteralPath $winccComponentBlueprintScript)) {
+            throw "WinCC component blueprint scaffold was not found: $winccComponentBlueprintScript"
+        }
+        Invoke-PowerShellFile -Path $winccComponentBlueprintScript -Arguments $CommandArgs
+        break
+    }
+    "wincc-engineering-scaffold" {
+        if (-not (Test-Path -LiteralPath $winccEngineeringScaffoldScript)) {
+            throw "WinCC engineering scaffold was not found: $winccEngineeringScaffoldScript"
+        }
+        Invoke-PowerShellFile -Path $winccEngineeringScaffoldScript -Arguments $CommandArgs
         break
     }
     "probe" {

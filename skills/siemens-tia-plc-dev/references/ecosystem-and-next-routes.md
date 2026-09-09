@@ -61,6 +61,16 @@ Best when:
 - live project access is blocked or slow
 - reviewability and diffability matter more than direct online edits
 
+### 5. Add offline graphical preview adapters
+
+Best when:
+
+- the user wants LAD/FBD/GRAPH readability without opening TIA editors for every review
+- exported SimaticML, `.scl`, `.db`, `.udt`, or document-style sources are available
+- the adapter is used read-only for preview and diff before any import
+
+Community TIA Viewer / ImportExport style tools are useful references for this route. Review source and license before reuse, and keep the workbench writer path separate from a viewer path.
+
 ## Design rule for future versions
 
 Do not let the top-level workflow depend on one TIA version.

@@ -78,7 +78,7 @@ function Get-OnlineMetadata {
             Stars = [int]$repo.stargazers_count
             Archived = [bool]$repo.archived
             PushedAt = $repo.pushed_at
-            License = if ($repo.license) { $repo.license.spdx_id } else { "Unknown" }
+            License = $(if ($repo.license) { $repo.license.spdx_id } else { "Unknown" })
             Url = $repo.html_url
         }
     }
@@ -137,6 +137,18 @@ $tiaMcpPath = Find-FirstExistingPath -Candidates @(
     (Join-Path $externalRoot "TIA_Portal_Openness_MCP\tools\tiaportal-mcp\src\TiaMcpServer\bin\Release\net48\TiaMcpServer.exe"),
     (Join-Path $externalRoot "TIA_Portal_Openness_MCP\tools\tiaportal-mcp\src\TiaMcpServer\bin-v20\Release\net48\TiaMcpServer.exe")
 )
+$tiaV20UnifiedMcpPath = Find-FirstExistingPath -Candidates @(
+    [string](Get-ConfigValue -Config $config -Path @("wincc", "tiaV20UnifiedMcpPath") -Fallback ""),
+    $env:TIA_V20_UNIFIED_MCP_PATH,
+    (Join-Path $externalRoot "tia-v20-unified-mcp"),
+    (Join-Path $externalRoot "tia-v20-unified-mcp\package.json")
+)
+$tiaOpennessManagerPath = Find-FirstExistingPath -Candidates @(
+    [string](Get-ConfigValue -Config $config -Path @("wincc", "tiaOpennessManagerPath") -Fallback ""),
+    $env:TIA_OPENNESS_MANAGER_PATH,
+    (Join-Path $externalRoot "TIAOpenessManager\TIAOpenessManager.sln"),
+    (Join-Path $externalRoot "TIAOpenessManager")
+)
 $showScriptsPath = Find-FirstExistingPath -Candidates @(
     [string](Get-ConfigValue -Config $config -Path @("wincc", "showScriptsPath") -Fallback ""),
     $env:TIA_SHOW_SCRIPTS_PATH,
@@ -147,6 +159,14 @@ $runtimeMcpPath = Find-FirstExistingPath -Candidates @(
     [string](Get-ConfigValue -Config $config -Path @("wincc", "runtimeMcpPath") -Fallback ""),
     $env:WINCCUA_MCP_SERVER_PATH,
     (Join-Path $externalRoot "winccua-mcp-server\index.js")
+)
+$tiaViewerPath = Find-FirstExistingPath -Candidates @(
+    [string](Get-ConfigValue -Config $config -Path @("wincc", "tiaViewerPath") -Fallback ""),
+    $env:TIA_VIEWER_PATH,
+    (Join-Path $externalRoot "Parozzz-TiaUtilities\TiaUtilities.sln"),
+    (Join-Path $externalRoot "Parozzz-TiaUtilities\src"),
+    (Join-Path $externalRoot "TiaUtilities\TiaUtilities.sln"),
+    (Join-Path $externalRoot "TiaUtilities\src")
 )
 $graphqlUrl = [string](Get-ConfigValue -Config $config -Path @("wincc", "graphqlUrl") -Fallback $env:GRAPHQL_URL)
 
@@ -170,8 +190,11 @@ $detectedPlugins = @(
     [pscustomobject]@{ Id = "siemens-openness"; Ready = [bool]($opennessScriptPath -and $hmiApiPath); Path = $opennessScriptPath; ApiPath = $hmiApiPath; Compatible = ($tiaVersion -ge 16 -and $tiaVersion -le 21); Role = "engineering" },
     [pscustomobject]@{ Id = "sivarc-openness"; Ready = [bool]$sivarcApiPath; Path = $sivarcApiPath; Compatible = [bool]$sivarcApiPath; Role = "rule-generation" },
     [pscustomobject]@{ Id = "tia-openness-mcp"; Ready = [bool]$tiaMcpPath; Path = $tiaMcpPath; Compatible = ($tiaVersion -ge 20 -and $tiaVersion -le 21); Role = "engineering" },
+    [pscustomobject]@{ Id = "tia-v20-unified-mcp"; Ready = [bool]$tiaV20UnifiedMcpPath; Path = $tiaV20UnifiedMcpPath; Compatible = ($tiaVersion -ge 20 -and $tiaVersion -le 21); Role = "engineering" },
+    [pscustomobject]@{ Id = "tia-openness-manager"; Ready = [bool]$tiaOpennessManagerPath; Path = $tiaOpennessManagerPath; Compatible = ($tiaVersion -ge 16 -and $tiaVersion -le 21); Role = "bulk-import-export-review" },
     [pscustomobject]@{ Id = "show-scripts-addin"; Ready = [bool]$showScriptsPath; Path = $showScriptsPath; Compatible = ($tiaVersion -ge 17); Role = "screen-script-audit" },
-    [pscustomobject]@{ Id = "winccua-mcp-server"; Ready = [bool]($runtimeMcpPath -and $graphqlUrl); Path = $runtimeMcpPath; Endpoint = $graphqlUrl; Compatible = $isUnified; Role = "runtime-validation" }
+    [pscustomobject]@{ Id = "winccua-mcp-server"; Ready = [bool]($runtimeMcpPath -and $graphqlUrl); Path = $runtimeMcpPath; Endpoint = $graphqlUrl; Compatible = $isUnified; Role = "runtime-validation" },
+    [pscustomobject]@{ Id = "tia-viewer-importexport"; Ready = [bool]$tiaViewerPath; Path = $tiaViewerPath; Compatible = $true; Role = "offline-graphical-preview" }
 )
 
 $invocationPlan = New-Object System.Collections.Generic.List[object]
@@ -181,7 +204,7 @@ if ($wantsVisual -and $imagegenSkillPath) {
         Adapter = "codex-imagegen"
         Ready = $true
         Invocation = "Use `$imagegen with the uploaded reference image or design brief, then convert the result into WinCC-native components."
-        Reason = if ($hasReferenceImage) { "Reference image is available." } else { "The task requests visual screen design." }
+        Reason = $(if ($hasReferenceImage) { "Reference image is available." } else { "The task requests visual screen design." })
     })
 }
 
@@ -191,12 +214,16 @@ if ($pluginPolicy -ne "仅官方/本机" -and $tiaVersion -ge 20 -and $tiaVersio
     $engineeringAdapter = "tia-openness-mcp"
     $engineeringReady = $true
 }
+elseif ($pluginPolicy -ne "仅官方/本机" -and $tiaVersion -ge 20 -and $tiaVersion -le 21 -and $tiaV20UnifiedMcpPath) {
+    $engineeringAdapter = "tia-v20-unified-mcp"
+    $engineeringReady = $true
+}
 $invocationPlan.Add([pscustomobject]@{
     Stage = "engineering"
     Adapter = $engineeringAdapter
     Ready = $engineeringReady
-    Invocation = if ($engineeringAdapter -eq "tia-openness-mcp") { "Call the configured TIA MCP HMI screen/tag/event tools on a cloned project." } else { "Call the local Siemens Openness workflow on a cloned project; use manual import only for unsupported screen objects." }
-    Reason = if ($tiaVersion -lt 20) { "TIA V$tiaVersion uses the local version-compatible Openness route." } else { "The best compatible installed engineering adapter was selected." }
+    Invocation = $(if ($engineeringAdapter -eq "tia-openness-mcp") { "Call the configured TIA MCP HMI screen/tag/event tools on a cloned project." } else { "Call the local Siemens Openness workflow on a cloned project; use manual import only for unsupported screen objects." })
+    Reason = $(if ($tiaVersion -lt 20) { "TIA V$tiaVersion uses the local version-compatible Openness route." } else { "The best compatible installed engineering adapter was selected." })
 })
 
 if ($showScriptsPath -and $tiaVersion -ge 17) {
@@ -204,6 +231,9 @@ if ($showScriptsPath -and $tiaVersion -ge 17) {
 }
 if ($wantsRuntime) {
     $invocationPlan.Add([pscustomobject]@{ Stage = "runtime-validation"; Adapter = "winccua-mcp-server"; Ready = [bool]($runtimeMcpPath -and $graphqlUrl -and $isUnified); Invocation = "Browse tags and alarms through the configured Unified GraphQL MCP server; keep write and acknowledge operations disabled unless explicitly requested."; Reason = "The task includes runtime validation." })
+}
+if ($tiaViewerPath) {
+    $invocationPlan.Add([pscustomobject]@{ Stage = "offline-preview"; Adapter = "tia-viewer-importexport"; Ready = $true; Invocation = "Use the reviewed viewer/import-export adapter read-only to render exported SimaticML, SCL, DB, UDT, LAD/FBD or GRAPH artifacts inside the workbench."; Reason = "A local TIA viewer/import-export path is configured or detected." })
 }
 
 $installSuggestions = @()
@@ -213,8 +243,17 @@ if ($tiaVersion -ge 17 -and -not $showScriptsPath) {
 if ($tiaVersion -ge 20 -and $tiaVersion -le 21 -and -not $tiaMcpPath -and $pluginPolicy -ne "仅官方/本机") {
     $installSuggestions += [pscustomobject]@{ Id = "tia-openness-mcp"; Url = "https://github.com/bulaofen0036-coder/TIA_Portal_Openness_MCP"; Why = "Adds declarative Unified HMI generation for V20/V21."; Action = "Review source and release provenance, install in the external plugin directory, then set wincc.tiaMcpPath." }
 }
+if ($tiaVersion -ge 20 -and $tiaVersion -le 21 -and -not $tiaV20UnifiedMcpPath -and $pluginPolicy -ne "仅官方/本机") {
+    $installSuggestions += [pscustomobject]@{ Id = "tia-v20-unified-mcp"; Url = "https://github.com/Fanqi-dev/tia-v20-unified-mcp"; Why = "Provides another V20 Unified MCP workflow reference for project/XML/compile automation."; Action = "Review source and license, install only if it fits the local TIA version, then set wincc.tiaV20UnifiedMcpPath." }
+}
+if (-not $tiaOpennessManagerPath -and $pluginPolicy -ne "仅官方/本机") {
+    $installSuggestions += [pscustomobject]@{ Id = "tia-openness-manager"; Url = "https://github.com/StaniB88/TIAOpenessManager"; Why = "Useful bulk import/export and project-review workflow reference."; Action = "Review source and license before enabling; set wincc.tiaOpennessManagerPath only for read/review tasks until validated." }
+}
 if ($isUnified -and -not $runtimeMcpPath) {
     $installSuggestions += [pscustomobject]@{ Id = "winccua-mcp-server"; Url = "https://github.com/vogler75/winccua-mcp-server"; Why = "Adds GraphQL runtime tag/alarm inspection."; Action = "Review and install only on a trusted engineering network; set wincc.runtimeMcpPath and wincc.graphqlUrl." }
+}
+if (-not $tiaViewerPath) {
+    $installSuggestions += [pscustomobject]@{ Id = "tia-viewer-importexport"; Url = "https://github.com/Parozzz/TiaUtilities"; Why = "Provides useful source patterns for offline SimaticML/LAD/FBD/GRAPH preview and import/export workflows."; Action = "Review source/license, install under the external plugin directory if approved, then set wincc.tiaViewerPath or TIA_VIEWER_PATH." }
 }
 
 if ([string]::IsNullOrWhiteSpace($OutputPath)) {
@@ -223,11 +262,11 @@ if ([string]::IsNullOrWhiteSpace($OutputPath)) {
 $report = [pscustomobject]@{
     GeneratedAt = (Get-Date).ToString("o")
     ProjectPath = $projectDirectory
-    TiaVersion = if ($tiaVersion) { "V$tiaVersion" } else { "Unknown" }
+    TiaVersion = $(if ($tiaVersion) { "V$tiaVersion" } else { "Unknown" })
     WinccFlavor = $flavor
     PluginPolicy = $pluginPolicy
     WorkflowConfigPath = $WorkflowConfigPath
-    ReferenceImage = if ($hasReferenceImage) { (Get-Item -LiteralPath $ReferenceImagePath).FullName } else { "" }
+    ReferenceImage = $(if ($hasReferenceImage) { (Get-Item -LiteralPath $ReferenceImagePath).FullName } else { "" })
     CatalogPath = $catalogPath
     OnlineMetadata = $onlineMetadata
     DetectedPlugins = $detectedPlugins

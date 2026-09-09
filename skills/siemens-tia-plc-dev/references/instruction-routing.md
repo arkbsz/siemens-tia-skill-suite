@@ -13,6 +13,13 @@ Instead, choose the narrowest route that matches the instruction family:
 - SCL source import for algorithmic, arithmetic, conversion, string, array, and bulk data logic
 - donor-network patching when the instruction is available in exported LAD XML but not yet modeled in the JSON writer
 
+## Current Source Format Choice
+
+- Use SIMATIC SD first on TIA `V20 Update 4+` and `V21` when the installed TIA version can export/import the required LAD/FBD/SCL/DB/UDT object. Siemens documents this as a text representation route for graphical and data objects, but attributes/settings can still have restrictions.
+- Use Openness XML as the broad compatibility route for `V16-V21`, especially for LAD/FBD networks and donor-template edits.
+- Use generated SCL sources for algorithm-heavy code where TIA source import supports the block type.
+- Do not convert LAD to SCL just to make editing easier when maintenance readability is a requirement; use LAD JSON or donor-network patching instead.
+
 ## Practical coverage map
 
 - Bit logic:

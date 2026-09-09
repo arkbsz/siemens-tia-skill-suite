@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "platforms": [
+    {
+      "id": "codex",
+      "name": "Codex",
+      "commandCandidates": ["codex.exe", "codex"],
+      "environmentOverride": "CODEX_CLI_PATH",
+      "defaultModel": "inherit",
+      "supportsSessions": true,
+      "supportsImages": true,
+      "supportsNativeSearch": true,
+      "installHint": "安装 Codex Desktop，或执行 npm install -g @openai/codex；随后运行 codex login。"
+    },
+    {
+      "id": "claude-code",
+      "name": "Claude Code",
+      "commandCandidates": ["claude.exe", "claude.cmd", "claude"],
+      "environmentOverride": "CLAUDE_CODE_PATH",
+      "defaultModel": "sonnet",
+      "supportsSessions": true,
+      "supportsImages": true,
+      "supportsNativeSearch": false,
+      "installHint": "执行 npm install -g @anthropic-ai/claude-code，并完成 claude 登录。"
+    },
+    {
+      "id": "trae-agent",
+      "name": "Trae Agent",
+      "commandCandidates": ["trae-cli.exe", "trae-cli.cmd", "trae-cli"],
+      "environmentOverride": "TRAE_AGENT_PATH",
+      "defaultModel": "inherit",
+      "supportsSessions": false,
+      "supportsImages": false,
+      "supportsNativeSearch": false,
+      "installHint": "按 https://github.com/bytedance/trae-agent 的说明安装 trae-cli，并配置模型提供方凭据。"
+    },
+    {
+      "id": "qoder",
+      "name": "Qoder CLI",
+      "commandCandidates": ["qodercli.exe", "qodercli.cmd", "qodercli"],
+      "environmentOverride": "QODER_CLI_PATH",
+      "defaultModel": "inherit",
+      "supportsSessions": true,
+      "supportsImages": true,
+      "supportsNativeSearch": false,
+      "installHint": "执行 npm install -g @qoder-ai/qodercli，并通过浏览器登录或设置 QODER_PERSONAL_ACCESS_TOKEN。"
+    }
+  ]
+}
