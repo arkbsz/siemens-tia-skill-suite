@@ -79,6 +79,7 @@ namespace SiemensTiaSkillSuite
         private readonly RichTextBox contextBox = new RichTextBox();
         private readonly RichTextBox knowledgeBox = new RichTextBox();
         private readonly RichTextBox capabilityBox = new RichTextBox();
+        private readonly RichTextBox releaseReviewBox = new RichTextBox();
         private readonly RichTextBox ladSpecBox = new RichTextBox();
         private readonly RichTextBox winccDesignSpecBox = new RichTextBox();
         private readonly TextBox requestBox = new TextBox();
@@ -459,6 +460,7 @@ namespace SiemensTiaSkillSuite
             commandBar.Controls.Add(CommandButton("执行队列", "agent-queue", Teal));
             commandBar.Controls.Add(CommandButton("运行阶段", "queue-run-current", Gold));
             commandBar.Controls.Add(CommandButton("审查包", "review-package", Ink));
+            commandBar.Controls.Add(CommandButton("发布审批", "review-approval-refresh", Gold));
             commandBar.Controls.Add(CommandButton("总览面板", "workbench-dashboard", Teal));
             editPreviewBox.Text = "编辑预览";
             editPreviewBox.AutoSize = true;
@@ -583,6 +585,14 @@ namespace SiemensTiaSkillSuite
             capabilityBox.Font = new Font("Microsoft YaHei UI", 9.2F);
             capabilityBox.Text = "能力矩阵\n\n这里会显示本地工作台替代 TIA Portal 原生编辑器的实际覆盖情况：已可用能力、半自动能力、仍需 TIA 原生界面的边界和下一步增强方向。";
 
+            releaseReviewBox.Dock = DockStyle.Fill;
+            releaseReviewBox.ReadOnly = true;
+            releaseReviewBox.BorderStyle = BorderStyle.None;
+            releaseReviewBox.BackColor = Color.FromArgb(247, 249, 241);
+            releaseReviewBox.ForeColor = Ink;
+            releaseReviewBox.Font = new Font("Microsoft YaHei UI", 9.2F);
+            releaseReviewBox.Text = "发布审查 / 审批门禁\n\n这里会显示导入就绪、克隆编译、WinCC布局、哈希、审批状态和发布清单。生产应用必须通过此页生成 APPROVED/production 审批记录。";
+
             referencePreviewBox.Dock = DockStyle.Fill;
             referencePreviewBox.BackColor = Color.FromArgb(28, 47, 48);
             referencePreviewBox.BorderStyle = BorderStyle.None;
@@ -604,6 +614,7 @@ namespace SiemensTiaSkillSuite
             mainTabs.Controls.Add(NewTab("参考图", referencePreviewBox));
             mainTabs.Controls.Add(NewTab("LAD结构编辑", BuildLadEditorPage()));
             mainTabs.Controls.Add(NewTab("WinCC设计编辑", BuildWinccEditorPage()));
+            mainTabs.Controls.Add(NewTab("发布审批", BuildReleaseReviewPage()));
             mainLayout.Controls.Add(mainTabs, 0, 2);
 
             GroupBox aiInputBox = NewGroup("AI交互与工作流");
@@ -1099,6 +1110,42 @@ namespace SiemensTiaSkillSuite
             winccEditorStatusLabel.Text = "WinCC设计编辑器：画面、组件、标签和报警会保存为可审查规格，再进入视觉包、蓝图、工程和克隆验证流程。";
             page.Controls.Add(winccEditorStatusLabel, 0, 2);
             LoadWinccDesignEditorFromSpec();
+            return page;
+        }
+
+        private Control BuildReleaseReviewPage()
+        {
+            TableLayoutPanel page = new TableLayoutPanel();
+            page.Dock = DockStyle.Fill;
+            page.BackColor = Canvas;
+            page.Padding = new Padding(8);
+            page.ColumnCount = 1;
+            page.RowCount = 2;
+            page.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
+            page.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+            FlowLayoutPanel toolbar = new FlowLayoutPanel();
+            toolbar.Dock = DockStyle.Fill;
+            toolbar.WrapContents = false;
+            toolbar.AutoScroll = true;
+            toolbar.BackColor = CardSoft;
+            toolbar.Padding = new Padding(6, 8, 6, 6);
+            toolbar.Controls.Add(LadEditorLabel("发布门禁"));
+            AddWinccEditorButton(toolbar, "刷新审查", Teal, 78, delegate { StartCommand("review-package"); });
+            AddWinccEditorButton(toolbar, "生成待审批", Ink, 94, delegate { StartCommand("review-approval-refresh"); });
+            AddWinccEditorButton(toolbar, "批准克隆", Gold, 82, delegate { StartCommand("review-approval-approve-clone"); }, true);
+            AddWinccEditorButton(toolbar, "批准生产", Orange, 82, delegate { ApproveProductionApply(); });
+            AddWinccEditorButton(toolbar, "拒绝发布", Ink, 82, delegate { StartCommand("review-approval-reject"); });
+            AddWinccEditorButton(toolbar, "生成清单", Teal, 82, delegate { StartCommand("review-approval-manifest"); });
+            AddWinccEditorButton(toolbar, "应用主工程", Orange, 94, delegate { ApplyApprovedRelease(); });
+            page.Controls.Add(toolbar, 0, 0);
+
+            GroupBox reviewGroup = NewGroup("审查证据 / Review Evidence");
+            reviewGroup.Dock = DockStyle.Fill;
+            releaseReviewBox.Dock = DockStyle.Fill;
+            reviewGroup.Controls.Add(releaseReviewBox);
+            page.Controls.Add(reviewGroup, 0, 1);
+
             return page;
         }
 
@@ -2565,6 +2612,7 @@ namespace SiemensTiaSkillSuite
             view.DropDownItems.Add(NewMenuItem("参考图", delegate { SelectMainTab(10); }));
             view.DropDownItems.Add(NewMenuItem("LAD结构编辑", delegate { SelectMainTab(11); }));
             view.DropDownItems.Add(NewMenuItem("WinCC设计编辑", delegate { SelectMainTab(12); }));
+            view.DropDownItems.Add(NewMenuItem("发布审批", delegate { ShowReleaseReview(); }));
             view.DropDownItems.Add(new ToolStripSeparator());
             view.DropDownItems.Add(NewMenuItem("恢复默认布局", delegate { RestoreDefaultLayout(); }));
             return view;
@@ -2619,6 +2667,11 @@ namespace SiemensTiaSkillSuite
             run.DropDownItems.Add(NewMenuItem("队列：完成当前阶段", delegate { StartCommand("queue-complete-current"); }));
             run.DropDownItems.Add(NewMenuItem("队列：标记当前阶段失败", delegate { StartCommand("queue-fail-current"); }));
             run.DropDownItems.Add(NewMenuItem("生成工作台审查包", delegate { StartCommand("review-package"); }));
+            run.DropDownItems.Add(NewMenuItem("刷新发布审批门禁", delegate { StartCommand("review-approval-refresh"); }));
+            run.DropDownItems.Add(NewMenuItem("批准克隆导入", delegate { StartCommand("review-approval-approve-clone"); }));
+            run.DropDownItems.Add(NewMenuItem("批准生产应用", delegate { ApproveProductionApply(); }));
+            run.DropDownItems.Add(NewMenuItem("生成发布清单", delegate { StartCommand("review-approval-manifest"); }));
+            run.DropDownItems.Add(NewMenuItem("应用已批准发布到主工程", delegate { ApplyApprovedRelease(); }));
             run.DropDownItems.Add(NewMenuItem("刷新工作台总览", delegate { StartCommand("workbench-dashboard"); }));
             run.DropDownItems.Add(NewMenuItem("克隆验证 LAD", delegate { StartCommand("write-cycle"); }));
             return run;
@@ -2672,6 +2725,13 @@ namespace SiemensTiaSkillSuite
             tools.DropDownItems.Add(NewMenuItem("运行当前队列阶段", delegate { StartCommand("queue-run-current"); }));
             tools.DropDownItems.Add(NewMenuItem("生成工作台审查包", delegate { StartCommand("review-package"); }));
             tools.DropDownItems.Add(NewMenuItem("查看工作台审查包", delegate { ShowWorkbenchReviewPackage(); }));
+            tools.DropDownItems.Add(NewMenuItem("打开发布审批门禁", delegate { ShowReleaseReview(); }));
+            tools.DropDownItems.Add(NewMenuItem("刷新发布审批门禁", delegate { StartCommand("review-approval-refresh"); }));
+            tools.DropDownItems.Add(NewMenuItem("批准克隆导入", delegate { StartCommand("review-approval-approve-clone"); }));
+            tools.DropDownItems.Add(NewMenuItem("批准生产应用", delegate { ApproveProductionApply(); }));
+            tools.DropDownItems.Add(NewMenuItem("拒绝发布", delegate { StartCommand("review-approval-reject"); }));
+            tools.DropDownItems.Add(NewMenuItem("生成发布清单", delegate { StartCommand("review-approval-manifest"); }));
+            tools.DropDownItems.Add(NewMenuItem("应用已批准发布到主工程", delegate { ApplyApprovedRelease(); }));
             tools.DropDownItems.Add(NewMenuItem("刷新工作台总览", delegate { StartCommand("workbench-dashboard"); }));
             tools.DropDownItems.Add(NewMenuItem("查看工作台总览", delegate { ShowWorkbenchDashboard(); }));
             tools.DropDownItems.Add(NewMenuItem("应用字体设置", delegate { ApplySelectedFont(); }));
@@ -3483,6 +3543,111 @@ namespace SiemensTiaSkillSuite
             }
         }
 
+        private void ShowReleaseReview()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string reviewRoot = Path.Combine(root, "PLC_Code", "review-packages", "latest");
+                string readinessPath = Path.Combine(reviewRoot, "import-readiness.json");
+                string approvalPath = Path.Combine(reviewRoot, "approval.json");
+                string manifestPath = Path.Combine(reviewRoot, "release-manifest.json");
+                string reviewSummaryPath = Path.Combine(reviewRoot, "review-summary.md");
+                string layoutPath = Path.Combine(root, "PLC_Code", "wincc", "design-workflow", "latest", "layout-validation.json");
+                string latestWriteReport = FindLatestWorkflowReport(root, "write-cycle-");
+
+                if (!File.Exists(readinessPath))
+                {
+                    statusLabel.Text = "尚未生成审查包，正在刷新";
+                    StartCommand("review-package");
+                    return;
+                }
+
+                StringBuilder builder = new StringBuilder();
+                builder.AppendLine("发布审查 / 审批门禁");
+                builder.AppendLine("================================");
+                builder.AppendLine("项目：" + root);
+                builder.AppendLine("当前输入 XML：" + (File.Exists(inputXmlBox.Text.Trim()) ? inputXmlBox.Text.Trim() : "未选择"));
+                builder.AppendLine();
+                builder.AppendLine("【导入就绪】");
+                builder.AppendLine(ReadText(readinessPath));
+                builder.AppendLine();
+                if (File.Exists(approvalPath))
+                {
+                    builder.AppendLine("【当前审批】");
+                    builder.AppendLine(ReadText(approvalPath));
+                }
+                else
+                {
+                    builder.AppendLine("【当前审批】尚未生成。请先点击“生成待审批”。");
+                }
+                builder.AppendLine();
+                builder.AppendLine("【克隆编译证据】");
+                builder.AppendLine(string.IsNullOrWhiteSpace(latestWriteReport) ? "尚未找到 write-cycle 报告。" : latestWriteReport + Environment.NewLine + ReadText(latestWriteReport));
+                builder.AppendLine();
+                builder.AppendLine("【WinCC 布局】");
+                builder.AppendLine(File.Exists(layoutPath) ? ReadText(layoutPath) : "未找到布局校验报告，视为未配置 WinCC 布局。");
+                builder.AppendLine();
+                builder.AppendLine("【发布清单】");
+                builder.AppendLine(File.Exists(manifestPath) ? manifestPath : "尚未生成。");
+                builder.AppendLine();
+                builder.AppendLine("安全边界：");
+                builder.AppendLine("1. 克隆导入与生产应用分离。");
+                builder.AppendLine("2. 审批绑定项目路径、输入 XML SHA256、审查包指纹和过期时间。");
+                builder.AppendLine("3. 任何输入或审查证据变化都会使审批失效。");
+                builder.AppendLine("4. PLC 下载保持关闭，生产应用必须由用户在此页明确触发。");
+
+                releaseReviewBox.Text = builder.ToString();
+                previewBox.Text = File.Exists(reviewSummaryPath) ? ReadText(reviewSummaryPath) : releaseReviewBox.Text;
+                SelectMainTab(13);
+                statusLabel.Text = "已打开发布审查与审批门禁";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "打开发布审查失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void ApproveProductionApply()
+        {
+            if (string.IsNullOrWhiteSpace(inputXmlBox.Text) || !File.Exists(inputXmlBox.Text.Trim()))
+            {
+                MessageBox.Show("请先在顶部选择要应用的 LAD XML，再批准生产应用。", "生产审批", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                SelectMainTab(13);
+                return;
+            }
+
+            DialogResult result = MessageBox.Show(
+                "这会生成 24 小时有效的生产应用审批记录。\r\n\r\n当前仍不会立即写入；只有之后再次点击“应用主工程”才会执行。\r\n\r\n确认批准当前 XML 的生产应用？",
+                "确认生产审批",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+            if (result == DialogResult.Yes)
+            {
+                StartCommand("review-approval-approve-production");
+            }
+        }
+
+        private void ApplyApprovedRelease()
+        {
+            if (string.IsNullOrWhiteSpace(inputXmlBox.Text) || !File.Exists(inputXmlBox.Text.Trim()))
+            {
+                MessageBox.Show("请先在顶部选择要应用的 LAD XML。", "应用主工程", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                SelectMainTab(13);
+                return;
+            }
+
+            DialogResult result = MessageBox.Show(
+                "即将把已审批的 LAD XML 应用到当前 TIA 工程。\r\n\r\n脚本仍会再次校验审批、哈希、审查指纹并在写入前备份。\r\n\r\n确认继续？",
+                "确认应用主工程",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+            if (result == DialogResult.Yes)
+            {
+                StartCommand("apply-release");
+            }
+        }
+
         private void ShowWorkbenchReviewPackage()
         {
             try
@@ -3502,6 +3667,33 @@ namespace SiemensTiaSkillSuite
             {
                 MessageBox.Show(ex.Message, "打开工作台审查包失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
+        }
+
+        private static string FindLatestWorkflowReport(string root, string prefix)
+        {
+            string runsRoot = Path.Combine(root, "PLC_Code", "runs");
+            if (!Directory.Exists(runsRoot))
+            {
+                return "";
+            }
+            DirectoryInfo latest = null;
+            foreach (DirectoryInfo directory in new DirectoryInfo(runsRoot).GetDirectories())
+            {
+                if (!directory.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+                if (latest == null || directory.LastWriteTimeUtc > latest.LastWriteTimeUtc)
+                {
+                    latest = directory;
+                }
+            }
+            if (latest == null)
+            {
+                return "";
+            }
+            string report = Path.Combine(latest.FullName, "workflow-report.json");
+            return File.Exists(report) ? report : "";
         }
 
         private void ShowWorkbenchDashboard()
@@ -5400,7 +5592,15 @@ namespace SiemensTiaSkillSuite
                         }
                         if (command == "review-package" && currentProcess.ExitCode == 0)
                         {
-                            ShowWorkbenchReviewPackage();
+                            ShowReleaseReview();
+                        }
+                        if (command.StartsWith("review-approval-", StringComparison.OrdinalIgnoreCase))
+                        {
+                            ShowReleaseReview();
+                        }
+                        if (command == "apply-release")
+                        {
+                            ShowReleaseReview();
                         }
                         if (command == "workbench-dashboard" && currentProcess.ExitCode == 0)
                         {
@@ -5756,6 +5956,38 @@ namespace SiemensTiaSkillSuite
                 args.AddRange(new string[] { "review-package", "-ProjectPath", root });
                 AddWorkflowConfigArg(args, configPath);
             }
+            else if (command == "review-approval-refresh" ||
+                     command == "review-approval-approve-clone" ||
+                     command == "review-approval-approve-production" ||
+                     command == "review-approval-reject" ||
+                     command == "review-approval-manifest")
+            {
+                string approvalAction = "refresh";
+                if (command == "review-approval-approve-clone") { approvalAction = "approve-clone"; }
+                else if (command == "review-approval-approve-production") { approvalAction = "approve-production"; }
+                else if (command == "review-approval-reject") { approvalAction = "reject"; }
+                else if (command == "review-approval-manifest") { approvalAction = "manifest"; }
+
+                if (approvalAction == "approve-production" &&
+                    (string.IsNullOrWhiteSpace(inputXmlBox.Text) || !File.Exists(inputXmlBox.Text.Trim())))
+                {
+                    throw new FileNotFoundException("批准生产应用前必须选择输入 XML。", inputXmlBox.Text);
+                }
+
+                args.AddRange(new string[] {
+                    "review-approval",
+                    "-ProjectPath", root,
+                    "-Action", approvalAction,
+                    "-PlcName", PlcName(),
+                    "-TargetProject", root,
+                    "-Note", "Approved or managed from the native PLCDevConsole workbench."
+                });
+                if (!string.IsNullOrWhiteSpace(inputXmlBox.Text) && File.Exists(inputXmlBox.Text.Trim()))
+                {
+                    args.Add("-InputXml");
+                    args.Add(inputXmlBox.Text.Trim());
+                }
+            }
             else if (command == "workbench-dashboard")
             {
                 args.AddRange(new string[] { "workbench-dashboard", "-ProjectPath", root });
@@ -5807,6 +6039,20 @@ namespace SiemensTiaSkillSuite
                 {
                     args.Add("-SkipRelease");
                 }
+            }
+            else if (command == "apply-release")
+            {
+                if (string.IsNullOrWhiteSpace(inputXmlBox.Text) || !File.Exists(inputXmlBox.Text.Trim()))
+                {
+                    throw new FileNotFoundException("请先选择要应用到主工程的 LAD XML。", inputXmlBox.Text);
+                }
+                args.AddRange(new string[] {
+                    "apply-release",
+                    "-ProjectPath", root,
+                    "-InputXml", inputXmlBox.Text.Trim(),
+                    "-PlcName", PlcName(),
+                    "-ReleaseApprovalPath", Path.Combine(root, "PLC_Code", "review-packages", "latest", "approval.json")
+                });
             }
             else
             {

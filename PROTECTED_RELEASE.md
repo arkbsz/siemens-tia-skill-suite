@@ -50,6 +50,7 @@ SHA256：8D349F2AE8222D543F86463009262D535B68AE6258B5E41377FB73D9552FA2EA
 - 保护版工作台生成的执行队列、变更包和 WinCC runner 会优先使用 `SIEMENS_TIA_RUNTIME_ROOT`，不会回退到发行包外的源码路径。
 - 本次构建包含真实 WinCC 读取、克隆应用预检、中文路径日志解码和 C# runner 适配器修复。
 - 可向构建脚本传入 `-CertificateThumbprint`，使用当前用户证书进行 Authenticode 签名。
+- 工作台内置发布审批门禁：审查包携带 artifact fingerprint，生产应用绑定输入 XML SHA256、克隆编译证据、WinCC 布局状态和审批有效期；生产应用始终执行备份，不能使用 `-SkipBackup`。
 
 ## 保护边界
 

@@ -1,10 +1,12 @@
-param(
+﻿param(
     [Parameter(Mandatory = $true)]
     [string]$ProjectPath,
 
     [string]$HmiDeviceName = "",
 
     [string]$ImplementationPath = "",
+
+    [string]$ReleaseApprovalPath = "",
 
     [switch]$ApplyToClone
 )
@@ -36,6 +38,34 @@ function Invoke-Captured {
     }
 }
 
+function Read-JsonFile {
+    param([string]$Path)
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $null }
+    return (Get-Content -LiteralPath $Path -Raw -ErrorAction Stop | ConvertFrom-Json)
+}
+
+function Assert-CloneApproval {
+    param(
+        [string]$Path,
+        [string]$ProjectRoot
+    )
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        $Path = Join-Path $ProjectRoot "PLC_Code\review-packages\latest\approval.json"
+    }
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw "未找到克隆导入审批记录，请先在工作台生成审查包并批准克隆导入：$Path"
+    }
+    $approval = Read-JsonFile -Path $Path
+    if ([string]$approval.status -ne "APPROVED" -or @("clone", "production") -notcontains [string]$approval.approvedFor) {
+        throw "审批记录不是 APPROVED/clone，WinCC 克隆导入已阻断。"
+    }
+    $readiness = Read-JsonFile -Path (Join-Path $ProjectRoot "PLC_Code\review-packages\latest\import-readiness.json")
+    if (-not $readiness -or [string]$approval.reviewFingerprint -ne [string]$readiness.artifactFingerprint) {
+        throw "审查包指纹已变化或缺失，请重新生成审查包并批准克隆导入。"
+    }
+    return $approval
+}
+
 if (-not $ApplyToClone) {
     throw "Clone-only guard: pass -ApplyToClone after reviewing the implementation package."
 }
@@ -43,6 +73,10 @@ if (-not $ApplyToClone) {
 $projectItem = Get-Item -LiteralPath $ProjectPath
 $resolvedProject = $projectItem.FullName
 $projectRoot = Resolve-ProjectDirectory -Path $resolvedProject
+if ([string]::IsNullOrWhiteSpace($ReleaseApprovalPath)) {
+    $ReleaseApprovalPath = Join-Path $projectRoot "PLC_Code\review-packages\latest\approval.json"
+}
+Assert-CloneApproval -Path $ReleaseApprovalPath -ProjectRoot $projectRoot | Out-Null
 if ([string]::IsNullOrWhiteSpace($ImplementationPath)) {
     $ImplementationPath = Join-Path $projectRoot "PLC_Code\wincc\openness-implementation\latest"
 }
@@ -168,6 +202,7 @@ $report = [pscustomobject]@{
     cloneProject = $cloneProjectFile
     cloneDirectory = $clonePath
     implementationPath = $ImplementationPath
+    releaseApprovalPath = $ReleaseApprovalPath
     hmiDeviceName = $HmiDeviceName
     tagCsv = $tagCsv
     alarmCsv = $alarmCsv

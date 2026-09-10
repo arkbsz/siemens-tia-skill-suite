@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-10 - 发布审查与审批门禁 1.0.5
+
+- 新增原生“发布审批”页面，显示导入就绪、克隆编译、WinCC 布局、哈希和审批状态。
+- 新增 `review-approval`：支持待审批、克隆批准、生产批准、拒绝和发布清单。
+- 生产审批绑定项目路径、输入 XML SHA256、审查包指纹、成功克隆编译证据、WinCC 布局状态和有效期。
+- `apply-release` 会重新校验全部门禁并禁止 `-SkipBackup`；WinCC 克隆应用也必须存在批准记录。
+- 新增中文审批脚本 UTF-8 BOM 兼容处理，避免 Windows PowerShell 5.1 乱码解析。
+
 ## 2026-09-10 - WinCC 布局校验与保护版 1.0.4
 
 - 修复 Windows PowerShell 5.1 直接执行无 BOM UTF-8 脚本时的误解析，WinCC 设计工作流脚本改为 UTF-8 BOM。

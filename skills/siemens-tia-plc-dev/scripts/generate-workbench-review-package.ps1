@@ -167,15 +167,64 @@ $latestSummaryPath = Join-Path $latestDir "review-summary.md"
 Write-Doc -Path $summaryPath -Content $summary.ToString()
 Write-Doc -Path $latestSummaryPath -Content $summary.ToString()
 
+$latestWriteDirectory = Get-ChildItem -LiteralPath (Join-Path $workspaceRoot "runs") -Directory -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -like "write-cycle-*" } |
+    Sort-Object LastWriteTimeUtc -Descending |
+    Select-Object -First 1
+$latestWriteReport = $null
+if ($latestWriteDirectory) {
+    $latestWriteReport = Join-Path $latestWriteDirectory.FullName "workflow-report.json"
+}
+$compileExitCode = $null
+$writeStatus = "MISSING"
+if ($latestWriteReport -and (Test-Path -LiteralPath $latestWriteReport -PathType Leaf)) {
+    try {
+        $writeJson = Get-Content -LiteralPath $latestWriteReport -Raw | ConvertFrom-Json
+        $compileExitCode = [int]$writeJson.CompileExitCode
+        $writeStatus = [string]$writeJson.Status
+    }
+    catch {
+        $compileExitCode = $null
+        $writeStatus = "UNREADABLE"
+    }
+}
+$layoutPath = Join-Path $workspaceRoot "wincc\design-workflow\latest\layout-validation.json"
+$layoutStatus = "NOT_AVAILABLE"
+if (Test-Path -LiteralPath $layoutPath -PathType Leaf) {
+    try {
+        $layoutStatus = [string]((Get-Content -LiteralPath $layoutPath -Raw | ConvertFrom-Json).status)
+    }
+    catch {
+        $layoutStatus = "UNREADABLE"
+    }
+}
+$fingerprintRows = @($artifacts | Sort-Object path | ForEach-Object { "{0}|{1}" -f $_.sha256, $_.path })
+$fingerprintText = $fingerprintRows -join "`n"
+$fingerprintSha = [System.Security.Cryptography.SHA256]::Create()
+try {
+    $artifactFingerprint = ([BitConverter]::ToString($fingerprintSha.ComputeHash([Text.Encoding]::UTF8.GetBytes($fingerprintText)))).Replace("-", "").ToUpperInvariant()
+}
+finally {
+    $fingerprintSha.Dispose()
+}
+
 $readiness = New-Object System.Text.StringBuilder
 [void]$readiness.AppendLine("{")
 [void]$readiness.AppendLine('  "status": "ok",')
 [void]$readiness.AppendLine('  "projectRoot": ' + (ConvertTo-JsonString $root) + ',')
 [void]$readiness.AppendLine('  "artifactCount": ' + $artifacts.Count + ',')
+[void]$readiness.AppendLine('  "artifactFingerprint": ' + (ConvertTo-JsonString $artifactFingerprint) + ',')
 [void]$readiness.AppendLine('  "hasAgentPlan": ' + ((Test-Path -LiteralPath $latestPlan).ToString().ToLowerInvariant()) + ',')
 [void]$readiness.AppendLine('  "hasAgentQueue": ' + ((Test-Path -LiteralPath $latestQueue).ToString().ToLowerInvariant()) + ',')
 [void]$readiness.AppendLine('  "hasPlcChangePackage": ' + ((Test-Path -LiteralPath $latestPlcPackage).ToString().ToLowerInvariant()) + ',')
 [void]$readiness.AppendLine('  "hasWinccVisualPackage": ' + ((Test-Path -LiteralPath $latestWinccPackage).ToString().ToLowerInvariant()) + ',')
+[void]$readiness.AppendLine('  "cloneCompileExitCode": ' + $(if ($null -eq $compileExitCode) { "null" } else { [string]$compileExitCode }) + ',')
+[void]$readiness.AppendLine('  "latestWriteStatus": ' + (ConvertTo-JsonString $writeStatus) + ',')
+[void]$readiness.AppendLine('  "latestWriteReport": ' + (ConvertTo-JsonString ([string]$latestWriteReport)) + ',')
+[void]$readiness.AppendLine('  "winccLayoutStatus": ' + (ConvertTo-JsonString $layoutStatus) + ',')
+[void]$readiness.AppendLine('  "winccLayoutReport": ' + (ConvertTo-JsonString $layoutPath) + ',')
+[void]$readiness.AppendLine('  "productionWriteAllowed": false,')
+[void]$readiness.AppendLine('  "plcDownloadAllowed": false,')
 [void]$readiness.AppendLine('  "releaseAllowed": false')
 [void]$readiness.AppendLine("}")
 

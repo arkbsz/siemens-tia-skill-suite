@@ -50,6 +50,7 @@
 - 自动开发流水线：一键执行 `agent-pipeline`，按任务自动判断 PLC/WinCC 范围，生成知识包、能力矩阵、PLC 指令库、PLC 指令方案、WinCC 视觉工程包、WinCC 组件蓝图、Agent 计划、执行队列和工作台验证总览
 - 队列状态控制：支持开始下一阶段、完成当前阶段、标记失败/阻塞和重置队列，并自动生成当前阶段 prompt 与建议命令
 - 工作台审查包：一键生成 `PLC_Code\review-packages\latest`，汇总计划、队列、PLC 改动包、WinCC 工程包、文件哈希、git diff 和导入就绪检查
+- 发布审批门禁：工作台内置“发布审批”页，绑定审查指纹、输入 XML SHA256、克隆编译证据、WinCC 布局状态和审批有效期；生产应用前自动备份，证据变化或审批缺失时自动阻断
 - 离线图形预览适配：可配置 TIA Viewer / ImportExport 类工具路径，用于后续把 SimaticML、LAD/FBD、GRAPH、SCL、DB、UDT 导出文件渲染到工作台预览
 - 本地编辑闭环：工作台可直接编辑导出的 XML/SCL/DB/Markdown/JSON 文件，保存前自动备份到 `PLC_Code\file-backups`，并支持一键生成 LAD XML 可读预览。
 - 原生 LAD 结构编辑：工作台的 `LAD结构编辑` 页可读取导出网络摘要、编辑条件/动作链、自由修改完整 LAD JSON、生成真实 LAD XML、校验并进入克隆编译验证；复杂网络仍可通过右侧 JSON、模板补丁和指令路由扩展。
@@ -157,6 +158,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex
 - 视觉设置：使用柔和工业渐变、卡片式区域、圆角按钮，并读取 Windows 本机字体库供界面文字配置。
 
 `console` 和 `console-exe` 默认启动窗口版。旧的浏览器控制台保留为备用入口 `console-web`。窗口通过本机已安装并授权的 Codex、Claude Code、Trae Agent 或 Qoder 调用 Agent，不在项目配置中保存 API 密钥；生产工程写入仍必须经过备份、克隆验证和明确确认。
+
+工作台的“发布审批”页提供刷新审查、生成待审批、批准克隆、批准生产、拒绝发布、生成清单和应用主工程按钮。批准生产不会立即写入，最终应用仍会再次校验项目路径、XML 哈希、审查指纹、审批过期时间，并拒绝跳过备份。
 
 ## 推荐使用顺序
 

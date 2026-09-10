@@ -101,6 +101,7 @@ $knowledgePack = Join-Path $workspaceRoot "knowledge\packs\latest\knowledge-pack
 $capabilityMap = Join-Path $workspaceRoot "workbench\capabilities\latest\capability-map.md"
 $capabilityJson = Join-Path $workspaceRoot "workbench\capabilities\latest\capability-map.json"
 $readinessPath = Join-Path $workspaceRoot "review-packages\latest\import-readiness.json"
+$approvalPath = Join-Path $workspaceRoot "review-packages\latest\approval.json"
 $reviewSummary = Join-Path $workspaceRoot "review-packages\latest\review-summary.md"
 $runsRoot = Join-Path $workspaceRoot "runs"
 $latestRun = Get-LatestRun -RunsRoot $runsRoot
@@ -144,6 +145,13 @@ $pipelineText = Read-ShortText -Path $pipelineSummary -Max 5000
 $agentContextText = Read-ShortText -Path $agentContext -Max 5000
 $knowledgeText = Read-ShortText -Path $knowledgeBrief -Max 5000
 $capabilityText = Read-ShortText -Path $capabilityMap -Max 5000
+$approvalText = Read-ShortText -Path $approvalPath -Max 5000
+$approvalObject = $null
+if (Test-Path -LiteralPath $approvalPath -PathType Leaf) {
+    try { $approvalObject = Get-Content -LiteralPath $approvalPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { $approvalObject = $null }
+}
+$approvalStatus = if ($approvalObject) { [string]$approvalObject.status } else { "MISSING" }
+$approvedFor = if ($approvalObject) { [string]$approvalObject.approvedFor } else { "none" }
 
 $validationMd = Join-Path $OutputDirectory "validation-summary.md"
 $latestRunDisplay = if ($latestRun) { $latestRun.FullName } else { "none" }
@@ -208,6 +216,15 @@ $validationBuilder = New-Object System.Text.StringBuilder
 [void]$validationBuilder.AppendLine()
 [void]$validationBuilder.AppendLine('```json')
 [void]$validationBuilder.AppendLine($readinessText)
+[void]$validationBuilder.AppendLine('```')
+[void]$validationBuilder.AppendLine()
+[void]$validationBuilder.AppendLine("## Release Approval")
+[void]$validationBuilder.AppendLine()
+[void]$validationBuilder.AppendLine("- Approval file: ``$approvalPath``")
+[void]$validationBuilder.AppendLine("- Status: ``$approvalStatus``")
+[void]$validationBuilder.AppendLine("- Approved for: ``$approvedFor``")
+[void]$validationBuilder.AppendLine('```json')
+[void]$validationBuilder.AppendLine($approvalText)
 [void]$validationBuilder.AppendLine('```')
 [void]$validationBuilder.AppendLine()
 [void]$validationBuilder.AppendLine("## Latest Run Report")
@@ -302,6 +319,7 @@ $agentContextDisplay = if (Test-Path -LiteralPath $agentContext -PathType Leaf) 
 $knowledgeDisplay = if (Test-Path -LiteralPath $knowledgeBrief -PathType Leaf) { $knowledgeBrief } else { "missing" }
 $capabilityDisplay = if (Test-Path -LiteralPath $capabilityMap -PathType Leaf) { $capabilityMap } else { "missing" }
 $reviewDisplay = if (Test-Path -LiteralPath $reviewSummary) { $reviewSummary } else { "missing" }
+$approvalDisplay = if (Test-Path -LiteralPath $approvalPath) { $approvalPath } else { "missing" }
 $pluginDisplay = if (Test-Path -LiteralPath $pluginRouting) { $pluginRouting } else { "missing" }
 $dashboardBuilder = New-Object System.Text.StringBuilder
 [void]$dashboardBuilder.AppendLine("# Siemens TIA Workbench Dashboard")
@@ -331,6 +349,7 @@ $dashboardBuilder = New-Object System.Text.StringBuilder
 [void]$dashboardBuilder.AppendLine("- Knowledge pack: ``$knowledgeDisplay``")
 [void]$dashboardBuilder.AppendLine("- Capability map: ``$capabilityDisplay``")
 [void]$dashboardBuilder.AppendLine("- Review package: ``$reviewDisplay``")
+[void]$dashboardBuilder.AppendLine("- Release approval: ``$approvalDisplay``")
 [void]$dashboardBuilder.AppendLine("- WinCC plugin routing: ``$pluginDisplay``")
 [void]$dashboardBuilder.AppendLine()
 [void]$dashboardBuilder.AppendLine("## Queue Summary")
@@ -363,6 +382,7 @@ $dashboardBuilder = New-Object System.Text.StringBuilder
 [void]$dashboardBuilder.AppendLine()
 [void]$dashboardBuilder.AppendLine("## Safety Gates")
 [void]$dashboardBuilder.AppendLine()
+[void]$dashboardBuilder.AppendLine("- Release approval status: ``$approvalStatus`` (``$approvedFor``)")
 [void]$dashboardBuilder.AppendLine("- Production writes remain disabled unless explicitly requested.")
 [void]$dashboardBuilder.AppendLine("- First imports must run on backup or clone projects.")
 [void]$dashboardBuilder.AppendLine("- Runtime HMI writes and alarm acknowledgement stay disabled unless explicitly requested.")
@@ -405,6 +425,9 @@ $json = [pscustomobject]@{
     queue = $queueValue
     pluginRouting = $pluginRoutingValue
     importReadiness = $readinessValue
+    releaseApproval = if (Test-Path -LiteralPath $approvalPath -PathType Leaf) { $approvalPath } else { "" }
+    releaseApprovalStatus = $approvalStatus
+    releaseApprovedFor = $approvedFor
     instructionRoute = $instructionRouteValue
     instructionCookbook = $instructionCookbookValue
     safetyRisk = $safetyRiskValue

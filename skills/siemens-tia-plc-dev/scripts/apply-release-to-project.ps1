@@ -14,6 +14,8 @@
 
     [string]$VerifyOutputRoot,
 
+    [string]$ReleaseApprovalPath = "",
+
     [switch]$SkipBackup,
 
     [switch]$DryRunOnly
@@ -70,6 +72,51 @@ function Invoke-PowerShellStep {
     }
 }
 
+function Read-JsonFile {
+    param([string]$Path)
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $null }
+    return (Get-Content -LiteralPath $Path -Raw -ErrorAction Stop | ConvertFrom-Json)
+}
+
+function Get-Sha256 {
+    param([string]$Path)
+    return (Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash.ToUpperInvariant()
+}
+
+function Assert-ReleaseApproval {
+    param(
+        [string]$Path,
+        [string]$ProjectRoot,
+        [string]$XmlPath
+    )
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw "未找到生产应用审批记录，生产写入已阻断：$Path"
+    }
+    $approval = Read-JsonFile -Path $Path
+    if ([string]$approval.status -ne "APPROVED" -or [string]$approval.approvedFor -ne "production") {
+        throw "审批记录不是 APPROVED/production，生产写入已阻断。"
+    }
+    if ([string]$approval.projectRoot -ne $ProjectRoot -or [string]$approval.targetProject -ne $ProjectRoot) {
+        throw "审批目标工程与当前工程不一致，生产写入已阻断。"
+    }
+    if ($approval.expiresAt) {
+        $expires = [DateTime]::Parse([string]$approval.expiresAt)
+        if ($expires.ToUniversalTime() -le (Get-Date).ToUniversalTime()) {
+            throw "审批记录已过期，生产写入已阻断。"
+        }
+    }
+    $actualHash = Get-Sha256 -Path $XmlPath
+    if ([string]$approval.inputXml -ne $XmlPath -or [string]$approval.inputSha256 -ne $actualHash) {
+        throw "审批记录中的输入 XML 或 SHA256 与当前输入不一致，生产写入已阻断。"
+    }
+    $readinessPath = Join-Path $ProjectRoot "PLC_Code\review-packages\latest\import-readiness.json"
+    $readiness = Read-JsonFile -Path $readinessPath
+    if (-not $readiness -or [string]$approval.reviewFingerprint -ne [string]$readiness.artifactFingerprint) {
+        throw "审查包指纹已变化或缺失，请重新生成审查包并审批。"
+    }
+    return $approval
+}
+
 if (-not (Test-Path -LiteralPath $InputXml)) {
     throw "Input XML not found: $InputXml"
 }
@@ -84,6 +131,13 @@ foreach ($path in @($invokeScript)) {
 $projectItem = Get-Item -LiteralPath $ProjectPath
 $projectDir = if ($projectItem.PSIsContainer) { $projectItem.FullName } else { $projectItem.Directory.FullName }
 $workspacePath = Join-Path $projectDir "PLC_Code"
+
+if ([string]::IsNullOrWhiteSpace($ReleaseApprovalPath)) {
+    $ReleaseApprovalPath = Join-Path $workspacePath "review-packages\latest\approval.json"
+}
+if (-not $DryRunOnly) {
+    $releaseApproval = Assert-ReleaseApproval -Path $ReleaseApprovalPath -ProjectRoot $projectDir -XmlPath (Get-Item -LiteralPath $InputXml).FullName
+}
 
 $blockInfo = Get-BlockInfoFromXml -Path $InputXml
 $resolvedBlockName = if ($BlockName) { $BlockName } else { $blockInfo.BlockName }
@@ -129,6 +183,7 @@ if ($DryRunOnly) {
         PlcName = $PlcName
         BlockName = $resolvedBlockName
         VerificationDirectory = $verifyDir
+        ReleaseApprovalPath = $ReleaseApprovalPath
         BackupOutput = $backupOutput
         DryRunOutput = ($dryRunStep.Output -join [Environment]::NewLine).Trim()
         DryRunOnly = $true
@@ -183,6 +238,8 @@ if ($blockInfo.ProgrammingLanguage -eq "LAD") {
 $report = [ordered]@{
     ProjectPath = $projectDir
     InputXml = (Get-Item -LiteralPath $InputXml).FullName
+    ReleaseApprovalPath = $ReleaseApprovalPath
+    ReleaseApproval = if ($releaseApproval) { $releaseApproval } else { $null }
     PlcName = $PlcName
     BlockName = $resolvedBlockName
     VerificationDirectory = $verifyDir

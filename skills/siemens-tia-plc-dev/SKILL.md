@@ -65,6 +65,7 @@ Use the local visual console when the user wants a better interaction surface th
 - editor-replacement capability maps through `capability-map`, generating a concrete matrix of native workbench coverage, backing commands, validation gates, TIA-native gaps, and next engineering steps under `PLC_Code\workbench\capabilities\latest`
 - one-click Agent development pipeline through `agent-pipeline`, which detects PLC/WinCC scope from the task, generates instruction routing, WinCC visual packages, Agent plans, execution queues and dashboard evidence in one auditable pass
 - workbench review packages through `review-package`, collecting plans, queues, PLC/WinCC packages, artifact hashes, git diffs and import-readiness gates
+- visual release approval through `review-approval`, binding approvals to the project path, input XML SHA256, review fingerprint, clone compile evidence and expiry
 - workbench dashboard generation through `workbench-dashboard`, feeding the native validation and diff panels with queue health, latest run reports, import readiness, plugin routing and Git diff summaries
 - PLC instruction and technology-object route planning through `plc-instruction-plan`, producing instruction families, preferred authoring surfaces, verification gates and safety-risk notes
 - PLC instruction cookbooks through `plc-instruction-cookbook`, producing a reusable route matrix for bit logic, compares, timers, counters, motion, drives, communication, PID, diagnostics, arrays, recipes, math and conversion families
@@ -349,6 +350,16 @@ Use `simulation-replay` after `simulation-package` when the workbench should sho
 Use `agent-pipeline` when the user wants the native workbench to own the first pass of a PLC/WinCC task. It classifies the task, generates the project model, knowledge pack, capability map, PLC instruction cookbook, PLC instruction plan, WinCC plugin routing, WinCC visual package, WinCC component blueprints, WinCC engineering scaffold, WinCC Openness implementation package, simulation package, simulation replay report, Agent plan, Agent queue and dashboard. It does not import, download, or write to the production project.
 
 Use `review-package` before release or after a substantial Agent run. It writes `PLC_Code\review-packages\latest\review-summary.md`, artifact indexes, optional `git-diff.patch`, and `import-readiness.json`. Treat it like a local PLC/WinCC pull-request bundle.
+
+Use `review-approval` as the executable release gate behind the native `发布审批` page:
+
+- `-Action refresh` creates a `PENDING` approval snapshot.
+- `-Action approve-clone` permits clone-only WinCC implementation and records a 72-hour approval.
+- `-Action approve-production -InputXml <xml>` requires successful clone compile evidence and a passing WinCC layout before recording a 24-hour production approval.
+- `-Action reject` invalidates the current approval.
+- `-Action manifest` writes a hash-bound `release-manifest.json`.
+- `apply-release` rechecks approval status, target project, expiry, input XML SHA256 and review fingerprint, and refuses `-SkipBackup`.
+- `wincc-apply-clone` also requires an approved clone or production record; no approval means no clone is opened.
 
 Use `workbench-dashboard` to refresh the native validation and diff panels after any read, write, queue, WinCC or review action. It writes `PLC_Code\workbench\latest\dashboard.md`, `validation-summary.md`, `diff-summary.patch`, and `dashboard.json`.
 

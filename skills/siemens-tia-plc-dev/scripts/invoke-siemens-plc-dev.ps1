@@ -25,6 +25,7 @@ Commands:
   queue-stage -ProjectPath <projectDir|ap16..ap21> [-Action start-next|record-current|complete-current|fail-current|block-current|reset] [-QueuePath <json>] [-Note <text>] [-EvidencePath <path>]
   queue-run-current -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-QueuePath <json>] [-RoutingMode auto|manual] [-Platform auto|codex|claude-code|trae-agent|qoder] [-Model <id>] [-Sandbox read-only|workspace-write|danger-full-access] [-TimeoutSeconds <n>] [-Search] [-CompleteOnSuccess]
   review-package -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-OutputDirectory <dir>]
+  review-approval -ProjectPath <projectDir|ap16..ap21> [-Action refresh|approve-clone|approve-production|reject|manifest] [-InputXml <xml>] [-PlcName <name>] [-TargetProject <dir>] [-Note <text>]
   workbench-dashboard -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-OutputDirectory <dir>]
   capability-map -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-OutputDirectory <dir>]
   project-model -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-OutputDirectory <dir>]
@@ -214,6 +215,10 @@ switch ($Command.ToLowerInvariant()) {
     }
     "review-package" {
         Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "generate-workbench-review-package.ps1") -Arguments $CommandArgs
+        break
+    }
+    "review-approval" {
+        Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "manage-release-approval.ps1") -Arguments $CommandArgs
         break
     }
     "workbench-dashboard" {
