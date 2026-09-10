@@ -31,6 +31,7 @@ Commands:
   knowledge-pack -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-OutputDirectory <dir>] [-RefreshOnline]
   plc-instruction-cookbook -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-OutputDirectory <dir>]
   simulation-package -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-OutputDirectory <dir>]
+  simulation-replay -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-SimulationPackagePath <json>] [-ScenarioId <id>] [-OutputDirectory <dir>] [-Strict]
   agent-pipeline -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-ReferenceImagePath <image>] [-SourceXml <xml>] [-OutputDirectory <dir>] [-RefreshWinccCatalog] [-SkipAgentQueue]
   plc-instruction-plan -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-SourceXml <xml>] [-OutputDirectory <dir>]
   plc-change-package -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-Workflow <id>] [-SourceXml <xml>] [-OutputDirectory <dir>]
@@ -39,6 +40,9 @@ Commands:
   wincc-visual-package -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-ReferenceImagePath <image>] [-OutputDirectory <dir>]
   wincc-component-blueprints -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-ReferenceImagePath <image>] [-OutputDirectory <dir>]
   wincc-engineering-scaffold -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-ReferenceImagePath <image>] [-OutputDirectory <dir>]
+  wincc-openness-implementation -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-EngineeringScaffoldPath <json>] [-OutputDirectory <dir>] [-ForCloneOnly]
+  wincc-read-cycle -ProjectPath <projectDir|ap16..ap21> [-HmiName <name>] [-WorkflowConfigPath <json>] [-UseUi] [-Attach]
+  wincc-apply-clone -ProjectPath <projectDir|ap16..ap21> [-HmiDeviceName <name>] [-ImplementationPath <dir>] -ApplyToClone
   doctor [-ProjectPath <projectDir|ap16..ap21>]
   create-project --name <projectName> [--directory <dir>] [--device-type <typeIdentifier>] [--device-item-type <typeIdentifier>] [--item-name <name>] [--device-name <name>]
   hold-project --project <projectDir|ap16..ap21> [--ui] [--lease-file <path>] [--poll-ms <ms>]
@@ -61,6 +65,10 @@ TIA project commands:
   list-devices --project <projectDir|ap16..ap21>
   list-plcs --project <projectDir|ap16..ap21>
   list-blocks --project <projectDir|ap16..ap21> [--plc <name>]
+  list-hmi --project <projectDir|ap16..ap21> [--hmi <name>]
+  read-hmi --project <projectDir|ap16..ap21> [--hmi <name>] [--output <dir>] [--no-export]
+  import-hmi --project <projectDir|ap16..ap21> --input <xml|dir> [--hmi <name>] [--kind auto|screen|tagtable|connection] [--apply] [--no-save]
+  apply-hmi-manifest --project <projectDir|ap16..ap21> [--hmi <name>] [--tag-csv <csv>] [--alarm-csv <csv>] [--screen-csv <csv>] [--apply]
   export-blocks --project <projectDir|ap16..ap21> [--plc <name>] [--block <name>] [--language LAD|FBD|SCL] [--output <dir>]
   import-blocks --project <projectDir|ap16..ap21> --input <xml|dir> [--plc <name>] [--group <path>] [--apply] [--no-save]
   import-sources --project <projectDir|ap16..ap21> [--plc <name>] --source-dir <dir> [--compile] [--save]
@@ -105,6 +113,9 @@ $winccPluginScript = Join-Path (Join-Path $skillsRoot "siemens-wincc-hmi-dev") "
 $winccVisualPackageScript = Join-Path (Join-Path $skillsRoot "siemens-wincc-hmi-dev") "scripts\scaffold-wincc-visual-package.ps1"
 $winccComponentBlueprintScript = Join-Path (Join-Path $skillsRoot "siemens-wincc-hmi-dev") "scripts\scaffold-wincc-component-blueprints.ps1"
 $winccEngineeringScaffoldScript = Join-Path (Join-Path $skillsRoot "siemens-wincc-hmi-dev") "scripts\scaffold-wincc-engineering-package.ps1"
+$winccOpennessImplementationScript = Join-Path (Join-Path $skillsRoot "siemens-wincc-hmi-dev") "scripts\scaffold-wincc-openness-implementation.ps1"
+$winccReadCycleScript = Join-Path $PSScriptRoot "run-wincc-read-cycle.ps1"
+$winccApplyCloneScript = Join-Path $PSScriptRoot "run-wincc-implementation.ps1"
 
 $opennessScript = Resolve-TiaBridgeScript -SkillPath $bridge.SkillPath -Candidates @(
     "scripts\invoke-tia-openness.ps1"
@@ -142,7 +153,7 @@ $buildIndexScript = Resolve-TiaBridgeScript -SkillPath $bridge.SkillPath -Candid
     "scripts\build-lad-template-index.ps1"
 )
 
-$projectCommands = @("create-project", "hold-project", "list-devices", "list-plcs", "list-blocks", "export-blocks", "import-blocks", "import-sources", "compile-plc")
+$projectCommands = @("create-project", "hold-project", "list-devices", "list-plcs", "list-blocks", "list-hmi", "read-hmi", "import-hmi", "apply-hmi-manifest", "export-blocks", "import-blocks", "import-sources", "compile-plc")
 
 switch ($Command.ToLowerInvariant()) {
     "help" {
@@ -227,6 +238,10 @@ switch ($Command.ToLowerInvariant()) {
         Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "generate-simulation-package.ps1") -Arguments $CommandArgs
         break
     }
+    "simulation-replay" {
+        Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "run-simulation-scenario-replay.ps1") -Arguments $CommandArgs
+        break
+    }
     "agent-pipeline" {
         Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "run-agent-development-pipeline.ps1") -Arguments $CommandArgs
         break
@@ -269,6 +284,27 @@ switch ($Command.ToLowerInvariant()) {
             throw "WinCC engineering scaffold was not found: $winccEngineeringScaffoldScript"
         }
         Invoke-PowerShellFile -Path $winccEngineeringScaffoldScript -Arguments $CommandArgs
+        break
+    }
+    "wincc-openness-implementation" {
+        if (-not (Test-Path -LiteralPath $winccOpennessImplementationScript)) {
+            throw "WinCC Openness implementation scaffold was not found: $winccOpennessImplementationScript"
+        }
+        Invoke-PowerShellFile -Path $winccOpennessImplementationScript -Arguments $CommandArgs
+        break
+    }
+    "wincc-read-cycle" {
+        if (-not (Test-Path -LiteralPath $winccReadCycleScript)) {
+            throw "WinCC read-cycle script was not found: $winccReadCycleScript"
+        }
+        Invoke-PowerShellFile -Path $winccReadCycleScript -Arguments $CommandArgs
+        break
+    }
+    "wincc-apply-clone" {
+        if (-not (Test-Path -LiteralPath $winccApplyCloneScript)) {
+            throw "WinCC clone implementation script was not found: $winccApplyCloneScript"
+        }
+        Invoke-PowerShellFile -Path $winccApplyCloneScript -Arguments $CommandArgs
         break
     }
     "probe" {

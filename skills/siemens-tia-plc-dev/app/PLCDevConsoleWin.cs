@@ -191,7 +191,8 @@ namespace SiemensTiaSkillSuite
             }
             else
             {
-                BeginInvoke((Action)delegate { AutoLoadCurrentTiaProject(false); });
+                // Wait until the form handle exists before probing the current TIA session.
+                Shown += delegate { AutoLoadCurrentTiaProject(false); };
             }
         }
 
@@ -404,11 +405,15 @@ namespace SiemensTiaSkillSuite
             commandBar.Controls.Add(CommandButton("自动流水线", "agent-pipeline", Gold));
             commandBar.Controls.Add(CommandButton("PLC改动包", "plc-change-package", Gold));
             commandBar.Controls.Add(CommandButton("指令方案", "plc-instruction-plan", Teal));
+            commandBar.Controls.Add(CommandButton("WinCC读取", "wincc-read-cycle", Teal));
+            commandBar.Controls.Add(CommandButton("WinCC克隆应用", "wincc-apply-clone", Orange));
             commandBar.Controls.Add(CommandButton("WinCC插件", "wincc-plugins", Teal));
             commandBar.Controls.Add(CommandButton("WinCC方案", "wincc-visual-package", Orange));
             commandBar.Controls.Add(CommandButton("组件蓝图", "wincc-component-blueprints", Orange));
             commandBar.Controls.Add(CommandButton("WinCC工程", "wincc-engineering-scaffold", Orange));
+            commandBar.Controls.Add(CommandButton("WinCC实现", "wincc-openness-implementation", Orange));
             commandBar.Controls.Add(CommandButton("仿真包", "simulation-package", Teal));
+            commandBar.Controls.Add(CommandButton("仿真回放", "simulation-replay", Teal));
             commandBar.Controls.Add(CommandButton("任务编排", "agent-plan", Gold));
             commandBar.Controls.Add(CommandButton("执行队列", "agent-queue", Teal));
             commandBar.Controls.Add(CommandButton("运行阶段", "queue-run-current", Gold));
@@ -1090,7 +1095,11 @@ namespace SiemensTiaSkillSuite
             run.DropDownItems.Add(NewMenuItem("生成 WinCC 视觉工程包", delegate { StartCommand("wincc-visual-package"); }));
             run.DropDownItems.Add(NewMenuItem("生成 WinCC 组件蓝图", delegate { StartCommand("wincc-component-blueprints"); }));
             run.DropDownItems.Add(NewMenuItem("生成 WinCC 工程脚手架", delegate { StartCommand("wincc-engineering-scaffold"); }));
+            run.DropDownItems.Add(NewMenuItem("生成 WinCC Openness 实现包", delegate { StartCommand("wincc-openness-implementation"); }));
+            run.DropDownItems.Add(NewMenuItem("读取 WinCC 工程对象", delegate { StartCommand("wincc-read-cycle"); }));
+            run.DropDownItems.Add(NewMenuItem("在克隆工程应用 WinCC 包", delegate { StartCommand("wincc-apply-clone"); }));
             run.DropDownItems.Add(NewMenuItem("生成仿真/运行验证包", delegate { StartCommand("simulation-package"); }));
+            run.DropDownItems.Add(NewMenuItem("回放仿真场景证据", delegate { StartCommand("simulation-replay"); }));
             run.DropDownItems.Add(NewMenuItem("生成 Agent 任务编排", delegate { StartCommand("agent-plan"); }));
             run.DropDownItems.Add(NewMenuItem("生成 Agent 执行队列", delegate { StartCommand("agent-queue"); }));
             run.DropDownItems.Add(NewMenuItem("队列：开始下一阶段", delegate { StartCommand("queue-start-next"); }));
@@ -1135,8 +1144,14 @@ namespace SiemensTiaSkillSuite
             tools.DropDownItems.Add(NewMenuItem("查看 WinCC 组件蓝图", delegate { ShowWinccComponentBlueprints(); }));
             tools.DropDownItems.Add(NewMenuItem("生成 WinCC 工程脚手架", delegate { StartCommand("wincc-engineering-scaffold"); }));
             tools.DropDownItems.Add(NewMenuItem("查看 WinCC 工程脚手架", delegate { ShowWinccEngineeringScaffold(); }));
+            tools.DropDownItems.Add(NewMenuItem("生成 WinCC Openness 实现包", delegate { StartCommand("wincc-openness-implementation"); }));
+            tools.DropDownItems.Add(NewMenuItem("查看 WinCC Openness 实现包", delegate { ShowWinccOpennessImplementation(); }));
+            tools.DropDownItems.Add(NewMenuItem("读取 WinCC 工程对象", delegate { StartCommand("wincc-read-cycle"); }));
+            tools.DropDownItems.Add(NewMenuItem("在克隆工程应用 WinCC 包", delegate { StartCommand("wincc-apply-clone"); }));
             tools.DropDownItems.Add(NewMenuItem("生成仿真/运行验证包", delegate { StartCommand("simulation-package"); }));
             tools.DropDownItems.Add(NewMenuItem("查看仿真/运行验证包", delegate { ShowSimulationPackage(); }));
+            tools.DropDownItems.Add(NewMenuItem("回放仿真场景证据", delegate { StartCommand("simulation-replay"); }));
+            tools.DropDownItems.Add(NewMenuItem("查看仿真回放报告", delegate { ShowSimulationReplay(); }));
             tools.DropDownItems.Add(NewMenuItem("生成 Agent 任务编排", delegate { StartCommand("agent-plan"); }));
             tools.DropDownItems.Add(NewMenuItem("生成 Agent 执行队列", delegate { StartCommand("agent-queue"); }));
             tools.DropDownItems.Add(NewMenuItem("查看当前队列阶段", delegate { ShowCurrentQueueStage(); }));
@@ -1203,7 +1218,7 @@ namespace SiemensTiaSkillSuite
             grid.Dock = DockStyle.Top;
             grid.AutoSize = true;
             grid.ColumnCount = 4;
-            grid.RowCount = 30;
+            grid.RowCount = 32;
             grid.Padding = new Padding(12);
             grid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 96));
             grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
@@ -1241,6 +1256,8 @@ namespace SiemensTiaSkillSuite
             AddSettingRow(grid, 27, "阶段", NewMenuButton("完成当前", delegate { StartCommand("queue-complete-current"); }), "审查", NewMenuButton("生成审查包", delegate { StartCommand("review-package"); }));
             AddSettingRow(grid, 28, "预览", NewMenuButton("查看审查包", delegate { ShowWorkbenchReviewPackage(); }), "总览", NewMenuButton("刷新总览", delegate { StartCommand("workbench-dashboard"); }));
             AddSettingRow(grid, 29, "预览", NewMenuButton("查看总览", delegate { ShowWorkbenchDashboard(); }), "WinCC", NewMenuButton("生成视觉包", delegate { StartCommand("wincc-visual-package"); }));
+            AddSettingRow(grid, 30, "WinCC实现", NewMenuButton("生成实现包", delegate { StartCommand("wincc-openness-implementation"); }), "预览", NewMenuButton("查看实现包", delegate { ShowWinccOpennessImplementation(); }));
+            AddSettingRow(grid, 31, "仿真回放", NewMenuButton("生成回放", delegate { StartCommand("simulation-replay"); }), "预览", NewMenuButton("查看回放", delegate { ShowSimulationReplay(); }));
 
             item.DropDownItems.Add(new ToolStripControlHost(panel)
             {
@@ -2223,6 +2240,93 @@ namespace SiemensTiaSkillSuite
             }
         }
 
+        private void ShowWinccOpennessImplementation()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string packagePath = Path.Combine(root, "PLC_Code", "wincc", "openness-implementation", "latest", "README.md");
+                string manifestPath = Path.Combine(root, "PLC_Code", "wincc", "openness-implementation", "latest", "implementation-manifest.json");
+                if (!File.Exists(packagePath))
+                {
+                    statusLabel.Text = "尚未生成WinCC Openness实现包，正在创建";
+                    StartCommand("wincc-openness-implementation");
+                    return;
+                }
+
+                planBox.Text = ReadText(packagePath);
+                previewBox.Text = File.Exists(manifestPath) ? ReadText(manifestPath) : planBox.Text;
+                SelectMainTab(1);
+                statusLabel.Text = "已打开WinCC Openness实现包";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "打开WinCC Openness实现包失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void ShowWinccReadback()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string reportPath = Path.Combine(root, "PLC_Code", "wincc", "readback", "latest", "wincc-readback.json");
+                string readmePath = Path.Combine(root, "PLC_Code", "wincc", "readback", "latest", "README.md");
+                if (!File.Exists(reportPath) && !File.Exists(readmePath))
+                {
+                    statusLabel.Text = "尚未生成WinCC读取回读";
+                    return;
+                }
+                previewBox.Text = File.Exists(reportPath) ? ReadText(reportPath) : ReadText(readmePath);
+                SelectMainTab(1);
+                statusLabel.Text = "已打开WinCC真实读取回读";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "打开WinCC读取回读失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void ShowWinccImplementationRun()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                DirectoryInfo runsRoot = new DirectoryInfo(Path.Combine(root, "PLC_Code", "wincc", "openness-implementation"));
+                if (!runsRoot.Exists)
+                {
+                    statusLabel.Text = "尚未生成WinCC实现运行记录";
+                    return;
+                }
+                DirectoryInfo latest = null;
+                foreach (DirectoryInfo directory in runsRoot.GetDirectories())
+                {
+                    if (directory.Name.Equals("latest", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+                    if (latest == null || directory.LastWriteTimeUtc > latest.LastWriteTimeUtc)
+                    {
+                        latest = directory;
+                    }
+                }
+                if (latest == null)
+                {
+                    statusLabel.Text = "尚未生成WinCC实现运行记录";
+                    return;
+                }
+                string reportPath = Path.Combine(latest.FullName, "implementation-run.json");
+                string readmePath = Path.Combine(latest.FullName, "README.md");
+                previewBox.Text = File.Exists(reportPath) ? ReadText(reportPath) : ReadText(readmePath);
+                SelectMainTab(1);
+                statusLabel.Text = "已打开WinCC克隆实现回读";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "打开WinCC实现运行记录失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
         private void ShowSimulationPackage()
         {
             try
@@ -2245,6 +2349,31 @@ namespace SiemensTiaSkillSuite
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, "打开仿真/运行验证包失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void ShowSimulationReplay()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string reportPath = Path.Combine(root, "PLC_Code", "simulation", "replays", "latest", "replay-report.md");
+                string jsonPath = Path.Combine(root, "PLC_Code", "simulation", "replays", "latest", "replay-report.json");
+                if (!File.Exists(reportPath))
+                {
+                    statusLabel.Text = "尚未生成仿真回放报告，正在创建";
+                    StartCommand("simulation-replay");
+                    return;
+                }
+
+                validationBox.Text = ReadText(reportPath);
+                previewBox.Text = File.Exists(jsonPath) ? ReadText(jsonPath) : validationBox.Text;
+                SelectMainTab(6);
+                statusLabel.Text = "已打开仿真回放报告";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "打开仿真回放报告失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 
@@ -3620,8 +3749,11 @@ namespace SiemensTiaSkillSuite
                 start.CreateNoWindow = true;
                 start.RedirectStandardOutput = true;
                 start.RedirectStandardError = true;
-                start.StandardOutputEncoding = Encoding.UTF8;
-                start.StandardErrorEncoding = Encoding.UTF8;
+                // Windows PowerShell 5.1 writes redirected command output using the
+                // active Chinese console code page; decode it explicitly so project
+                // paths and diagnostics remain readable in the workbench.
+                start.StandardOutputEncoding = Encoding.GetEncoding(936);
+                start.StandardErrorEncoding = Encoding.GetEncoding(936);
 
                 currentProcess = new Process();
                 currentProcess.StartInfo = start;
@@ -3632,7 +3764,8 @@ namespace SiemensTiaSkillSuite
                 {
                     BeginInvoke((Action)delegate
                     {
-                        statusLabel.Text = "完成，ExitCode=" + currentProcess.ExitCode;
+                        int exitCode = currentProcess.ExitCode;
+                        statusLabel.Text = (exitCode == 0 ? "完成" : "未完成/已阻断") + "，ExitCode=" + exitCode;
                         RefreshCurrentJobTail();
                         RefreshRuns();
                         if (command == "wincc-plugins" && currentProcess.ExitCode == 0)
@@ -3707,9 +3840,25 @@ namespace SiemensTiaSkillSuite
                         {
                             ShowWinccEngineeringScaffold();
                         }
+                        if (command == "wincc-openness-implementation" && currentProcess.ExitCode == 0)
+                        {
+                            ShowWinccOpennessImplementation();
+                        }
+                        if (command == "wincc-read-cycle")
+                        {
+                            ShowWinccReadback();
+                        }
+                        if (command == "wincc-apply-clone")
+                        {
+                            ShowWinccImplementationRun();
+                        }
                         if (command == "simulation-package" && currentProcess.ExitCode == 0)
                         {
                             ShowSimulationPackage();
+                        }
+                        if (command == "simulation-replay" && currentProcess.ExitCode == 0)
+                        {
+                            ShowSimulationReplay();
                         }
                         if (command == "probe-ai-platforms" && currentProcess.ExitCode == 0)
                         {
@@ -3862,9 +4011,37 @@ namespace SiemensTiaSkillSuite
                     args.Add(referenceImageBox.Text.Trim());
                 }
             }
+            else if (command == "wincc-openness-implementation")
+            {
+                args.AddRange(new string[] { "wincc-openness-implementation", "-ProjectPath", root, "-ForCloneOnly" });
+                AddWorkflowConfigArg(args, configPath);
+            }
+            else if (command == "wincc-read-cycle")
+            {
+                args.AddRange(new string[] { "wincc-read-cycle", "-ProjectPath", root });
+                AddWorkflowConfigArg(args, configPath);
+            }
+            else if (command == "wincc-apply-clone")
+            {
+                if (SelectedText(safetyModeBox, "克隆编译验证") == "只生成不写入")
+                {
+                    throw new InvalidOperationException("当前安全策略为“只生成不写入”，请切换到克隆编译验证后再执行。");
+                }
+                args.AddRange(new string[] { "wincc-apply-clone", "-ProjectPath", root, "-ApplyToClone" });
+                string packagePath = Path.Combine(root, "PLC_Code", "wincc", "openness-implementation", "latest");
+                if (Directory.Exists(packagePath))
+                {
+                    args.AddRange(new string[] { "-ImplementationPath", packagePath });
+                }
+            }
             else if (command == "simulation-package")
             {
                 args.AddRange(new string[] { "simulation-package", "-ProjectPath", root, "-TaskText", requestBox.Text.Trim() });
+                AddWorkflowConfigArg(args, configPath);
+            }
+            else if (command == "simulation-replay")
+            {
+                args.AddRange(new string[] { "simulation-replay", "-ProjectPath", root });
                 AddWorkflowConfigArg(args, configPath);
             }
             else if (command == "agent-plan")

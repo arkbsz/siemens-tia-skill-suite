@@ -17,9 +17,10 @@ protected-release\SiemensTIAAgent.exe
 最近验证构建：
 
 ```text
-时间：2026-09-09 17:08 +08:00
+时间：2026-09-10 14:06 +08:00
 文件：protected-release\SiemensTIAAgent.exe
-SHA256：FA9352FB9E0738095C4432242187479A76389780ECE54A36CD0645CB2DE9538D
+SHA256：FEDF9366AF549A30FFE73458F6791F07FE7C0320DF823F0BE2FB2D7B86D7E8D2
+载荷文件数：225
 自检：Passed
 ```
 
@@ -45,6 +46,7 @@ SHA256：FA9352FB9E0738095C4432242187479A76389780ECE54A36CD0645CB2DE9538D
 - 临时目录会收紧为当前 Windows 用户访问，并设置隐藏和禁止内容索引属性。
 - 交互窗口关闭后自动清理本次运行目录；异常残留会在下一次启动时清理。
 - EXE 内置 HMAC 完整性验证，被修改或载荷损坏时拒绝启动。
+- 本次构建包含真实 WinCC 读取、克隆应用预检、中文路径日志解码和 C# runner 适配器修复。
 - 可向构建脚本传入 `-CertificateThumbprint`，使用当前用户证书进行 Authenticode 签名。
 
 ## 保护边界

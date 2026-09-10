@@ -44,6 +44,7 @@ For reference-image or text-driven HMI design, scaffold a package before enginee
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" wincc-visual-package -ProjectPath "D:\path\to\project" -TaskText "Create a station overview screen"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" wincc-component-blueprints -ProjectPath "D:\path\to\project" -TaskText "Create reusable WinCC component blueprints"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" wincc-engineering-scaffold -ProjectPath "D:\path\to\project" -TaskText "Create clone-first WinCC engineering scaffold"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" wincc-openness-implementation -ProjectPath "D:\path\to\project" -ForCloneOnly
 ```
 
 This writes `PLC_Code\wincc\tasks\latest\design-brief.md`, `screen-map.md`, `component-map.md`, `tag-contract.md`, `style-guide.md`, `implementation-plan.md`, and `safety-review.md`.
@@ -53,6 +54,16 @@ The current package also includes `reference-analysis.md`, `component-selection-
 Run `wincc-component-blueprints` after the visual package when the screen must become a reusable project pattern. It writes `PLC_Code\wincc\component-blueprints\latest\component-blueprints.md/json`, `screen-layout-grid.json`, `sivarc-rule-blueprints.md`, and `cwc-package-manifest.json`. Use these files to map each visual zone to existing faceplates, standard WinCC controls, SiVArc repeated-object rules, custom faceplates, or CWC candidates before any write-like engineering step.
 
 Run `wincc-engineering-scaffold` after the visual package and component blueprints when the design is ready to become engineering work. It writes `PLC_Code\wincc\engineering-scaffold\latest` with preflight checks, HMI tag and alarm import maps, Faceplate build lists, SiVArc generation checks, CWC review notes, Unified runtime smoke plans and clone-validation plans. This is the handoff from visual design into Openness/SiVArc/CWC implementation, not a direct production-screen write.
+
+Run `wincc-openness-implementation` after `wincc-engineering-scaffold` when the scaffold should become a concrete implementation package. It writes `PLC_Code\wincc\openness-implementation\latest` with screen/object mapping, packaged HMI tag/alarm inputs, `WinccEngineeringSkeleton.cs`, `implementation-manifest.json`, and a runner that calls the real clone-only Openness implementation workflow.
+
+The native workbench also exposes executable WinCC operations:
+
+- `wincc-read-cycle` calls Openness to enumerate HMI targets and writes screen, tag, alarm, connection and export readback evidence under `PLC_Code\wincc\readback`.
+- `wincc-apply-clone` preflights the HMI target, clones the project, applies the packaged manifest to a supported WinCC Unified target, reads the clone back, and writes `implementation-run.json`. It never writes the production project or downloads to a PLC.
+- `read-hmi` and `import-hmi` provide direct Openness routes for Classic WinCC XML readback/import.
+
+Classic WinCC screen/tag creation remains import-driven because the V17 object model exposes export/import compositions rather than a general-purpose `Create` method. The workflow must not report a Classic object as created unless the XML import and readback both succeed.
 
 For larger WinCC work, generate an Agent plan and execution queue from the PLC skill, then run one stage at a time through `queue-run-current`. Keep the visual reference, component map, tag contract, generated assets, Openness/SiVArc scripts, runtime validation notes and safety review as separate evidence files so the workbench can review them like a local pull request.
 

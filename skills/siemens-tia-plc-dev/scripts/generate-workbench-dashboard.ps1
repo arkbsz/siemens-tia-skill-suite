@@ -87,7 +87,11 @@ $instructionCookbook = Join-Path $workspaceRoot "plc\instruction-cookbook\latest
 $safetyRisk = Join-Path $workspaceRoot "plc\instruction-plans\latest\safety-risk-assessment.md"
 $winccComponentBlueprints = Join-Path $workspaceRoot "wincc\component-blueprints\latest\component-blueprints.md"
 $winccEngineeringScaffold = Join-Path $workspaceRoot "wincc\engineering-scaffold\latest\wincc-engineering-scaffold.md"
+$winccOpennessImplementation = Join-Path $workspaceRoot "wincc\openness-implementation\latest\README.md"
+$winccReadback = Join-Path $workspaceRoot "wincc\readback\latest\wincc-readback.json"
+$winccImplementationRunsRoot = Join-Path $workspaceRoot "wincc\openness-implementation"
 $simulationPackage = Join-Path $workspaceRoot "simulation\latest\simulation-package.md"
+$simulationReplay = Join-Path $workspaceRoot "simulation\replays\latest\replay-report.md"
 $pipelineSummary = Join-Path $workspaceRoot "workbench\pipelines\latest\pipeline-summary.md"
 $pipelineSummaryJson = Join-Path $workspaceRoot "workbench\pipelines\latest\pipeline-summary.json"
 $projectModel = Join-Path $workspaceRoot "workbench\context\latest\project-model.json"
@@ -101,6 +105,7 @@ $reviewSummary = Join-Path $workspaceRoot "review-packages\latest\review-summary
 $runsRoot = Join-Path $workspaceRoot "runs"
 $latestRun = Get-LatestRun -RunsRoot $runsRoot
 $latestWriteRun = Get-LatestRun -RunsRoot $runsRoot -Prefix "write-cycle"
+$latestWinccImplementationRun = Get-LatestRun -RunsRoot $winccImplementationRunsRoot -Prefix "wincc-implementation-"
 
 $queueSummary = Get-QueueSummary -QueuePath $queueJson
 $gitStatus = Invoke-GitText -Root $root -Arguments @("status", "--short")
@@ -129,7 +134,12 @@ $instructionCookbookText = Read-ShortText -Path $instructionCookbook -Max 5000
 $safetyRiskText = Read-ShortText -Path $safetyRisk -Max 5000
 $winccComponentBlueprintText = Read-ShortText -Path $winccComponentBlueprints -Max 5000
 $winccEngineeringScaffoldText = Read-ShortText -Path $winccEngineeringScaffold -Max 5000
+$winccOpennessImplementationText = Read-ShortText -Path $winccOpennessImplementation -Max 5000
+$winccReadbackText = Read-ShortText -Path $winccReadback -Max 5000
+$winccImplementationRunPath = if ($latestWinccImplementationRun) { Join-Path $latestWinccImplementationRun.FullName "implementation-run.json" } else { "" }
+$winccImplementationRunText = Read-ShortText -Path $winccImplementationRunPath -Max 5000
 $simulationPackageText = Read-ShortText -Path $simulationPackage -Max 5000
+$simulationReplayText = Read-ShortText -Path $simulationReplay -Max 5000
 $pipelineText = Read-ShortText -Path $pipelineSummary -Max 5000
 $agentContextText = Read-ShortText -Path $agentContext -Max 5000
 $knowledgeText = Read-ShortText -Path $knowledgeBrief -Max 5000
@@ -154,7 +164,9 @@ $validationBuilder = New-Object System.Text.StringBuilder
 [void]$validationBuilder.AppendLine("- PLC instruction cookbook: ``$instructionCookbook``")
 [void]$validationBuilder.AppendLine("- WinCC component blueprints: ``$winccComponentBlueprints``")
 [void]$validationBuilder.AppendLine("- WinCC engineering scaffold: ``$winccEngineeringScaffold``")
+[void]$validationBuilder.AppendLine("- WinCC Openness implementation package: ``$winccOpennessImplementation``")
 [void]$validationBuilder.AppendLine("- Simulation package: ``$simulationPackage``")
+[void]$validationBuilder.AppendLine("- Simulation replay: ``$simulationReplay``")
 [void]$validationBuilder.AppendLine("- Generated: ``$(Get-Date -Format o)``")
 [void]$validationBuilder.AppendLine()
 [void]$validationBuilder.AppendLine("## Queue Health")
@@ -234,10 +246,34 @@ $validationBuilder = New-Object System.Text.StringBuilder
 [void]$validationBuilder.AppendLine($winccEngineeringScaffoldText)
 [void]$validationBuilder.AppendLine('```')
 [void]$validationBuilder.AppendLine()
+[void]$validationBuilder.AppendLine("## WinCC Openness Implementation Package")
+[void]$validationBuilder.AppendLine()
+[void]$validationBuilder.AppendLine('```text')
+[void]$validationBuilder.AppendLine($winccOpennessImplementationText)
+[void]$validationBuilder.AppendLine('```')
+[void]$validationBuilder.AppendLine()
+[void]$validationBuilder.AppendLine("## WinCC Real Readback")
+[void]$validationBuilder.AppendLine()
+[void]$validationBuilder.AppendLine('```json')
+[void]$validationBuilder.AppendLine($winccReadbackText)
+[void]$validationBuilder.AppendLine('```')
+[void]$validationBuilder.AppendLine()
+[void]$validationBuilder.AppendLine("## WinCC Clone Implementation Run")
+[void]$validationBuilder.AppendLine()
+[void]$validationBuilder.AppendLine('```json')
+[void]$validationBuilder.AppendLine($winccImplementationRunText)
+[void]$validationBuilder.AppendLine('```')
+[void]$validationBuilder.AppendLine()
 [void]$validationBuilder.AppendLine("## Simulation Package")
 [void]$validationBuilder.AppendLine()
 [void]$validationBuilder.AppendLine('```text')
 [void]$validationBuilder.AppendLine($simulationPackageText)
+[void]$validationBuilder.AppendLine('```')
+[void]$validationBuilder.AppendLine()
+[void]$validationBuilder.AppendLine("## Simulation Replay")
+[void]$validationBuilder.AppendLine()
+[void]$validationBuilder.AppendLine('```text')
+[void]$validationBuilder.AppendLine($simulationReplayText)
 [void]$validationBuilder.AppendLine('```')
 [void]$validationBuilder.AppendLine()
 [void]$validationBuilder.AppendLine("## Safety Risk Assessment")
@@ -255,7 +291,11 @@ $cookbookDisplay = if (Test-Path -LiteralPath $instructionCookbook -PathType Lea
 $safetyDisplay = if (Test-Path -LiteralPath $safetyRisk -PathType Leaf) { $safetyRisk } else { "missing" }
 $blueprintDisplay = if (Test-Path -LiteralPath $winccComponentBlueprints -PathType Leaf) { $winccComponentBlueprints } else { "missing" }
 $engineeringDisplay = if (Test-Path -LiteralPath $winccEngineeringScaffold -PathType Leaf) { $winccEngineeringScaffold } else { "missing" }
+$winccImplementationDisplay = if (Test-Path -LiteralPath $winccOpennessImplementation -PathType Leaf) { $winccOpennessImplementation } else { "missing" }
+$winccReadbackDisplay = if (Test-Path -LiteralPath $winccReadback -PathType Leaf) { $winccReadback } else { "missing" }
+$winccImplementationRunDisplay = if ($winccImplementationRunPath -and (Test-Path -LiteralPath $winccImplementationRunPath -PathType Leaf)) { $winccImplementationRunPath } else { "missing" }
 $simulationDisplay = if (Test-Path -LiteralPath $simulationPackage -PathType Leaf) { $simulationPackage } else { "missing" }
+$simulationReplayDisplay = if (Test-Path -LiteralPath $simulationReplay -PathType Leaf) { $simulationReplay } else { "missing" }
 $pipelineDisplay = if (Test-Path -LiteralPath $pipelineSummary -PathType Leaf) { $pipelineSummary } else { "missing" }
 $projectModelDisplay = if (Test-Path -LiteralPath $projectModel -PathType Leaf) { $projectModel } else { "missing" }
 $agentContextDisplay = if (Test-Path -LiteralPath $agentContext -PathType Leaf) { $agentContext } else { "missing" }
@@ -280,7 +320,11 @@ $dashboardBuilder = New-Object System.Text.StringBuilder
 [void]$dashboardBuilder.AppendLine("- Safety risk: ``$safetyDisplay``")
 [void]$dashboardBuilder.AppendLine("- WinCC component blueprints: ``$blueprintDisplay``")
 [void]$dashboardBuilder.AppendLine("- WinCC engineering scaffold: ``$engineeringDisplay``")
+[void]$dashboardBuilder.AppendLine("- WinCC Openness implementation package: ``$winccImplementationDisplay``")
+[void]$dashboardBuilder.AppendLine("- WinCC real readback: ``$winccReadbackDisplay``")
+[void]$dashboardBuilder.AppendLine("- WinCC clone implementation run: ``$winccImplementationRunDisplay``")
 [void]$dashboardBuilder.AppendLine("- Simulation package: ``$simulationDisplay``")
+[void]$dashboardBuilder.AppendLine("- Simulation replay: ``$simulationReplayDisplay``")
 [void]$dashboardBuilder.AppendLine("- Agent pipeline: ``$pipelineDisplay``")
 [void]$dashboardBuilder.AppendLine("- Project model: ``$projectModelDisplay``")
 [void]$dashboardBuilder.AppendLine("- Agent context: ``$agentContextDisplay``")
@@ -335,7 +379,11 @@ $instructionCookbookValue = if (-not [string]::IsNullOrWhiteSpace($instructionCo
 $safetyRiskValue = if (-not [string]::IsNullOrWhiteSpace($safetyRisk) -and (Test-Path -LiteralPath $safetyRisk -PathType Leaf)) { $safetyRisk } else { "" }
 $winccComponentBlueprintValue = if (-not [string]::IsNullOrWhiteSpace($winccComponentBlueprints) -and (Test-Path -LiteralPath $winccComponentBlueprints -PathType Leaf)) { $winccComponentBlueprints } else { "" }
 $winccEngineeringScaffoldValue = if (-not [string]::IsNullOrWhiteSpace($winccEngineeringScaffold) -and (Test-Path -LiteralPath $winccEngineeringScaffold -PathType Leaf)) { $winccEngineeringScaffold } else { "" }
+$winccOpennessImplementationValue = if (-not [string]::IsNullOrWhiteSpace($winccOpennessImplementation) -and (Test-Path -LiteralPath $winccOpennessImplementation -PathType Leaf)) { $winccOpennessImplementation } else { "" }
+$winccReadbackValue = if (-not [string]::IsNullOrWhiteSpace($winccReadback) -and (Test-Path -LiteralPath $winccReadback -PathType Leaf)) { $winccReadback } else { "" }
+$winccImplementationRunValue = if (-not [string]::IsNullOrWhiteSpace($winccImplementationRunPath) -and (Test-Path -LiteralPath $winccImplementationRunPath -PathType Leaf)) { $winccImplementationRunPath } else { "" }
 $simulationPackageValue = if (-not [string]::IsNullOrWhiteSpace($simulationPackage) -and (Test-Path -LiteralPath $simulationPackage -PathType Leaf)) { $simulationPackage } else { "" }
+$simulationReplayValue = if (-not [string]::IsNullOrWhiteSpace($simulationReplay) -and (Test-Path -LiteralPath $simulationReplay -PathType Leaf)) { $simulationReplay } else { "" }
 $pipelineSummaryValue = if (-not [string]::IsNullOrWhiteSpace($pipelineSummary) -and (Test-Path -LiteralPath $pipelineSummary -PathType Leaf)) { $pipelineSummary } else { "" }
 $pipelineSummaryJsonValue = if (-not [string]::IsNullOrWhiteSpace($pipelineSummaryJson) -and (Test-Path -LiteralPath $pipelineSummaryJson -PathType Leaf)) { $pipelineSummaryJson } else { "" }
 $projectModelValue = if (-not [string]::IsNullOrWhiteSpace($projectModel) -and (Test-Path -LiteralPath $projectModel -PathType Leaf)) { $projectModel } else { "" }
@@ -362,7 +410,11 @@ $json = [pscustomobject]@{
     safetyRisk = $safetyRiskValue
     winccComponentBlueprints = $winccComponentBlueprintValue
     winccEngineeringScaffold = $winccEngineeringScaffoldValue
+    winccOpennessImplementation = $winccOpennessImplementationValue
+    winccReadback = $winccReadbackValue
+    winccImplementationRun = $winccImplementationRunValue
     simulationPackage = $simulationPackageValue
+    simulationReplay = $simulationReplayValue
     pipelineSummary = $pipelineSummaryValue
     pipelineSummaryJson = $pipelineSummaryJsonValue
     projectModel = $projectModelValue

@@ -150,10 +150,16 @@ if ($winccNeeded) {
         $engineeringArgs += @("-ReferenceImagePath", (Get-Item -LiteralPath $ReferenceImagePath).FullName)
     }
     Invoke-Step -Steps $steps -Name "wincc-engineering-scaffold" -Command $invokeScript -Arguments $engineeringArgs -ExpectedOutput "PLC_Code\wincc\engineering-scaffold\latest"
+
+    $implementationArgs = @("wincc-openness-implementation", "-ProjectPath", $root, "-WorkflowConfigPath", $WorkflowConfigPath, "-ForCloneOnly")
+    Invoke-Step -Steps $steps -Name "wincc-openness-implementation" -Command $invokeScript -Arguments $implementationArgs -ExpectedOutput "PLC_Code\wincc\openness-implementation\latest"
 }
 
 $simulationArgs = @("simulation-package", "-ProjectPath", $root, "-WorkflowConfigPath", $WorkflowConfigPath, "-TaskText", $task)
 Invoke-Step -Steps $steps -Name "simulation-package" -Command $invokeScript -Arguments $simulationArgs -ExpectedOutput "PLC_Code\simulation\latest"
+
+$simulationReplayArgs = @("simulation-replay", "-ProjectPath", $root, "-WorkflowConfigPath", $WorkflowConfigPath)
+Invoke-Step -Steps $steps -Name "simulation-replay" -Command $invokeScript -Arguments $simulationReplayArgs -ExpectedOutput "PLC_Code\simulation\replays\latest"
 
 $workflow = if ($winccNeeded -and $advancedPlcNeeded) { "agent-workbench" } elseif ($winccNeeded) { "wincc-visual" } elseif ($advancedPlcNeeded) { "advanced-plc" } else { "project-read" }
 $planArgs = @("agent-plan", "-ProjectPath", $root, "-WorkflowConfigPath", $WorkflowConfigPath, "-TaskText", $task, "-Workflow", $workflow, "-AgentId", "workbench")
@@ -222,7 +228,9 @@ foreach ($step in $steps) {
 [void]$md.AppendLine("- PLC_Code\wincc\tasks\latest\implementation-plan.md")
 [void]$md.AppendLine("- PLC_Code\wincc\component-blueprints\latest\component-blueprints.md")
 [void]$md.AppendLine("- PLC_Code\wincc\engineering-scaffold\latest\wincc-engineering-scaffold.md")
+[void]$md.AppendLine("- PLC_Code\wincc\openness-implementation\latest\README.md")
 [void]$md.AppendLine("- PLC_Code\simulation\latest\simulation-package.md")
+[void]$md.AppendLine("- PLC_Code\simulation\replays\latest\replay-report.md")
 [void]$md.AppendLine("- PLC_Code\agent-plans\latest-plan.md")
 [void]$md.AppendLine("- PLC_Code\agent-queues\latest\queue.md")
 [void]$md.AppendLine()

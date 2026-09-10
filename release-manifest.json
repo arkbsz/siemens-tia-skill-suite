@@ -63,8 +63,9 @@
                               "payloadIntegrity":  "HMAC-SHA256",
                               "temporaryRuntime":  "%LOCALAPPDATA%\\ArkBSZ\\SiemensTIAAgent\\sessions",
                               "sourceFilesDistributedBesideExe":  false,
-                              "lastBuiltAt":  "2026-09-09T17:08:00+08:00",
-                              "lastBuildSha256":  "FA9352FB9E0738095C4432242187479A76389780ECE54A36CD0645CB2DE9538D",
+                              "lastBuiltAt":  "2026-09-10T14:06:15+08:00",
+                              "lastBuildSha256":  "FEDF9366AF549A30FFE73458F6791F07FE7C0320DF823F0BE2FB2D7B86D7E8D2",
+                              "lastBuildPayloadFiles":  225,
                               "lastBuildSelfTest":  "Passed"
                           },
     "excludedDirectories":  [
@@ -131,6 +132,29 @@
                                    "ReleaseAllowed":  false
                                },
                                {
+                                   "Workflow":  "wincc-openness-implementation",
+                                   "Status":  "passed",
+                                   "ValidatedAt":  "2026-09-10T11:26:30+08:00",
+                                   "ProjectPath":  "D:\\plc\\手动程序",
+                                   "Command":  "wincc-openness-implementation -ProjectPath \"D:\\plc\\手动程序\" -ForCloneOnly",
+                                   "OutputRoot":  "D:\\plc\\手动程序\\PLC_Code\\wincc\\openness-implementation\\latest",
+                                   "TagCount":  5,
+                                   "AlarmCount":  3,
+                                   "ScreenObjectCount":  5,
+                                   "ReleaseAllowed":  false
+                               },
+                               {
+                                   "Workflow":  "simulation-replay",
+                                   "Status":  "passed",
+                                   "ValidatedAt":  "2026-09-10T11:26:31+08:00",
+                                   "ProjectPath":  "D:\\plc\\手动程序",
+                                   "Command":  "simulation-replay -ProjectPath \"D:\\plc\\手动程序\"",
+                                   "OutputRoot":  "D:\\plc\\手动程序\\PLC_Code\\simulation\\replays\\latest",
+                                   "ScenarioCount":  6,
+                                   "PlcsimDetected":  false,
+                                   "ReleaseAllowed":  false
+                               },
+                               {
                                    "Workflow":  "workbench-dashboard",
                                    "Status":  "passed",
                                    "ValidatedAt":  "2026-09-09T17:00:06+08:00",
@@ -143,13 +167,15 @@
                                {
                                    "Workflow":  "agent-pipeline",
                                    "Status":  "passed",
-                                   "ValidatedAt":  "2026-09-09T17:07:25+08:00",
+                                   "ValidatedAt":  "2026-09-10T11:26:34+08:00",
                                    "ProjectPath":  "D:\\plc\\手动程序",
-                                   "Command":  "agent-pipeline -ProjectPath \"D:\\plc\\手动程序\" -RefreshWinccCatalog",
+                                   "Command":  "agent-pipeline -ProjectPath \"D:\\plc\\手动程序\"",
                                    "OutputRoot":  "D:\\plc\\手动程序\\PLC_Code\\workbench\\pipelines\\latest",
-                                   "StepCount":  13,
+                                   "StepCount":  15,
                                    "IncludesWinccEngineeringScaffold":  true,
                                    "IncludesSimulationPackage":  true,
+                                   "IncludesWinccOpennessImplementation":  true,
+                                   "IncludesSimulationReplay":  true,
                                    "ReleaseAllowed":  false
                                }
                            ],
@@ -175,13 +201,16 @@
                   "plc-instruction-cookbook creates PLC_Code\\plc\\instruction-cookbook\\latest with reusable Siemens instruction-family routes, example anchors and safety-risk checks.",
                   "wincc-component-blueprints creates PLC_Code\\wincc\\component-blueprints\\latest with reusable screen shells, component blueprints, layout grids, SiVArc rule notes and CWC manifest stubs.",
                   "wincc-engineering-scaffold creates PLC_Code\\wincc\\engineering-scaffold\\latest with preflight checks, HMI tag/alarm import maps, faceplate build lists, SiVArc/CWC checklists, runtime smoke plans, and clone validation plans.",
+                  "wincc-openness-implementation creates PLC_Code\\wincc\\openness-implementation\\latest with screen/object maps, HMI tag/alarm references, a runnable C# runner adapter, and a guarded clone-only runner; it does not write production projects.",
                   "simulation-package creates PLC_Code\\simulation\\latest with static validation, clone compile, readback diff, PLCSIM Advanced hook, WinCC Unified runtime smoke, and release-gate scenario artifacts.",
-                  "agent-pipeline provides a one-click first-pass PLC/WinCC development pipeline that generates project context, knowledge packs, capability maps, PLC instruction cookbooks, instruction routing, WinCC visual packages, WinCC component blueprints, WinCC engineering scaffolds, simulation packages, Agent plans, queues, and workbench dashboard evidence without production writes.",
+                  "simulation-replay creates PLC_Code\\simulation\\replays\\latest with scenario evidence results and readiness checks for clone compile, project model, PLCSIM Advanced and WinCC Unified runtime smoke.",
+                  "agent-pipeline provides a one-click first-pass PLC/WinCC development pipeline that generates project context, knowledge packs, capability maps, PLC instruction cookbooks, instruction routing, WinCC visual packages, WinCC component blueprints, WinCC engineering scaffolds, WinCC Openness implementation packages, simulation packages, simulation replay evidence, Agent plans, queues, and workbench dashboard evidence without production writes.",
                   "PowerShell scripts that contain bilingual Chinese/English workflow text are saved with UTF-8 BOM for Windows PowerShell 5.1 compatibility.",
                   "workbench-dashboard now includes the latest agent-pipeline summary together with queue health, instruction routes, safety risks, plugin routing, run reports, and diff evidence.",
                   "Automatic mode selects the first installed platform preferred by the active PLC/WinCC workflow; manual mode never silently falls back.",
                   "setup-siemens-tia-suite.ps1 installs skills with backup, detects all supported Agent CLIs, records runtime dependencies, builds the EXE, and optionally launches the project console.",
                   "build-protected-exe.ps1 produces a self-contained single-file Windows application with an encrypted, authenticated runtime payload and no adjacent source tree.",
+                  "The native workbench command channel decodes Windows PowerShell 5.1 Chinese output with GB18030 while keeping Agent JSONL output on UTF-8.",
                   "The browser-based console remains available only as the explicit console-web fallback."
               ]
 }

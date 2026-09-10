@@ -44,7 +44,9 @@
 - PLC 指令库：一键生成 `PLC_Code\plc\instruction-cookbook\latest`，把位逻辑、比较、定时、计数、运动、驱动通信、PID、诊断、数组、配方、数学和转换指令路由到 LAD JSON、通用 `CALL`、SCL、donor LAD 或工艺对象配置
 - WinCC 组件蓝图：一键生成 `PLC_Code\wincc\component-blueprints\latest`，沉淀画面外壳、报警条、工位卡、电机/气缸/驱动面板、趋势、参数、诊断表、SiVArc 规则和 CWC 候选清单
 - WinCC 工程脚手架：一键生成 `PLC_Code\wincc\engineering-scaffold\latest`，输出前置检查、HMI 变量导入表、报警导入表、Faceplate 制作清单、SiVArc 检查表、CWC 审查、运行时冒烟和克隆验证计划
+- WinCC Openness 实现包：一键生成 `PLC_Code\wincc\openness-implementation\latest`，把工程脚手架转换为 HMI tag/alarm/screen 对象映射、克隆专用 C# skeleton 和带安全门禁的执行 wrapper
 - 仿真与运行验证包：一键生成 `PLC_Code\simulation\latest`，把静态校验、克隆编译、回读比对、PLCSIM Advanced 虚拟控制器、WinCC Unified GraphQL 冒烟和发布门槛整理成可执行场景
+- 仿真场景回放：一键生成 `PLC_Code\simulation\replays\latest`，把仿真包中的场景转成可审查证据矩阵，自动识别 write-cycle、项目模型、GraphQL/PLCSIM 准备状态
 - 自动开发流水线：一键执行 `agent-pipeline`，按任务自动判断 PLC/WinCC 范围，生成知识包、能力矩阵、PLC 指令库、PLC 指令方案、WinCC 视觉工程包、WinCC 组件蓝图、Agent 计划、执行队列和工作台验证总览
 - 队列状态控制：支持开始下一阶段、完成当前阶段、标记失败/阻塞和重置队列，并自动生成当前阶段 prompt 与建议命令
 - 工作台审查包：一键生成 `PLC_Code\review-packages\latest`，汇总计划、队列、PLC 改动包、WinCC 工程包、文件哈希、git diff 和导入就绪检查
@@ -69,6 +71,7 @@
 - 根据参考图提取布局、配色、字体层级、状态颜色和组件结构，再映射为 WinCC 标准控件、Faceplate、SiVArc 规则或自定义组件
 - 自动生成 WinCC 视觉工程包，包含参考图分析、组件选择矩阵、插件调用计划、CWC/Faceplate 包装建议和可审查工程任务 JSON
 - 自动生成 WinCC 工程脚手架，进一步把设计包转换成 HMI tag/alarm CSV、Faceplate/SiVArc/CWC 制作清单、工程前置检查和克隆验证计划
+- 自动生成 WinCC Openness 实现包，形成 screen/object 映射、HMI 变量和报警清单、克隆工程专用 skeleton，并保留 dry-run/clone-only 安全门禁
 - PLC 数据块与 HMI 变量映射
 - 工业风格画面规范：总览、工位、手动、报警、趋势、参数、维护分层
 - WinCC Unified 运行时读写、订阅和诊断联动
@@ -138,6 +141,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex
 - 知识库页：中心新增 `知识库` Tab，可查看官方优先检索包、社区插件候选、检索关键词和当前项目上下文绑定。
 - 能力矩阵页：中心新增 `能力矩阵` Tab，可查看本地窗口替代 TIA 原生编辑器的实际覆盖范围、验证状态、剩余 TIA 依赖和下一步增强方向。
 - 自动开发流水线：`自动流水线` 按钮会根据任务文本和参考图自动串联 PLC 指令计划、WinCC 插件路由、WinCC 视觉包、Agent 编排、执行队列和总览面板，形成第一轮可审查开发骨架。
+- WinCC 实现包：`WinCC实现` 按钮会把 WinCC 工程脚手架推进到 Openness/SiVArc/CWC 可执行前的实现包，所有写入默认仍限制在克隆工程门禁内。
+- 仿真回放：`仿真回放` 按钮会读取仿真包并输出场景证据矩阵，用于检查克隆编译、手自动模式、联锁故障、驱动通信和 WinCC runtime smoke 的准备状态。
 - Agent 执行队列：`执行队列` 按钮会把最新计划转成阶段 prompt、建议命令、日志目录和证据目录；缺少计划时会自动先生成计划。
 - 队列阶段控制：运行菜单和设置面板可开始下一阶段、完成当前阶段或标记失败，中心任务编排页会显示当前阶段 prompt。
 - 工作台审查包：`审查包` 按钮用于把当前 PLC/WinCC/Agent 产物整理成 PR 式审查材料，适合导入、编译或发布前检查。
@@ -168,7 +173,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1 plc-instruction-cookbook -ProjectPath "D:\path\to\project" -TaskText "生成通用PLC指令开发库"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1 wincc-component-blueprints -ProjectPath "D:\path\to\project" -TaskText "生成WinCC可复用组件蓝图"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1 wincc-engineering-scaffold -ProjectPath "D:\path\to\project" -TaskText "生成WinCC工程脚手架"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1 wincc-openness-implementation -ProjectPath "D:\path\to\project" -ForCloneOnly
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1 simulation-package -ProjectPath "D:\path\to\project" -TaskText "生成仿真与运行验证包"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1 simulation-replay -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1 agent-pipeline -ProjectPath "D:\path\to\project" -TaskText "规划 LAD、DB、WinCC 画面和验证队列" -RefreshWinccCatalog
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1 plc-change-package -ProjectPath "D:\path\to\project" -TaskText "Add motor interlock logic" -Workflow plc-lad
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1 write-cycle -ProjectPath "D:\path\to\project" -InputXml "D:\path\to\generated.xml" -PlcName "PLC_1"

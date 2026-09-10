@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-09-10 - 真实工作台执行链路
+
+- 验证安装目录中的 `PLCDevConsole.exe` 可启动并保持响应，窗口内可见项目树、日志、文件预览、AI 交互和工作流按钮。
+- 通过 Windows UI Automation/Win32 真实触发“WinCC读取”和“WinCC克隆应用”，确认按钮会启动实际 PowerShell 工作流并生成项目内日志与回读证据。
+- 修复工作台命令通道对 Windows PowerShell 5.1 中文输出的解码问题，中文 TIA 工程路径在日志和预览中保持可读。
+- WinCC 读取流程已在当前 V17 工程生成真实 `wincc-readback.json`；因工程没有 HMI 目标，克隆应用流程明确阻断并记录“未克隆、未写入”证据。
+- 修复 WinCC Openness 脚手架生成的 C# 适配器，使其调用受保护的克隆执行 runner，不再生成 `NotImplementedException` 占位实现。
+- 保护版单文件 EXE 重新构建并通过自检，载荷文件数为 225，生产写入和 PLC 下载仍保持关闭。
+
 ## 2026-09-09 - Agent workbench orchestration
 
 - Added `plc-instruction-cookbook`, producing a reusable Siemens instruction route matrix and risk checklist for LAD JSON, generic `CALL`, SCL source import, donor LAD network and technology-object workflows.
@@ -27,6 +36,11 @@
 - Added references for agent workbench evolution, advanced PLC instruction/technology-object routing, and visual-to-WinCC engineering.
 - Updated WinCC visual workflow with a multi-stage reference-image/text-to-editable-WinCC pipeline, component selection matrix, plugin invocation plan, CWC/Faceplate package notes and engineering task JSON.
 - Updated the native workbench toolbar, run/tools menus, settings panel, dashboard, capability map and project model previews for WinCC engineering scaffolds and simulation packages.
+- Added `wincc-openness-implementation`, producing clone-only WinCC screen/object maps, HMI tag/alarm implementation inputs, an Openness C# skeleton and a guarded runner.
+- Added `simulation-replay`, producing six scenario evidence results and readiness checks for clone compile, PLCSIM Advanced and WinCC Unified runtime smoke.
+- Extended the native console with WinCC implementation and simulation replay buttons, menus, settings actions, command routing and automatic result previews.
+- Fixed new Windows PowerShell 5.1 workflow scripts by writing them with UTF-8 BOM encoding.
+- Fixed native workbench startup when no project path is supplied: current-TIA detection now waits until the WinForms window handle exists, preventing `BeginInvoke` startup crashes.
 
 ## 2026-09-09
 

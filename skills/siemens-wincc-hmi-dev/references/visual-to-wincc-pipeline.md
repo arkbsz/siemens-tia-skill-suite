@@ -22,10 +22,16 @@ Use this reference when a text brief or uploaded reference image should become e
 6. Engineering generation
    Use Openness for engineering-time objects, SiVArc for rule-based repeated screens, reviewed TIA MCP adapters when compatible, and manual fallback notes when an API cannot create the target object.
 
-7. Validation
+7. Implementation packaging
+   Run `wincc-openness-implementation` after the engineering scaffold. Generate screen/object maps, packaged HMI tag/alarm implementation inputs, a clone-only Openness runner and reference C# notes. The runner creates a clone, applies supported Unified objects, reads the clone back, and records evidence; it never writes production.
+
+8. Validation
    Compile or smoke-test on a clone. For Unified runtime, GraphQL or runtime MCP may be used only on trusted endpoints and only for the requested read/write scope.
 
-8. Release
+9. Scenario replay
+   Run `simulation-replay` after `simulation-package` to turn compile, manual/automatic, interlock/fault, sequence, drive communication and WinCC runtime checks into evidence statuses. Missing PLCSIM or runtime prerequisites remain explicit next steps.
+
+10. Release
    Package the screen map, component map, style guide, generated assets, scripts, tag changes and risk notes.
 
 ## Required Outputs
@@ -48,6 +54,12 @@ Each WinCC visual task should create:
 - `PLC_Code\wincc\engineering-scaffold\latest\hmi-tag-import-map.csv`
 - `PLC_Code\wincc\engineering-scaffold\latest\alarm-import-map.csv`
 - `PLC_Code\wincc\engineering-scaffold\latest\clone-validation-plan.md`
+- `PLC_Code\wincc\openness-implementation\latest\README.md`
+- `PLC_Code\wincc\openness-implementation\latest\implementation-manifest.json`
+- `PLC_Code\wincc\openness-implementation\latest\screen-object-map.csv`
+- `PLC_Code\wincc\openness-implementation\latest\WinccEngineeringSkeleton.cs`
+- `PLC_Code\simulation\replays\latest\replay-report.md`
+- `PLC_Code\simulation\replays\latest\replay-report.json`
 
 For task planning from the native workbench, also generate `PLC_Code\agent-plans\latest-plan.md`.
 
@@ -67,8 +79,10 @@ For task planning from the native workbench, also generate `PLC_Code\agent-plans
 3. If the user supplies a screenshot/reference image, analyze it into zones, palette, typography, component density, object hierarchy and operator scan path.
 4. Build `component-selection-matrix.md`: every visual item must resolve to an existing faceplate, standard control, SiVArc-generated repeated object, custom faceplate or CWC.
 5. Run `wincc-engineering-scaffold` to turn the visual package and component blueprints into HMI tag/alarm import maps, faceplate build lists, SiVArc/CWC checklists, runtime smoke plans and clone-validation plans.
-6. Build or update `engineering-tasks.json`: keep each screen, tag, alarm, faceplate, CWC asset and validation action as a separate task that can be executed or reviewed from the workbench.
-7. Use Openness/SiVArc only on a backup or clone for first writes. Runtime GraphQL validation is read-only unless the user explicitly requests a trusted write/ack action.
+6. Run `wincc-openness-implementation` to convert the scaffold into a concrete, reviewable implementation package. Treat `WinccEngineeringSkeleton.cs` as a version- and project-specific starting point, not as a blind universal importer.
+7. Build or update `engineering-tasks.json`: keep each screen, tag, alarm, faceplate, CWC asset and validation action as a separate task that can be executed or reviewed from the workbench.
+8. Run `simulation-replay` after `simulation-package` when scenario evidence should be visible in the workbench.
+9. Use Openness/SiVArc only on a backup or clone for first writes. Runtime GraphQL validation is read-only unless the user explicitly requests a trusted write/ack action.
 
 ## Quality Gates
 

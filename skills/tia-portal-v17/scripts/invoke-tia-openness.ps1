@@ -40,6 +40,10 @@ Commands:
   help
   list-plcs --project <projectDir|ap16..ap21>
   list-blocks --project <projectDir|ap16..ap21> [--plc <name>]
+  list-hmi --project <projectDir|ap16..ap21> [--hmi <name>]
+  read-hmi --project <projectDir|ap16..ap21> [--hmi <name>] [--output <dir>] [--no-export]
+  import-hmi --project <projectDir|ap16..ap21> --input <xml|dir> [--hmi <name>] [--kind auto|screen|tagtable|connection] [--apply] [--no-save]
+  apply-hmi-manifest --project <projectDir|ap16..ap21> [--hmi <name>] [--tag-csv <csv>] [--alarm-csv <csv>] [--screen-csv <csv>] [--apply]
   export-blocks --project <projectDir|ap16..ap21> [--plc <name>] [--block <name>] [--language LAD|FBD|SCL] [--output <dir>]
   import-blocks --project <projectDir|ap16..ap21> --input <xml|dir> [--plc <name>] [--group <path>] [--apply] [--no-save]
   import-sources --project <projectDir|ap16..ap21> [--plc <name>] --source-dir <dir> [--compile] [--save]

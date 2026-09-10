@@ -6,8 +6,11 @@ using Siemens.Engineering.SW;
 using Siemens.Engineering.SW.Blocks;
 using Siemens.Engineering.SW.ExternalSources;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 
@@ -95,6 +98,49 @@ namespace CodexTiaPortalV17
                             }
                         }
                         return 0;
+                    });
+                }
+
+                if (command == "list-hmi")
+                {
+                    return WithProject(projectFile, false, options, delegate(Project project)
+                    {
+                        List<HmiTargetRecord> targets = FindHmiTargets(project);
+                        Console.WriteLine("Device\tItemPath\tFlavor\tSoftware");
+                        foreach (HmiTargetRecord target in targets)
+                        {
+                            Console.WriteLine("{0}\t{1}\t{2}\t{3}",
+                                target.DeviceName,
+                                target.ItemPath,
+                                target.Flavor,
+                                HmiSoftwareName(target.Software));
+                        }
+                        Console.WriteLine("SUMMARY\tHmiTargets\t{0}", targets.Count);
+                        return 0;
+                    });
+                }
+
+                if (command == "read-hmi")
+                {
+                    return WithProject(projectFile, false, options, delegate(Project project)
+                    {
+                        return ReadHmiProject(projectFile, project, options);
+                    });
+                }
+
+                if (command == "import-hmi")
+                {
+                    return WithProject(projectFile, true, options, delegate(Project project)
+                    {
+                        return ImportHmiArtifacts(projectFile, project, options);
+                    });
+                }
+
+                if (command == "apply-hmi-manifest")
+                {
+                    return WithProject(projectFile, true, options, delegate(Project project)
+                    {
+                        return ApplyHmiManifest(projectFile, project, options);
                     });
                 }
 
@@ -811,6 +857,801 @@ namespace CodexTiaPortalV17
             return result;
         }
 
+        private static List<HmiTargetRecord> FindHmiTargets(Project project)
+        {
+            List<HmiTargetRecord> result = new List<HmiTargetRecord>();
+            foreach (Device device in project.Devices)
+            {
+                foreach (DeviceItem item in device.DeviceItems)
+                {
+                    WalkHmiDeviceItem(device.Name, item.Name, item, result);
+                }
+            }
+            return result;
+        }
+
+        private static void WalkHmiDeviceItem(string deviceName, string path, DeviceItem item, List<HmiTargetRecord> result)
+        {
+            try
+            {
+                SoftwareContainer container = item.GetService<SoftwareContainer>();
+                if (container != null && container.Software != null)
+                {
+                    object software = container.Software;
+                    string fullName = software.GetType().FullName ?? "";
+                    if (fullName.Equals("Siemens.Engineering.Hmi.HmiTarget", StringComparison.Ordinal) ||
+                        fullName.Equals("Siemens.Engineering.HmiUnified.HmiSoftware", StringComparison.Ordinal) ||
+                        fullName.EndsWith(".HmiTarget", StringComparison.Ordinal) ||
+                        fullName.EndsWith(".HmiSoftware", StringComparison.Ordinal))
+                    {
+                        result.Add(new HmiTargetRecord
+                        {
+                            DeviceName = deviceName,
+                            ItemPath = path,
+                            Flavor = fullName.IndexOf("HmiUnified", StringComparison.OrdinalIgnoreCase) >= 0 ? "Unified" : "Classic",
+                            Software = software
+                        });
+                    }
+                }
+            }
+            catch
+            {
+                // Some hardware items do not expose a software service.
+            }
+
+            foreach (DeviceItem child in item.DeviceItems)
+            {
+                WalkHmiDeviceItem(deviceName, path + "/" + child.Name, child, result);
+            }
+        }
+
+        private static int ReadHmiProject(FileInfo projectFile, Project project, Dictionary<string, string> options)
+        {
+            string output = GetOption(options, "--output", Path.Combine(projectFile.Directory.FullName, "PLC_Code", "wincc", "readback", DateTime.Now.ToString("yyyyMMdd_HHmmss")));
+            string hmiFilter = GetOption(options, "--hmi", "");
+            bool exportArtifacts = !HasFlag(options, "--no-export");
+            Directory.CreateDirectory(output);
+
+            List<HmiTargetRecord> targets = FindHmiTargets(project);
+            List<HmiTargetRecord> selected = FilterHmis(targets, hmiFilter);
+            StringBuilder json = new StringBuilder();
+            json.AppendLine("{");
+            json.AppendLine("  \"status\": \"ok\",");
+            json.AppendLine("  \"project\": \"" + JsonEscape(projectFile.FullName) + "\",");
+            json.AppendLine("  \"generatedAt\": \"" + JsonEscape(DateTime.Now.ToString("o")) + "\",");
+            json.AppendLine("  \"exportArtifacts\": " + (exportArtifacts ? "true" : "false") + ",");
+            json.AppendLine("  \"targets\": [");
+
+            for (int i = 0; i < selected.Count; i++)
+            {
+                HmiTargetRecord target = selected[i];
+                HmiSnapshot snapshot = ReadHmiTarget(target, output, exportArtifacts);
+                PrintHmiSnapshot(target, snapshot);
+                AppendHmiSnapshotJson(json, target, snapshot, "    ", i == selected.Count - 1);
+            }
+
+            json.AppendLine("  ]");
+            json.AppendLine("}");
+
+            string reportPath = Path.Combine(output, "wincc-readback.json");
+            File.WriteAllText(reportPath, json.ToString(), Encoding.UTF8);
+            File.WriteAllText(Path.Combine(output, "README.md"), BuildHmiReadme(projectFile, reportPath, selected.Count, exportArtifacts), Encoding.UTF8);
+
+            Console.WriteLine("REPORT\t{0}", reportPath);
+            Console.WriteLine("SUMMARY\tHmiTargets\t{0}", selected.Count);
+            Console.WriteLine("SUMMARY\tReadbackDirectory\t{0}", output);
+            return 0;
+        }
+
+        private static List<HmiTargetRecord> FilterHmis(List<HmiTargetRecord> targets, string filter)
+        {
+            if (string.IsNullOrWhiteSpace(filter))
+            {
+                return targets;
+            }
+
+            List<HmiTargetRecord> selected = new List<HmiTargetRecord>();
+            foreach (HmiTargetRecord target in targets)
+            {
+                if (ContainsIgnoreCase(target.DeviceName, filter) ||
+                    ContainsIgnoreCase(target.ItemPath, filter) ||
+                    ContainsIgnoreCase(target.Flavor, filter) ||
+                    ContainsIgnoreCase(HmiSoftwareName(target.Software), filter))
+                {
+                    selected.Add(target);
+                }
+            }
+            if (selected.Count == 0)
+            {
+                throw new InvalidOperationException("No HMI matched --hmi " + filter);
+            }
+            return selected;
+        }
+
+        private static HmiSnapshot ReadHmiTarget(HmiTargetRecord target, string outputRoot, bool exportArtifacts)
+        {
+            HmiSnapshot snapshot = new HmiSnapshot();
+            string targetRoot = Path.Combine(outputRoot, MakeSafeFileName(target.DeviceName + "_" + target.ItemPath.Replace('/', '_')));
+            Directory.CreateDirectory(targetRoot);
+
+            if (target.Flavor == "Classic")
+            {
+                object screenFolder = GetProperty(target.Software, "ScreenFolder");
+                if (screenFolder != null)
+                {
+                    ReadClassicScreenFolder(screenFolder, "", targetRoot, exportArtifacts, snapshot);
+                }
+
+                object tagFolder = GetProperty(target.Software, "TagFolder");
+                if (tagFolder != null)
+                {
+                    ReadClassicTagFolder(tagFolder, "", targetRoot, exportArtifacts, snapshot);
+                }
+
+                ReadClassicCollection(GetProperty(target.Software, "Connections"), "Connection", targetRoot, exportArtifacts, snapshot);
+            }
+            else
+            {
+                ReadUnifiedScreens(GetProperty(target.Software, "Screens"), snapshot);
+                ReadUnifiedTags(GetProperty(target.Software, "Tags"), snapshot);
+                ReadUnifiedTagTables(GetProperty(target.Software, "TagTables"), snapshot);
+                ReadUnifiedAlarms(GetProperty(target.Software, "DiscreteAlarms"), "DiscreteAlarm", snapshot);
+                ReadUnifiedAlarms(GetProperty(target.Software, "AnalogAlarms"), "AnalogAlarm", snapshot);
+                ReadUnifiedCollection(GetProperty(target.Software, "Connections"), "Connection", snapshot);
+            }
+
+            return snapshot;
+        }
+
+        private static void ReadClassicScreenFolder(object folder, string folderPath, string targetRoot, bool exportArtifacts, HmiSnapshot snapshot)
+        {
+            object screens = GetProperty(folder, "Screens");
+            foreach (object screen in Enumerate(screens))
+            {
+                string name = GetStringProperty(screen, "Name");
+                snapshot.Screens.Add(CombinePath(folderPath, name));
+                if (exportArtifacts)
+                {
+                    string output = Path.Combine(targetRoot, "screens", MakeSafeFileName(CombinePath(folderPath, name)) + ".xml");
+                    TryExport(screen, output, snapshot.Exports);
+                }
+            }
+
+            object folders = GetProperty(folder, "Folders");
+            foreach (object child in Enumerate(folders))
+            {
+                ReadClassicScreenFolder(child, CombinePath(folderPath, GetStringProperty(child, "Name")), targetRoot, exportArtifacts, snapshot);
+            }
+        }
+
+        private static void ReadClassicTagFolder(object folder, string folderPath, string targetRoot, bool exportArtifacts, HmiSnapshot snapshot)
+        {
+            object tables = GetProperty(folder, "TagTables");
+            foreach (object table in Enumerate(tables))
+            {
+                string tableName = GetStringProperty(table, "Name");
+                string qualifiedName = CombinePath(folderPath, tableName);
+                snapshot.TagTables.Add(qualifiedName);
+                object tags = GetProperty(table, "Tags");
+                foreach (object tag in Enumerate(tags))
+                {
+                    snapshot.Tags.Add(qualifiedName + "/" + GetStringProperty(tag, "Name"));
+                }
+                if (exportArtifacts)
+                {
+                    string output = Path.Combine(targetRoot, "tagtables", MakeSafeFileName(qualifiedName) + ".xml");
+                    TryExport(table, output, snapshot.Exports);
+                }
+            }
+
+            object folders = GetProperty(folder, "Folders");
+            foreach (object child in Enumerate(folders))
+            {
+                ReadClassicTagFolder(child, CombinePath(folderPath, GetStringProperty(child, "Name")), targetRoot, exportArtifacts, snapshot);
+            }
+        }
+
+        private static void ReadClassicCollection(object composition, string kind, string targetRoot, bool exportArtifacts, HmiSnapshot snapshot)
+        {
+            foreach (object item in Enumerate(composition))
+            {
+                string name = GetStringProperty(item, "Name");
+                if (kind == "Connection")
+                {
+                    snapshot.Connections.Add(name);
+                }
+                if (exportArtifacts)
+                {
+                    string output = Path.Combine(targetRoot, "connections", MakeSafeFileName(name) + ".xml");
+                    TryExport(item, output, snapshot.Exports);
+                }
+            }
+        }
+
+        private static void ReadUnifiedScreens(object composition, HmiSnapshot snapshot)
+        {
+            foreach (object screen in Enumerate(composition))
+            {
+                string name = GetStringProperty(screen, "Name");
+                string details = name + " [" + GetStringProperty(screen, "Width") + "x" + GetStringProperty(screen, "Height") + "]";
+                int itemCount = CountUnifiedScreenItems(GetProperty(screen, "ScreenItems"));
+                if (itemCount > 0)
+                {
+                    details += " items=" + itemCount.ToString();
+                }
+                snapshot.Screens.Add(details);
+            }
+        }
+
+        private static int CountUnifiedScreenItems(object composition)
+        {
+            int count = 0;
+            foreach (object item in Enumerate(composition))
+            {
+                count++;
+                count += CountUnifiedScreenItems(GetProperty(item, "ScreenItems"));
+            }
+            return count;
+        }
+
+        private static void ReadUnifiedTags(object composition, HmiSnapshot snapshot)
+        {
+            foreach (object tag in Enumerate(composition))
+            {
+                string row = GetStringProperty(tag, "Name") +
+                    " | table=" + GetStringProperty(tag, "TagTableName") +
+                    " | plc=" + GetStringProperty(tag, "PlcName") +
+                    " | address=" + GetStringProperty(tag, "PlcTag") +
+                    " | type=" + GetStringProperty(tag, "DataType") +
+                    " | access=" + GetStringProperty(tag, "AccessMode");
+                snapshot.Tags.Add(row);
+            }
+        }
+
+        private static void ReadUnifiedTagTables(object composition, HmiSnapshot snapshot)
+        {
+            foreach (object table in Enumerate(composition))
+            {
+                snapshot.TagTables.Add(GetStringProperty(table, "Name"));
+            }
+        }
+
+        private static void ReadUnifiedAlarms(object composition, string kind, HmiSnapshot snapshot)
+        {
+            foreach (object alarm in Enumerate(composition))
+            {
+                snapshot.Alarms.Add(kind + ":" + GetStringProperty(alarm, "Name"));
+            }
+        }
+
+        private static void ReadUnifiedCollection(object composition, string kind, HmiSnapshot snapshot)
+        {
+            foreach (object item in Enumerate(composition))
+            {
+                if (kind == "Connection")
+                {
+                    snapshot.Connections.Add(GetStringProperty(item, "Name"));
+                }
+            }
+        }
+
+        private static void PrintHmiSnapshot(HmiTargetRecord target, HmiSnapshot snapshot)
+        {
+            Console.WriteLine("HMI\t{0}\t{1}\tFlavor={2}", target.DeviceName, target.ItemPath, target.Flavor);
+            Console.WriteLine("COUNT\tScreens\t{0}", snapshot.Screens.Count);
+            Console.WriteLine("COUNT\tTagTables\t{0}", snapshot.TagTables.Count);
+            Console.WriteLine("COUNT\tTags\t{0}", snapshot.Tags.Count);
+            Console.WriteLine("COUNT\tAlarms\t{0}", snapshot.Alarms.Count);
+            Console.WriteLine("COUNT\tConnections\t{0}", snapshot.Connections.Count);
+            foreach (string export in snapshot.Exports)
+            {
+                Console.WriteLine("EXPORTED_HMI\t{0}", export);
+            }
+        }
+
+        private static void AppendHmiSnapshotJson(StringBuilder json, HmiTargetRecord target, HmiSnapshot snapshot, string indent, bool last)
+        {
+            json.AppendLine(indent + "{");
+            json.AppendLine(indent + "  \"device\": \"" + JsonEscape(target.DeviceName) + "\",");
+            json.AppendLine(indent + "  \"itemPath\": \"" + JsonEscape(target.ItemPath) + "\",");
+            json.AppendLine(indent + "  \"flavor\": \"" + JsonEscape(target.Flavor) + "\",");
+            json.AppendLine(indent + "  \"software\": \"" + JsonEscape(HmiSoftwareName(target.Software)) + "\",");
+            AppendStringArrayJson(json, "screens", snapshot.Screens, indent + "  ", true);
+            AppendStringArrayJson(json, "tagTables", snapshot.TagTables, indent + "  ", true);
+            AppendStringArrayJson(json, "tags", snapshot.Tags, indent + "  ", true);
+            AppendStringArrayJson(json, "alarms", snapshot.Alarms, indent + "  ", true);
+            AppendStringArrayJson(json, "connections", snapshot.Connections, indent + "  ", true);
+            AppendStringArrayJson(json, "exports", snapshot.Exports, indent + "  ", false);
+            json.AppendLine(indent + "}" + (last ? "" : ","));
+        }
+
+        private static void AppendStringArrayJson(StringBuilder json, string name, List<string> values, string indent, bool comma)
+        {
+            json.AppendLine(indent + "\"" + name + "\": [");
+            for (int i = 0; i < values.Count; i++)
+            {
+                json.Append(indent + "  \"" + JsonEscape(values[i]) + "\"");
+                json.AppendLine(i == values.Count - 1 ? "" : ",");
+            }
+            json.AppendLine(indent + "]" + (comma ? "," : ""));
+        }
+
+        private static string BuildHmiReadme(FileInfo projectFile, string reportPath, int targetCount, bool exportArtifacts)
+        {
+            StringBuilder builder = new StringBuilder();
+            builder.AppendLine("# WinCC readback");
+            builder.AppendLine();
+            builder.AppendLine("- Project: `" + projectFile.FullName + "`");
+            builder.AppendLine("- HMI targets: `" + targetCount.ToString() + "`");
+            builder.AppendLine("- Export artifacts: `" + exportArtifacts.ToString() + "`");
+            builder.AppendLine("- Machine-readable report: `" + reportPath + "`");
+            builder.AppendLine();
+            builder.AppendLine("This report was produced by the Siemens TIA Portal Openness helper. No PLC download was performed.");
+            return builder.ToString();
+        }
+
+        private static int ImportHmiArtifacts(FileInfo projectFile, Project project, Dictionary<string, string> options)
+        {
+            string input = GetRequired(options, "--input");
+            string kind = GetOption(options, "--kind", "auto").ToLowerInvariant();
+            bool apply = HasFlag(options, "--apply");
+            bool noSave = HasFlag(options, "--no-save");
+            List<HmiTargetRecord> targets = FilterHmis(FindHmiTargets(project), GetOption(options, "--hmi", ""));
+            if (targets.Count != 1)
+            {
+                throw new InvalidOperationException("HMI import requires exactly one target. Use --hmi to select one.");
+            }
+
+            List<string> files = ResolveXmlFiles(input);
+            HmiTargetRecord target = targets[0];
+            Console.WriteLine("PLAN\tHMI\t{0}\t{1}\tFlavor={2}", target.DeviceName, target.ItemPath, target.Flavor);
+            foreach (string file in files)
+            {
+                Console.WriteLine("PLAN_IMPORT_HMI\t{0}\tKind={1}", file, kind);
+            }
+            if (!apply)
+            {
+                Console.WriteLine("DRY_RUN\tNo HMI changes were made. Add --apply on a clone to import.");
+                return 0;
+            }
+            if (target.Flavor != "Classic")
+            {
+                throw new InvalidOperationException("XML import is currently routed for Classic WinCC. Unified uses apply-hmi-manifest for editable object creation.");
+            }
+
+            int imported = 0;
+            foreach (string file in files)
+            {
+                string resolvedKind = kind == "auto" ? DetectHmiXmlKind(file) : kind;
+                object composition = ResolveClassicImportComposition(target.Software, resolvedKind);
+                object result = InvokeMethod(composition, "Import", new object[] { new FileInfo(file), ImportOptions.Override });
+                int count = CountEnumerable(result);
+                imported += count;
+                Console.WriteLine("IMPORTED_HMI\t{0}\tKind={1}\tObjects={2}", file, resolvedKind, count);
+            }
+
+            if (!noSave)
+            {
+                project.Save();
+                Console.WriteLine("SAVED\t{0}", projectFile.FullName);
+            }
+            Console.WriteLine("SUMMARY\tImportedHmiObjects\t{0}", imported);
+            return 0;
+        }
+
+        private static string DetectHmiXmlKind(string path)
+        {
+            string text = File.ReadAllText(path, Encoding.UTF8);
+            if (text.IndexOf("TagTable", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                text.IndexOf("HmiTag", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return "tagtable";
+            }
+            if (text.IndexOf("Connection", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return "connection";
+            }
+            return "screen";
+        }
+
+        private static object ResolveClassicImportComposition(object software, string kind)
+        {
+            switch (kind)
+            {
+                case "tag":
+                case "tagtable":
+                    return GetProperty(GetProperty(software, "TagFolder"), "TagTables");
+                case "connection":
+                case "connections":
+                    return GetProperty(software, "Connections");
+                case "screen":
+                case "screens":
+                    return GetProperty(GetProperty(software, "ScreenFolder"), "Screens");
+                default:
+                    throw new InvalidOperationException("Unsupported HMI import kind: " + kind);
+            }
+        }
+
+        private static int ApplyHmiManifest(FileInfo projectFile, Project project, Dictionary<string, string> options)
+        {
+            if (!HasFlag(options, "--apply"))
+            {
+                throw new InvalidOperationException("Manifest apply is guarded. Add --apply and run it on a clone.");
+            }
+
+            string tagCsv = GetOption(options, "--tag-csv", "");
+            string alarmCsv = GetOption(options, "--alarm-csv", "");
+            string screenCsv = GetOption(options, "--screen-csv", "");
+            List<HmiTargetRecord> targets = FilterHmis(FindHmiTargets(project), GetOption(options, "--hmi", ""));
+            if (targets.Count != 1)
+            {
+                throw new InvalidOperationException("Manifest apply requires exactly one HMI target. Use --hmi to select one.");
+            }
+            HmiTargetRecord target = targets[0];
+            if (target.Flavor != "Unified")
+            {
+                throw new InvalidOperationException("Direct CSV manifest creation is supported for WinCC Unified only. For Classic WinCC, export/import reviewed XML with import-hmi.");
+            }
+
+            int created = 0;
+            int updated = 0;
+            int warnings = 0;
+
+            if (!string.IsNullOrWhiteSpace(tagCsv))
+            {
+                foreach (Dictionary<string, string> row in ReadCsvRows(tagCsv))
+                {
+                    string tagName = GetRowValue(row, "tag", GetRowValue(row, "objectName", ""));
+                    if (string.IsNullOrWhiteSpace(tagName))
+                    {
+                        continue;
+                    }
+                    object tags = GetProperty(target.Software, "Tags");
+                    object tag = FindByName(tags, tagName);
+                    bool isNew = tag == null;
+                    if (isNew)
+                    {
+                        tag = InvokeCreate(tags, tagName);
+                        created++;
+                    }
+                    else
+                    {
+                        updated++;
+                    }
+                    TrySetProperty(tag, "Name", tagName, ref warnings);
+                    TrySetProperty(tag, "PlcTag", tagName, ref warnings);
+                    string connection = GetRowValue(row, "connection", "");
+                    if (!string.IsNullOrWhiteSpace(connection))
+                    {
+                        TrySetProperty(tag, "Connection", connection, ref warnings);
+                    }
+                    Console.WriteLine("{0}_HMI_TAG\t{1}", isNew ? "CREATED" : "UPDATED", tagName);
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(screenCsv))
+            {
+                foreach (Dictionary<string, string> row in ReadCsvRows(screenCsv))
+                {
+                    string screenName = GetRowValue(row, "screenName", GetRowValue(row, "name", ""));
+                    if (string.IsNullOrWhiteSpace(screenName))
+                    {
+                        continue;
+                    }
+                    object screens = GetProperty(target.Software, "Screens");
+                    object screen = FindByName(screens, screenName);
+                    bool isNew = screen == null;
+                    if (isNew)
+                    {
+                        screen = InvokeCreate(screens, screenName);
+                        created++;
+                    }
+                    else
+                    {
+                        updated++;
+                    }
+                    TrySetProperty(screen, "Name", screenName, ref warnings);
+                    TrySetProperty(screen, "Width", UInt32Value(GetRowValue(row, "width", "1280")), ref warnings);
+                    TrySetProperty(screen, "Height", UInt32Value(GetRowValue(row, "height", "800")), ref warnings);
+                    Console.WriteLine("{0}_HMI_SCREEN\t{1}", isNew ? "CREATED" : "UPDATED", screenName);
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(alarmCsv))
+            {
+                foreach (Dictionary<string, string> row in ReadCsvRows(alarmCsv))
+                {
+                    string alarmName = GetRowValue(row, "alarmName", GetRowValue(row, "name", ""));
+                    if (string.IsNullOrWhiteSpace(alarmName))
+                    {
+                        continue;
+                    }
+                    object alarms = GetProperty(target.Software, "DiscreteAlarms");
+                    object alarm = FindByName(alarms, alarmName);
+                    bool isNew = alarm == null;
+                    if (isNew)
+                    {
+                        alarm = InvokeCreate(alarms, alarmName);
+                        created++;
+                    }
+                    else
+                    {
+                        updated++;
+                    }
+                    TrySetProperty(alarm, "Name", alarmName, ref warnings);
+                    Console.WriteLine("{0}_HMI_ALARM\t{1}", isNew ? "CREATED" : "UPDATED", alarmName);
+                    string trigger = GetRowValue(row, "triggerTag", "");
+                    if (!string.IsNullOrWhiteSpace(trigger))
+                    {
+                        Console.WriteLine("HMI_ALARM_BINDING_REVIEW\t{0}\tTriggerTag={1}", alarmName, trigger);
+                    }
+                }
+            }
+
+            project.Save();
+            Console.WriteLine("SAVED\t{0}", projectFile.FullName);
+            Console.WriteLine("SUMMARY\tCreatedHmiObjects\t{0}", created);
+            Console.WriteLine("SUMMARY\tUpdatedHmiObjects\t{0}", updated);
+            Console.WriteLine("SUMMARY\tWarnings\t{0}", warnings);
+            return warnings > 0 ? 1 : 0;
+        }
+
+        private static List<Dictionary<string, string>> ReadCsvRows(string path)
+        {
+            if (!File.Exists(path))
+            {
+                throw new FileNotFoundException("CSV input not found: " + path);
+            }
+            string[] lines = File.ReadAllLines(path, Encoding.UTF8);
+            List<Dictionary<string, string>> rows = new List<Dictionary<string, string>>();
+            if (lines.Length == 0)
+            {
+                return rows;
+            }
+            List<string> headers = ParseCsvLine(lines[0]);
+            for (int i = 1; i < lines.Length; i++)
+            {
+                if (string.IsNullOrWhiteSpace(lines[i]))
+                {
+                    continue;
+                }
+                List<string> values = ParseCsvLine(lines[i]);
+                Dictionary<string, string> row = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                for (int column = 0; column < headers.Count; column++)
+                {
+                    row[headers[column]] = column < values.Count ? values[column] : "";
+                }
+                rows.Add(row);
+            }
+            return rows;
+        }
+
+        private static List<string> ParseCsvLine(string line)
+        {
+            List<string> values = new List<string>();
+            StringBuilder value = new StringBuilder();
+            bool quoted = false;
+            for (int i = 0; i < line.Length; i++)
+            {
+                char ch = line[i];
+                if (ch == '"')
+                {
+                    if (quoted && i + 1 < line.Length && line[i + 1] == '"')
+                    {
+                        value.Append('"');
+                        i++;
+                    }
+                    else
+                    {
+                        quoted = !quoted;
+                    }
+                }
+                else if (ch == ',' && !quoted)
+                {
+                    values.Add(value.ToString());
+                    value.Clear();
+                }
+                else
+                {
+                    value.Append(ch);
+                }
+            }
+            values.Add(value.ToString());
+            return values;
+        }
+
+        private static string GetRowValue(Dictionary<string, string> row, string key, string fallback)
+        {
+            string value;
+            return row.TryGetValue(key, out value) && !string.IsNullOrWhiteSpace(value) ? value.Trim() : fallback;
+        }
+
+        private static object UInt32Value(string value)
+        {
+            uint parsed;
+            return uint.TryParse(value, out parsed) ? (object)parsed : (object)(uint)1280;
+        }
+
+        private static object FindByName(object composition, string name)
+        {
+            if (composition == null || string.IsNullOrWhiteSpace(name))
+            {
+                return null;
+            }
+            try
+            {
+                return InvokeMethod(composition, "Find", new object[] { name });
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static object InvokeCreate(object composition, string name)
+        {
+            if (composition == null)
+            {
+                throw new InvalidOperationException("Target HMI composition is not available.");
+            }
+            return InvokeMethod(composition, "Create", new object[] { name });
+        }
+
+        private static void TrySetProperty(object target, string propertyName, object value, ref int warnings)
+        {
+            try
+            {
+                if (!SetProperty(target, propertyName, value))
+                {
+                    warnings++;
+                    Console.WriteLine("WARNING\tPropertyUnavailable\t{0}.{1}", target == null ? "<null>" : target.GetType().FullName, propertyName);
+                }
+            }
+            catch (Exception ex)
+            {
+                warnings++;
+                Console.WriteLine("WARNING\tPropertySetFailed\t{0}.{1}\t{2}", target == null ? "<null>" : target.GetType().FullName, propertyName, ex.Message.Replace(Environment.NewLine, " "));
+            }
+        }
+
+        private static string HmiSoftwareName(object software)
+        {
+            string name = GetStringProperty(software, "Name");
+            return string.IsNullOrWhiteSpace(name) ? Convert.ToString(software) : name;
+        }
+
+        private static object GetProperty(object target, string propertyName)
+        {
+            if (target == null)
+            {
+                return null;
+            }
+            PropertyInfo property = target.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+            return property == null ? null : property.GetValue(target, null);
+        }
+
+        private static bool SetProperty(object target, string propertyName, object value)
+        {
+            if (target == null)
+            {
+                return false;
+            }
+            PropertyInfo property = target.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+            if (property == null || !property.CanWrite)
+            {
+                return false;
+            }
+            object converted = ConvertValue(value, property.PropertyType);
+            property.SetValue(target, converted, null);
+            return true;
+        }
+
+        private static object ConvertValue(object value, Type targetType)
+        {
+            if (value == null)
+            {
+                return null;
+            }
+            if (targetType.IsInstanceOfType(value))
+            {
+                return value;
+            }
+            if (targetType.IsEnum)
+            {
+                return Enum.Parse(targetType, Convert.ToString(value), true);
+            }
+            return Convert.ChangeType(value, targetType);
+        }
+
+        private static object InvokeMethod(object target, string methodName, object[] arguments)
+        {
+            if (target == null)
+            {
+                throw new InvalidOperationException("Cannot invoke " + methodName + " on a null object.");
+            }
+            MethodInfo[] methods = target.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance);
+            foreach (MethodInfo method in methods)
+            {
+                if (!method.Name.Equals(methodName, StringComparison.Ordinal) || method.GetParameters().Length != arguments.Length)
+                {
+                    continue;
+                }
+                try
+                {
+                    return method.Invoke(target, arguments);
+                }
+                catch (TargetInvocationException ex)
+                {
+                    throw ex.InnerException ?? ex;
+                }
+                catch
+                {
+                    // Try the next overload when a provider exposes several signatures.
+                }
+            }
+            throw new MissingMethodException(target.GetType().FullName, methodName);
+        }
+
+        private static IEnumerable<object> Enumerate(object value)
+        {
+            if (value == null)
+            {
+                yield break;
+            }
+            IEnumerable enumerable = value as IEnumerable;
+            if (enumerable == null)
+            {
+                yield break;
+            }
+            foreach (object item in enumerable)
+            {
+                yield return item;
+            }
+        }
+
+        private static int CountEnumerable(object value)
+        {
+            int count = 0;
+            foreach (object ignored in Enumerate(value))
+            {
+                count++;
+            }
+            return count;
+        }
+
+        private static string GetStringProperty(object target, string propertyName)
+        {
+            object value = GetProperty(target, propertyName);
+            return value == null ? "" : Convert.ToString(value);
+        }
+
+        private static void TryExport(object target, string path, List<string> exports)
+        {
+            try
+            {
+                string directory = Path.GetDirectoryName(path);
+                if (!string.IsNullOrWhiteSpace(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+                InvokeMethod(target, "Export", new object[] { new FileInfo(path), ExportOptions.WithDefaults });
+                exports.Add(path);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("EXPORT_HMI_FAILED\t{0}\t{1}", path, ex.Message.Replace(Environment.NewLine, " "));
+            }
+        }
+
+        private static string JsonEscape(string value)
+        {
+            if (value == null)
+            {
+                return "";
+            }
+            return value.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n").Replace("\t", "\\t");
+        }
+
         private static void WalkDeviceItem(string deviceName, string path, DeviceItem item, List<PlcTarget> result)
         {
             try
@@ -1062,6 +1903,10 @@ namespace CodexTiaPortalV17
             Console.WriteLine("  list-devices --project <projectDir|ap16..ap21>");
             Console.WriteLine("  list-plcs --project <projectDir|ap16..ap21>");
             Console.WriteLine("  list-blocks --project <projectDir|ap16..ap21> [--plc <name>]");
+            Console.WriteLine("  list-hmi --project <projectDir|ap16..ap21> [--hmi <name>]");
+            Console.WriteLine("  read-hmi --project <projectDir|ap16..ap21> [--hmi <name>] [--output <dir>] [--no-export]");
+            Console.WriteLine("  import-hmi --project <projectDir|ap16..ap21> --input <xml|dir> [--hmi <name>] [--kind auto|screen|tagtable|connection] [--apply] [--no-save]");
+            Console.WriteLine("  apply-hmi-manifest --project <projectDir|ap16..ap21> [--hmi <name>] [--tag-csv <csv>] [--alarm-csv <csv>] [--screen-csv <csv>] [--apply]");
             Console.WriteLine("  export-blocks --project <projectDir|ap16..ap21> [--plc <name>] [--block <name>] [--language LAD|FBD|SCL] [--output <dir>]");
             Console.WriteLine("  import-blocks --project <projectDir|ap16..ap21> --input <xml|dir> [--plc <name>] [--group <path>] [--apply] [--no-save]");
             Console.WriteLine("  compile-plc --project <projectDir|ap16..ap21> [--plc <name>] [--save]");
@@ -1084,5 +1929,23 @@ namespace CodexTiaPortalV17
     {
         public string GroupPath;
         public PlcBlock Block;
+    }
+
+    internal sealed class HmiTargetRecord
+    {
+        public string DeviceName;
+        public string ItemPath;
+        public string Flavor;
+        public object Software;
+    }
+
+    internal sealed class HmiSnapshot
+    {
+        public List<string> Screens = new List<string>();
+        public List<string> TagTables = new List<string>();
+        public List<string> Tags = new List<string>();
+        public List<string> Alarms = new List<string>();
+        public List<string> Connections = new List<string>();
+        public List<string> Exports = new List<string>();
     }
 }

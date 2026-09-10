@@ -53,6 +53,8 @@ The workbench should gradually absorb these common coding-agent features:
 - one-click first-pass development orchestration through `agent-pipeline`
 - editor-replacement capability mapping through `capability-map`
 - workbench dashboard panels through `workbench-dashboard`
+- WinCC Openness implementation packages through `wincc-openness-implementation`
+- simulation scenario replay evidence through `simulation-replay`
 - structured PLC change packages with DB contracts, LAD JSON, SCL source folders, import manifests, validation plans and risk notes
 - local PR-style review packages through `review-package`
 - editable preview for exported text artifacts with automatic backup-on-save
@@ -77,12 +79,14 @@ Do not claim full parity until the workbench also has explicit approval checkpoi
 9. Use `knowledge-pack` to bind official-first documentation, current project evidence and reviewed community routes into the Agent context before authoring.
 10. Use `capability-map` to show which editor-like features are ready, partial, gated or still TIA-native before claiming replacement coverage.
 11. Use `wincc-engineering-scaffold` after the visual package and component blueprints when a WinCC task must turn into engineering work.
-12. Use `simulation-package` whenever a broad PLC/WinCC task needs validation beyond static generation.
-13. Use `agent-pipeline` for the first pass of a broad user request: it classifies PLC/WinCC scope, creates project context, knowledge, capability mapping, instruction routing, WinCC visual packages, WinCC engineering scaffold, simulation package, an Agent plan, an execution queue and a dashboard without production writes.
-14. Use `workbench-dashboard` to refresh queue health, latest run reports, import readiness, project context, plugin routing, instruction routes, safety risks, WinCC engineering tasks, simulation packages, capability gaps and Git diff summaries into the native validation and diff panels.
-15. Use `review-package` before release to collect artifact hashes, diff evidence, readiness flags and safety gates.
-16. Keep production project writes behind the existing backup, clone compile and explicit release gates.
-17. If a remote page, CLI or TIA session stalls, capture the partial log and switch route instead of blocking the whole workbench.
+12. Use `wincc-openness-implementation` after the WinCC engineering scaffold when a screen/tag/alarm design must become a reviewed, executable clone-only Openness implementation package; the runner must call the local helper, not stop at a generated C# placeholder.
+13. Use `simulation-package` whenever a broad PLC/WinCC task needs validation beyond static generation.
+14. Use `simulation-replay` after `simulation-package` when the workbench needs scenario-by-scenario evidence readiness for clone compile, project-model I/O mapping, PLCSIM Advanced and WinCC Unified runtime smoke.
+15. Use `agent-pipeline` for the first pass of a broad user request: it classifies PLC/WinCC scope, creates project context, knowledge, capability mapping, instruction routing, WinCC visual packages, WinCC engineering scaffold, WinCC Openness implementation package, simulation package, simulation replay evidence, an Agent plan, an execution queue and a dashboard without production writes.
+16. Use `workbench-dashboard` to refresh queue health, latest run reports, import readiness, project context, plugin routing, instruction routes, safety risks, WinCC engineering tasks, WinCC implementation packages, simulation packages, replay evidence, capability gaps and Git diff summaries into the native validation and diff panels.
+17. Use `review-package` before release to collect artifact hashes, diff evidence, readiness flags and safety gates.
+18. Keep production project writes behind the existing backup, clone compile and explicit release gates.
+19. If a remote page, CLI or TIA session stalls, capture the partial log and switch route instead of blocking the whole workbench.
 
 ## One-Click Development Pipeline
 
@@ -99,7 +103,8 @@ It runs only planning and package-generation steps:
 - PLC task detected: generate `PLC_Code\plc\instruction-plans\latest` with instruction-family routing, technology-object checks and safety-risk notes.
 - WinCC task detected: refresh plugin routing, then generate `PLC_Code\wincc\tasks\latest` with reference analysis, screen map, component map, tag contract, component-selection matrix, implementation plan and safety review.
 - WinCC task detected after component blueprints: generate `PLC_Code\wincc\engineering-scaffold\latest` so screen/tag/alarm/faceplate/SiVArc/CWC work is split into reviewable engineering tasks.
-- All broad tasks: generate `PLC_Code\simulation\latest` so static validation, clone compile, readback, PLCSIM Advanced hooks and WinCC runtime smoke checks are visible before release.
+- WinCC task detected after the engineering scaffold: generate `PLC_Code\wincc\openness-implementation\latest` so screen/object mapping and clone-only Openness implementation inputs are visible before release.
+- All broad tasks: generate `PLC_Code\simulation\latest` and `PLC_Code\simulation\replays\latest` so static validation, scenario evidence, clone compile, readback, PLCSIM Advanced hooks and WinCC runtime smoke checks are visible before release.
 - All tasks: generate `PLC_Code\agent-plans\latest-plan.md`, `PLC_Code\agent-queues\latest\queue.md` and `PLC_Code\workbench\latest\dashboard.md`.
 
 After this first pass, run or review one queue stage at a time. Do not let `agent-pipeline` import blocks, write HMI screens or download to PLC; those remain separate clone-verified release actions.
