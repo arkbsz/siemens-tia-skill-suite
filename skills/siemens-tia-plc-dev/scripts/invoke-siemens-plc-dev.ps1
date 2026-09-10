@@ -38,6 +38,7 @@ Commands:
   probe-ai-platforms [-WorkflowConfigPath <json>]
   wincc-plugins -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-ReferenceImagePath <image>] [-RefreshCatalog]
   wincc-visual-package -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-ReferenceImagePath <image>] [-OutputDirectory <dir>]
+  wincc-design-workflow -ProjectPath <projectDir|ap16..ap21> -DesignSpecPath <json> [-WorkflowConfigPath <json>] [-ReferenceImagePath <image>] [-ForCloneOnly]
   wincc-component-blueprints -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-ReferenceImagePath <image>] [-OutputDirectory <dir>]
   wincc-engineering-scaffold -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-ReferenceImagePath <image>] [-OutputDirectory <dir>]
   wincc-openness-implementation -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-EngineeringScaffoldPath <json>] [-OutputDirectory <dir>] [-ForCloneOnly]
@@ -111,6 +112,7 @@ $bridge = Resolve-TiaBridgeSkill -SkillsRoot $skillsRoot
 $aiPlatformAgentScript = Join-Path $PSScriptRoot "invoke-ai-platform-agent.ps1"
 $winccPluginScript = Join-Path (Join-Path $skillsRoot "siemens-wincc-hmi-dev") "scripts\resolve-wincc-plugins.ps1"
 $winccVisualPackageScript = Join-Path (Join-Path $skillsRoot "siemens-wincc-hmi-dev") "scripts\scaffold-wincc-visual-package.ps1"
+$winccDesignWorkflowScript = Join-Path $PSScriptRoot "run-wincc-design-workflow.ps1"
 $winccComponentBlueprintScript = Join-Path (Join-Path $skillsRoot "siemens-wincc-hmi-dev") "scripts\scaffold-wincc-component-blueprints.ps1"
 $winccEngineeringScaffoldScript = Join-Path (Join-Path $skillsRoot "siemens-wincc-hmi-dev") "scripts\scaffold-wincc-engineering-package.ps1"
 $winccOpennessImplementationScript = Join-Path (Join-Path $skillsRoot "siemens-wincc-hmi-dev") "scripts\scaffold-wincc-openness-implementation.ps1"
@@ -270,6 +272,13 @@ switch ($Command.ToLowerInvariant()) {
             throw "WinCC visual package scaffold was not found: $winccVisualPackageScript"
         }
         Invoke-PowerShellFile -Path $winccVisualPackageScript -Arguments $CommandArgs
+        break
+    }
+    "wincc-design-workflow" {
+        if (-not (Test-Path -LiteralPath $winccDesignWorkflowScript)) {
+            throw "WinCC design workflow was not found: $winccDesignWorkflowScript"
+        }
+        Invoke-PowerShellFile -Path $winccDesignWorkflowScript -Arguments $CommandArgs
         break
     }
     "wincc-component-blueprints" {

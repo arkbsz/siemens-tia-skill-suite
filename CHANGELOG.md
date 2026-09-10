@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-10 - WinCC 设计工作区闭环
+
+- 修复原生工作台 WinCC 设计页缺失列表模型和结果展示方法导致的编译失败、启动不可用问题。
+- 新增 WinCC 设计 JSON 保存校验，保存前自动备份旧规格；删除列表项后立即同步右侧 JSON。
+- 新增 `run-wincc-design-workflow.ps1` 的用户规格一致性处理：画面、组件、坐标、尺寸、类型、标签和报警会进入下游 CSV 与实现清单。
+- 修复 Windows PowerShell 5.1 中 `$LASTEXITCODE:` 的变量解析错误。
+- `wincc-design-workflow` 已在当前 V17 工程实际运行通过，生成 3 个画面、6 个组件、8 个 HMI 标签、3 个报警，并保持克隆专用、生产不写入、PLC 不下载。
+
 ## 2026-09-10 - 原生 LAD 结构编辑工作区
 
 - 新增 Windows Forms `LAD结构编辑` 页，提供网络号、标题、注释、条件链和动作链编辑。

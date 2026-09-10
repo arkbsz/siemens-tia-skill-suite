@@ -1,6 +1,6 @@
 {
     "packageName":  "siemens-tia-skill-suite_v1.0.0_20260810",
-    "version":  "1.0.2",
+    "version":  "1.0.3",
     "releaseDate":  "2026-08-10",
     "builtAt":  "2026-08-10T17:42:51",
     "installTarget":  "%USERPROFILE%\\.codex\\skills",
@@ -63,9 +63,9 @@
                               "payloadIntegrity":  "HMAC-SHA256",
                               "temporaryRuntime":  "%USERPROFILE%\\.codex\\siemens-tia-agent-runtime\\sessions",
                               "sourceFilesDistributedBesideExe":  false,
-                              "lastBuiltAt":  "2026-09-10T15:06:00+08:00",
-                              "lastBuildSha256":  "1F256E00A719729041E89CF2BB7476EA6B03FCA91A26000594E61E9618DE02FD",
-                              "lastBuildPayloadFiles":  226,
+                              "lastBuiltAt":  "2026-09-10T15:35:00+08:00",
+                              "lastBuildSha256":  "72E1C5B4CF2777F6B960CE9AC57AE6700D1468059C54D8B53CD91EE87118C281",
+                              "lastBuildPayloadFiles":  227,
                               "lastBuildSelfTest":  "Passed"
                           },
     "excludedDirectories":  [
@@ -214,5 +214,6 @@
                   "The native workbench command channel decodes Windows PowerShell 5.1 Chinese output with GB18030 while keeping Agent JSONL output on UTF-8.",
                   "The browser-based console remains available only as the explicit console-web fallback.",
                   "The protected EXE runtime is placed under the user's .codex directory so built-in Agent child processes can consume bundled skills without falling back to an external source tree."
+                  ,"The native WinCC design editor now validates and backs up JSON, compiles user-defined screen/component/tag/alarm structures, preserves component geometry, and feeds the clone-only implementation manifest."
               ]
 }

@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
+using System.Web.Script.Serialization;
 using System.Xml;
 
 namespace SiemensTiaSkillSuite
@@ -79,6 +80,7 @@ namespace SiemensTiaSkillSuite
         private readonly RichTextBox knowledgeBox = new RichTextBox();
         private readonly RichTextBox capabilityBox = new RichTextBox();
         private readonly RichTextBox ladSpecBox = new RichTextBox();
+        private readonly RichTextBox winccDesignSpecBox = new RichTextBox();
         private readonly TextBox requestBox = new TextBox();
         private readonly TextBox ladNetworkIndexBox = new TextBox();
         private readonly TextBox ladTitleBox = new TextBox();
@@ -94,6 +96,26 @@ namespace SiemensTiaSkillSuite
         private readonly TextBox ladActionPtBox = new TextBox();
         private readonly ListBox ladActionList = new ListBox();
         private readonly Label ladEditorStatusLabel = new Label();
+        private readonly TextBox winccScreenNameBox = new TextBox();
+        private readonly TextBox winccScreenPurposeBox = new TextBox();
+        private readonly TextBox winccScreenZoneBox = new TextBox();
+        private readonly ListBox winccScreenList = new ListBox();
+        private readonly TextBox winccComponentNameBox = new TextBox();
+        private readonly TextBox winccComponentTypeBox = new TextBox();
+        private readonly TextBox winccComponentScreenBox = new TextBox();
+        private readonly TextBox winccComponentTagsBox = new TextBox();
+        private readonly ListBox winccComponentList = new ListBox();
+        private readonly TextBox winccTagObjectBox = new TextBox();
+        private readonly TextBox winccTagNameBox = new TextBox();
+        private readonly TextBox winccTagLayerBox = new TextBox();
+        private readonly TextBox winccTagAccessBox = new TextBox();
+        private readonly ListBox winccTagList = new ListBox();
+        private readonly TextBox winccAlarmNameBox = new TextBox();
+        private readonly TextBox winccAlarmTriggerBox = new TextBox();
+        private readonly TextBox winccAlarmClassBox = new TextBox();
+        private readonly TextBox winccAlarmAckBox = new TextBox();
+        private readonly ListBox winccAlarmList = new ListBox();
+        private readonly Label winccEditorStatusLabel = new Label();
         private readonly Label statusLabel = new Label();
         private readonly Label projectBadge = new Label();
         private readonly MenuStrip mainMenu = new MenuStrip();
@@ -183,6 +205,7 @@ namespace SiemensTiaSkillSuite
         private string workflowConfigPath = "";
         private string currentLadSpecPath = "";
         private string currentLadGeneratedXmlPath = "";
+        private string currentWinccDesignSpecPath = "";
 
         public MainForm(string projectPath, string invokeScriptArg)
         {
@@ -580,6 +603,7 @@ namespace SiemensTiaSkillSuite
             mainTabs.Controls.Add(NewTab("能力矩阵", capabilityBox));
             mainTabs.Controls.Add(NewTab("参考图", referencePreviewBox));
             mainTabs.Controls.Add(NewTab("LAD结构编辑", BuildLadEditorPage()));
+            mainTabs.Controls.Add(NewTab("WinCC设计编辑", BuildWinccEditorPage()));
             mainLayout.Controls.Add(mainTabs, 0, 2);
 
             GroupBox aiInputBox = NewGroup("AI交互与工作流");
@@ -999,6 +1023,236 @@ namespace SiemensTiaSkillSuite
             return label;
         }
 
+        private Control BuildWinccEditorPage()
+        {
+            TableLayoutPanel page = new TableLayoutPanel();
+            page.Dock = DockStyle.Fill;
+            page.BackColor = Canvas;
+            page.Padding = new Padding(8);
+            page.ColumnCount = 1;
+            page.RowCount = 3;
+            page.RowStyles.Add(new RowStyle(SizeType.Absolute, 46));
+            page.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            page.RowStyles.Add(new RowStyle(SizeType.Absolute, 24));
+
+            FlowLayoutPanel toolbar = new FlowLayoutPanel();
+            toolbar.Dock = DockStyle.Fill;
+            toolbar.WrapContents = false;
+            toolbar.AutoScroll = true;
+            toolbar.BackColor = CardSoft;
+            toolbar.Padding = new Padding(6, 7, 6, 5);
+            toolbar.Controls.Add(LadEditorLabel("WinCC"));
+            AddWinccEditorButton(toolbar, "读入规格", Teal, 78, delegate { LoadWinccDesignEditorFromSpec(); });
+            AddWinccEditorButton(toolbar, "结构生成JSON", Teal, 106, delegate { SyncWinccSpecFromEditor(); });
+            AddWinccEditorButton(toolbar, "保存规格", Gold, 78, delegate { SaveWinccDesignSpec(); }, true);
+            AddWinccEditorButton(toolbar, "编译设计包", Orange, 94, delegate { CompileWinccDesignWorkflow(); });
+            AddWinccEditorButton(toolbar, "视觉包", Orange, 70, delegate { StartCommand("wincc-visual-package"); });
+            AddWinccEditorButton(toolbar, "组件蓝图", Teal, 82, delegate { StartCommand("wincc-component-blueprints"); });
+            AddWinccEditorButton(toolbar, "工程脚手架", Teal, 94, delegate { StartCommand("wincc-engineering-scaffold"); });
+            AddWinccEditorButton(toolbar, "实现包", Orange, 70, delegate { StartCommand("wincc-openness-implementation"); });
+            page.Controls.Add(toolbar, 0, 0);
+
+            SplitContainer editorSplitter = new SplitContainer();
+            editorSplitter.Dock = DockStyle.Fill;
+            editorSplitter.Orientation = Orientation.Vertical;
+            editorSplitter.SplitterWidth = 7;
+            editorSplitter.Panel1MinSize = 1;
+            editorSplitter.Panel2MinSize = 1;
+            editorSplitter.BackColor = Canvas;
+            page.Controls.Add(editorSplitter, 0, 1);
+
+            TableLayoutPanel structure = new TableLayoutPanel();
+            structure.Dock = DockStyle.Fill;
+            structure.Padding = new Padding(2);
+            structure.ColumnCount = 2;
+            structure.RowCount = 2;
+            structure.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+            structure.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+            structure.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+            structure.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+            editorSplitter.Panel1.Controls.Add(structure);
+
+            structure.Controls.Add(BuildWinccScreenSection(), 0, 0);
+            structure.Controls.Add(BuildWinccComponentSection(), 1, 0);
+            structure.Controls.Add(BuildWinccTagSection(), 0, 1);
+            structure.Controls.Add(BuildWinccAlarmSection(), 1, 1);
+
+            GroupBox jsonGroup = NewGroup("设计规格 / WinCC Design JSON");
+            jsonGroup.Dock = DockStyle.Fill;
+            winccDesignSpecBox.Dock = DockStyle.Fill;
+            winccDesignSpecBox.Multiline = true;
+            winccDesignSpecBox.AcceptsTab = true;
+            winccDesignSpecBox.ScrollBars = RichTextBoxScrollBars.Both;
+            winccDesignSpecBox.WordWrap = false;
+            winccDesignSpecBox.BorderStyle = BorderStyle.None;
+            winccDesignSpecBox.BackColor = CodeBack;
+            winccDesignSpecBox.ForeColor = CodeFore;
+            winccDesignSpecBox.Font = new Font("Cascadia Code", 9.1F);
+            winccDesignSpecBox.Text = DefaultWinccDesignSpecJson();
+            jsonGroup.Controls.Add(winccDesignSpecBox);
+            editorSplitter.Panel2.Controls.Add(jsonGroup);
+
+            winccEditorStatusLabel.Dock = DockStyle.Fill;
+            winccEditorStatusLabel.TextAlign = ContentAlignment.MiddleLeft;
+            winccEditorStatusLabel.ForeColor = MutedInk;
+            winccEditorStatusLabel.Padding = new Padding(8, 0, 0, 0);
+            winccEditorStatusLabel.Text = "WinCC设计编辑器：画面、组件、标签和报警会保存为可审查规格，再进入视觉包、蓝图、工程和克隆验证流程。";
+            page.Controls.Add(winccEditorStatusLabel, 0, 2);
+            LoadWinccDesignEditorFromSpec();
+            return page;
+        }
+
+        private static void AddWinccEditorButton(FlowLayoutPanel panel, string text, Color color, int width, Action action, bool darkText = false)
+        {
+            Button button = NewButton(text, color);
+            button.Width = width;
+            button.Height = 30;
+            button.Margin = new Padding(3, 1, 3, 1);
+            if (darkText) { button.ForeColor = Ink; }
+            button.Click += delegate { action(); };
+            panel.Controls.Add(button);
+        }
+
+        private GroupBox BuildWinccScreenSection()
+        {
+            GroupBox group = NewGroup("画面 / Screens");
+            group.Dock = DockStyle.Fill;
+            TableLayoutPanel layout = NewWinccSectionLayout();
+            ConfigureWinccList(winccScreenList);
+            layout.Controls.Add(winccScreenList, 0, 0);
+            FlowLayoutPanel fields = NewWinccFieldBar();
+            ConfigureWinccInput(winccScreenNameBox, 120);
+            ConfigureWinccInput(winccScreenPurposeBox, 150);
+            ConfigureWinccInput(winccScreenZoneBox, 92);
+            fields.Controls.Add(winccScreenNameBox);
+            fields.Controls.Add(winccScreenPurposeBox);
+            fields.Controls.Add(winccScreenZoneBox);
+            fields.Controls.Add(NewWinccSmallButton("+", Teal, delegate { AddWinccScreen(); }));
+            fields.Controls.Add(NewWinccSmallButton("-", Ink, delegate { RemoveSelectedWinccItem(winccScreenList); }));
+            layout.Controls.Add(fields, 0, 1);
+            group.Controls.Add(layout);
+            return group;
+        }
+
+        private GroupBox BuildWinccComponentSection()
+        {
+            GroupBox group = NewGroup("组件 / Components");
+            group.Dock = DockStyle.Fill;
+            TableLayoutPanel layout = NewWinccSectionLayout();
+            ConfigureWinccList(winccComponentList);
+            layout.Controls.Add(winccComponentList, 0, 0);
+            FlowLayoutPanel fields = NewWinccFieldBar();
+            ConfigureWinccInput(winccComponentNameBox, 116);
+            ConfigureWinccInput(winccComponentTypeBox, 96);
+            ConfigureWinccInput(winccComponentScreenBox, 112);
+            ConfigureWinccInput(winccComponentTagsBox, 150);
+            fields.Controls.Add(winccComponentNameBox);
+            fields.Controls.Add(winccComponentTypeBox);
+            fields.Controls.Add(winccComponentScreenBox);
+            fields.Controls.Add(winccComponentTagsBox);
+            fields.Controls.Add(NewWinccSmallButton("+", Teal, delegate { AddWinccComponent(); }));
+            fields.Controls.Add(NewWinccSmallButton("-", Ink, delegate { RemoveSelectedWinccItem(winccComponentList); }));
+            layout.Controls.Add(fields, 0, 1);
+            group.Controls.Add(layout);
+            return group;
+        }
+
+        private GroupBox BuildWinccTagSection()
+        {
+            GroupBox group = NewGroup("变量契约 / HMI Tags");
+            group.Dock = DockStyle.Fill;
+            TableLayoutPanel layout = NewWinccSectionLayout();
+            ConfigureWinccList(winccTagList);
+            layout.Controls.Add(winccTagList, 0, 0);
+            FlowLayoutPanel fields = NewWinccFieldBar();
+            ConfigureWinccInput(winccTagObjectBox, 116);
+            ConfigureWinccInput(winccTagNameBox, 146);
+            ConfigureWinccInput(winccTagLayerBox, 62);
+            ConfigureWinccInput(winccTagAccessBox, 62);
+            fields.Controls.Add(winccTagObjectBox);
+            fields.Controls.Add(winccTagNameBox);
+            fields.Controls.Add(winccTagLayerBox);
+            fields.Controls.Add(winccTagAccessBox);
+            fields.Controls.Add(NewWinccSmallButton("+", Teal, delegate { AddWinccTag(); }));
+            fields.Controls.Add(NewWinccSmallButton("-", Ink, delegate { RemoveSelectedWinccItem(winccTagList); }));
+            layout.Controls.Add(fields, 0, 1);
+            group.Controls.Add(layout);
+            return group;
+        }
+
+        private GroupBox BuildWinccAlarmSection()
+        {
+            GroupBox group = NewGroup("报警 / Alarms");
+            group.Dock = DockStyle.Fill;
+            TableLayoutPanel layout = NewWinccSectionLayout();
+            ConfigureWinccList(winccAlarmList);
+            layout.Controls.Add(winccAlarmList, 0, 0);
+            FlowLayoutPanel fields = NewWinccFieldBar();
+            ConfigureWinccInput(winccAlarmNameBox, 116);
+            ConfigureWinccInput(winccAlarmTriggerBox, 134);
+            ConfigureWinccInput(winccAlarmClassBox, 72);
+            ConfigureWinccInput(winccAlarmAckBox, 72);
+            fields.Controls.Add(winccAlarmNameBox);
+            fields.Controls.Add(winccAlarmTriggerBox);
+            fields.Controls.Add(winccAlarmClassBox);
+            fields.Controls.Add(winccAlarmAckBox);
+            fields.Controls.Add(NewWinccSmallButton("+", Teal, delegate { AddWinccAlarm(); }));
+            fields.Controls.Add(NewWinccSmallButton("-", Ink, delegate { RemoveSelectedWinccItem(winccAlarmList); }));
+            layout.Controls.Add(fields, 0, 1);
+            group.Controls.Add(layout);
+            return group;
+        }
+
+        private static TableLayoutPanel NewWinccSectionLayout()
+        {
+            TableLayoutPanel layout = new TableLayoutPanel();
+            layout.Dock = DockStyle.Fill;
+            layout.ColumnCount = 1;
+            layout.RowCount = 2;
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
+            return layout;
+        }
+
+        private static FlowLayoutPanel NewWinccFieldBar()
+        {
+            FlowLayoutPanel bar = new FlowLayoutPanel();
+            bar.Dock = DockStyle.Fill;
+            bar.WrapContents = false;
+            bar.AutoScroll = true;
+            bar.Padding = new Padding(0, 2, 0, 1);
+            return bar;
+        }
+
+        private static void ConfigureWinccList(ListBox list)
+        {
+            list.Dock = DockStyle.Fill;
+            list.BorderStyle = BorderStyle.None;
+            list.BackColor = CardSoft;
+            list.ForeColor = Ink;
+            list.Font = new Font("Cascadia Mono", 8.4F);
+            list.HorizontalScrollbar = true;
+        }
+
+        private static void ConfigureWinccInput(TextBox box, int width)
+        {
+            box.Width = width;
+            box.Height = 25;
+            box.Margin = new Padding(2, 3, 2, 2);
+            StyleInput(box);
+        }
+
+        private static Button NewWinccSmallButton(string text, Color color, Action action)
+        {
+            Button button = NewButton(text, color);
+            button.Width = 28;
+            button.Height = 27;
+            button.Margin = new Padding(2, 1, 2, 1);
+            button.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
+            button.Click += delegate { action(); };
+            return button;
+        }
+
         private static string DefaultLadSpecJson()
         {
             return "{\r\n" +
@@ -1012,6 +1266,350 @@ namespace SiemensTiaSkillSuite
                 "    { \"kind\": \"COIL\", \"symbol\": \"Motor_Run_电机运行\" }\r\n" +
                 "  ]\r\n" +
                 "}";
+        }
+
+        private static string DefaultWinccDesignSpecJson()
+        {
+            return "{\r\n" +
+                "  \"schemaVersion\": 1,\r\n" +
+                "  \"title\": \"搬运设备HMI_HandlingHMI\",\r\n" +
+                "  \"taskText\": \"建立清晰、可维护的搬运设备WinCC操作界面\",\r\n" +
+                "  \"screenSize\": { \"width\": 1920, \"height\": 1080 },\r\n" +
+                "  \"screens\": [\r\n" +
+                "    { \"name\": \"总览_Overview\", \"purpose\": \"设备状态与当前步骤\", \"zone\": \"Overview\" },\r\n" +
+                "    { \"name\": \"手动_Manual\", \"purpose\": \"工位手动操作与互锁\", \"zone\": \"Manual\" },\r\n" +
+                "    { \"name\": \"报警_Alarm\", \"purpose\": \"活动报警与首出故障\", \"zone\": \"Alarm\" }\r\n" +
+                "  ],\r\n" +
+                "  \"components\": [\r\n" +
+                "    { \"name\": \"报警条_AlarmStrip\", \"type\": \"standard-alarm-view\", \"screen\": \"总览_Overview\", \"tags\": \"当前报警_ActiveAlarm;确认命令_AckCmd\" },\r\n" +
+                "    { \"name\": \"工位卡_StationCard\", \"type\": \"faceplate\", \"screen\": \"总览_Overview\", \"tags\": \"工位状态_StationSts;互锁允许_InterlockOk\" },\r\n" +
+                "    { \"name\": \"电机面板_MotorFaceplate\", \"type\": \"faceplate\", \"screen\": \"手动_Manual\", \"tags\": \"启动命令_StartCmd;停止命令_StopCmd;运行反馈_RunFb\" }\r\n" +
+                "  ],\r\n" +
+                "  \"tags\": [\r\n" +
+                "    { \"objectName\": \"BTN_启动_Start\", \"tag\": \"启动命令_StartCmd\", \"layer\": \"Cmd\", \"access\": \"write\" },\r\n" +
+                "    { \"objectName\": \"IND_运行_Run\", \"tag\": \"运行反馈_RunFb\", \"layer\": \"Fb\", \"access\": \"read\" },\r\n" +
+                "    { \"objectName\": \"TXT_互锁原因_InterlockReason\", \"tag\": \"互锁原因_InterlockReason\", \"layer\": \"Intlk\", \"access\": \"read\" }\r\n" +
+                "  ],\r\n" +
+                "  \"alarms\": [\r\n" +
+                "    { \"alarmName\": \"超时报警_TimeoutAlm\", \"triggerTag\": \"超时报警_TimeoutAlm\", \"class\": \"Fault\", \"ack\": \"required\" },\r\n" +
+                "    { \"alarmName\": \"通信故障_CommFault\", \"triggerTag\": \"通信故障_CommFault\", \"class\": \"Fault\", \"ack\": \"required\" }\r\n" +
+                "  ],\r\n" +
+                "  \"style\": { \"palette\": \"soft-industrial-gradient\", \"naming\": \"中文_English\", \"commandConfirmation\": true }\r\n" +
+                "}";
+        }
+
+        private void AddWinccScreen()
+        {
+            if (string.IsNullOrWhiteSpace(winccScreenNameBox.Text) || string.IsNullOrWhiteSpace(winccScreenPurposeBox.Text))
+            {
+                MessageBox.Show("画面名称和用途不能为空。", "添加WinCC画面", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            winccScreenList.Items.Add(new WinccScreenEntry
+            {
+                Name = winccScreenNameBox.Text.Trim(),
+                Purpose = winccScreenPurposeBox.Text.Trim(),
+                Zone = winccScreenZoneBox.Text.Trim()
+            });
+            winccScreenNameBox.Clear();
+            winccScreenPurposeBox.Clear();
+            winccScreenZoneBox.Clear();
+            SyncWinccSpecFromEditor();
+        }
+
+        private void AddWinccComponent()
+        {
+            if (string.IsNullOrWhiteSpace(winccComponentNameBox.Text) || string.IsNullOrWhiteSpace(winccComponentTypeBox.Text))
+            {
+                MessageBox.Show("组件名称和类型不能为空。", "添加WinCC组件", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            winccComponentList.Items.Add(new WinccComponentEntry
+            {
+                Name = winccComponentNameBox.Text.Trim(),
+                Type = winccComponentTypeBox.Text.Trim(),
+                Screen = winccComponentScreenBox.Text.Trim(),
+                Tags = winccComponentTagsBox.Text.Trim()
+            });
+            winccComponentNameBox.Clear();
+            winccComponentTypeBox.Clear();
+            winccComponentScreenBox.Clear();
+            winccComponentTagsBox.Clear();
+            SyncWinccSpecFromEditor();
+        }
+
+        private void AddWinccTag()
+        {
+            if (string.IsNullOrWhiteSpace(winccTagObjectBox.Text) || string.IsNullOrWhiteSpace(winccTagNameBox.Text))
+            {
+                MessageBox.Show("对象名和变量名不能为空。", "添加WinCC变量", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            winccTagList.Items.Add(new WinccTagEntry
+            {
+                ObjectName = winccTagObjectBox.Text.Trim(),
+                Tag = winccTagNameBox.Text.Trim(),
+                Layer = winccTagLayerBox.Text.Trim(),
+                Access = winccTagAccessBox.Text.Trim()
+            });
+            winccTagObjectBox.Clear();
+            winccTagNameBox.Clear();
+            winccTagLayerBox.Clear();
+            winccTagAccessBox.Clear();
+            SyncWinccSpecFromEditor();
+        }
+
+        private void AddWinccAlarm()
+        {
+            if (string.IsNullOrWhiteSpace(winccAlarmNameBox.Text) || string.IsNullOrWhiteSpace(winccAlarmTriggerBox.Text))
+            {
+                MessageBox.Show("报警名称和触发变量不能为空。", "添加WinCC报警", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            winccAlarmList.Items.Add(new WinccAlarmEntry
+            {
+                AlarmName = winccAlarmNameBox.Text.Trim(),
+                TriggerTag = winccAlarmTriggerBox.Text.Trim(),
+                AlarmClass = winccAlarmClassBox.Text.Trim(),
+                Ack = winccAlarmAckBox.Text.Trim()
+            });
+            winccAlarmNameBox.Clear();
+            winccAlarmTriggerBox.Clear();
+            winccAlarmClassBox.Clear();
+            winccAlarmAckBox.Clear();
+            SyncWinccSpecFromEditor();
+        }
+
+        private void RemoveSelectedWinccItem(ListBox list)
+        {
+            if (list != null && list.SelectedIndex >= 0)
+            {
+                list.Items.RemoveAt(list.SelectedIndex);
+                SyncWinccSpecFromEditor();
+            }
+        }
+
+        private void SyncWinccSpecFromEditor()
+        {
+            winccDesignSpecBox.Text = BuildWinccDesignSpecJsonFromEditor();
+            winccEditorStatusLabel.Text = "WinCC结构已同步到 JSON；保存后可编译为视觉包、工程脚手架和克隆实现输入。";
+        }
+
+        private string BuildWinccDesignSpecJsonFromEditor()
+        {
+            StringBuilder builder = new StringBuilder();
+            builder.AppendLine("{");
+            builder.AppendLine("  \"schemaVersion\": 1,");
+            builder.AppendLine("  \"title\": \"WinCC Design / WinCC设计\",");
+            builder.AppendLine("  \"taskText\": " + JsonString(requestBox.Text.Trim()) + ",");
+            builder.AppendLine("  \"screenSize\": { \"width\": 1920, \"height\": 1080 },");
+            builder.AppendLine("  \"screens\": [");
+            for (int i = 0; i < winccScreenList.Items.Count; i++)
+            {
+                WinccScreenEntry item = winccScreenList.Items[i] as WinccScreenEntry;
+                if (item == null) { continue; }
+                builder.Append("    { \"name\": " + JsonString(item.Name) + ", \"purpose\": " + JsonString(item.Purpose) + ", \"zone\": " + JsonString(item.Zone) + " }");
+                if (i < winccScreenList.Items.Count - 1) { builder.Append(","); }
+                builder.AppendLine();
+            }
+            builder.AppendLine("  ],");
+            builder.AppendLine("  \"components\": [");
+            for (int i = 0; i < winccComponentList.Items.Count; i++)
+            {
+                WinccComponentEntry item = winccComponentList.Items[i] as WinccComponentEntry;
+                if (item == null) { continue; }
+                builder.Append("    { \"name\": " + JsonString(item.Name) + ", \"type\": " + JsonString(item.Type) + ", \"screen\": " + JsonString(item.Screen) + ", \"tags\": " + JsonString(item.Tags) + " }");
+                if (i < winccComponentList.Items.Count - 1) { builder.Append(","); }
+                builder.AppendLine();
+            }
+            builder.AppendLine("  ],");
+            builder.AppendLine("  \"tags\": [");
+            for (int i = 0; i < winccTagList.Items.Count; i++)
+            {
+                WinccTagEntry item = winccTagList.Items[i] as WinccTagEntry;
+                if (item == null) { continue; }
+                builder.Append("    { \"objectName\": " + JsonString(item.ObjectName) + ", \"tag\": " + JsonString(item.Tag) + ", \"layer\": " + JsonString(item.Layer) + ", \"access\": " + JsonString(item.Access) + " }");
+                if (i < winccTagList.Items.Count - 1) { builder.Append(","); }
+                builder.AppendLine();
+            }
+            builder.AppendLine("  ],");
+            builder.AppendLine("  \"alarms\": [");
+            for (int i = 0; i < winccAlarmList.Items.Count; i++)
+            {
+                WinccAlarmEntry item = winccAlarmList.Items[i] as WinccAlarmEntry;
+                if (item == null) { continue; }
+                builder.Append("    { \"alarmName\": " + JsonString(item.AlarmName) + ", \"triggerTag\": " + JsonString(item.TriggerTag) + ", \"class\": " + JsonString(item.AlarmClass) + ", \"ack\": " + JsonString(item.Ack) + " }");
+                if (i < winccAlarmList.Items.Count - 1) { builder.Append(","); }
+                builder.AppendLine();
+            }
+            builder.AppendLine("  ],");
+            builder.AppendLine("  \"style\": { \"palette\": \"soft-industrial-gradient\", \"naming\": \"中文_English\", \"commandConfirmation\": true }");
+            builder.AppendLine("}");
+            return builder.ToString();
+        }
+
+        private void SaveWinccDesignSpec()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string directory = Path.Combine(root, "PLC_Code", "wincc", "editor");
+                Directory.CreateDirectory(directory);
+                if (string.IsNullOrWhiteSpace(currentWinccDesignSpecPath))
+                {
+                    currentWinccDesignSpecPath = Path.Combine(directory, "latest-design.json");
+                }
+                string json = winccDesignSpecBox.Text.Trim();
+                ValidateWinccDesignSpec(json);
+                BackupWinccArtifact(currentWinccDesignSpecPath);
+                File.WriteAllText(currentWinccDesignSpecPath, json + Environment.NewLine, Encoding.UTF8);
+                winccEditorStatusLabel.Text = "WinCC设计规格已保存：" + currentWinccDesignSpecPath;
+                jobBox.AppendText(Environment.NewLine + "WinCC设计规格已保存：" + currentWinccDesignSpecPath + Environment.NewLine);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "保存WinCC设计规格失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void LoadWinccDesignEditorFromSpec()
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(currentWinccDesignSpecPath) && !string.IsNullOrWhiteSpace(projectRoot))
+                {
+                    currentWinccDesignSpecPath = Path.Combine(projectRoot, "PLC_Code", "wincc", "editor", "latest-design.json");
+                }
+                string json = !string.IsNullOrWhiteSpace(currentWinccDesignSpecPath) && File.Exists(currentWinccDesignSpecPath)
+                    ? ReadText(currentWinccDesignSpecPath)
+                    : winccDesignSpecBox.Text;
+                if (string.IsNullOrWhiteSpace(json)) { json = DefaultWinccDesignSpecJson(); }
+
+                winccScreenList.Items.Clear();
+                winccComponentList.Items.Clear();
+                winccTagList.Items.Clear();
+                winccAlarmList.Items.Clear();
+                foreach (string item in ExtractJsonObjects(ExtractJsonArray(json, "screens")))
+                {
+                    winccScreenList.Items.Add(new WinccScreenEntry
+                    {
+                        Name = JsonStringValue(item, "name", ""),
+                        Purpose = JsonStringValue(item, "purpose", ""),
+                        Zone = JsonStringValue(item, "zone", "")
+                    });
+                }
+                foreach (string item in ExtractJsonObjects(ExtractJsonArray(json, "components")))
+                {
+                    winccComponentList.Items.Add(new WinccComponentEntry
+                    {
+                        Name = JsonStringValue(item, "name", ""),
+                        Type = JsonStringValue(item, "type", ""),
+                        Screen = JsonStringValue(item, "screen", ""),
+                        Tags = JsonStringValue(item, "tags", "")
+                    });
+                }
+                foreach (string item in ExtractJsonObjects(ExtractJsonArray(json, "tags")))
+                {
+                    winccTagList.Items.Add(new WinccTagEntry
+                    {
+                        ObjectName = JsonStringValue(item, "objectName", ""),
+                        Tag = JsonStringValue(item, "tag", ""),
+                        Layer = JsonStringValue(item, "layer", ""),
+                        Access = JsonStringValue(item, "access", "")
+                    });
+                }
+                foreach (string item in ExtractJsonObjects(ExtractJsonArray(json, "alarms")))
+                {
+                    winccAlarmList.Items.Add(new WinccAlarmEntry
+                    {
+                        AlarmName = JsonStringValue(item, "alarmName", ""),
+                        TriggerTag = JsonStringValue(item, "triggerTag", ""),
+                        AlarmClass = JsonStringValue(item, "class", ""),
+                        Ack = JsonStringValue(item, "ack", "")
+                    });
+                }
+                winccDesignSpecBox.Text = json;
+                winccEditorStatusLabel.Text = "已从JSON读入WinCC结构；右侧可继续自由编辑完整设计规格。";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "读取WinCC设计规格失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void CompileWinccDesignWorkflow()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                SaveWinccDesignSpec();
+                if (string.IsNullOrWhiteSpace(currentWinccDesignSpecPath) || !File.Exists(currentWinccDesignSpecPath))
+                {
+                    throw new FileNotFoundException("WinCC设计规格不存在。", currentWinccDesignSpecPath);
+                }
+                StartCommand("wincc-design-workflow");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "编译WinCC设计工作流失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void BackupWinccArtifact(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) { return; }
+            string root = ResolveProjectRoot(projectPathBox.Text);
+            string backupDirectory = Path.Combine(root, "PLC_Code", "wincc", "editor", "backups", DateTime.Now.ToString("yyyyMMdd-HHmmssfff"));
+            Directory.CreateDirectory(backupDirectory);
+            File.Copy(path, Path.Combine(backupDirectory, Path.GetFileName(path)), false);
+        }
+
+        private static void ValidateWinccDesignSpec(string json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                throw new InvalidDataException("WinCC设计规格不能为空。");
+            }
+
+            object parsed;
+            try
+            {
+                parsed = new JavaScriptSerializer().DeserializeObject(json);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidDataException("WinCC设计规格不是有效JSON：" + ex.Message, ex);
+            }
+
+            Dictionary<string, object> document = parsed as Dictionary<string, object>;
+            if (document == null)
+            {
+                throw new InvalidDataException("WinCC设计规格根节点必须是JSON对象。");
+            }
+
+            RequireWinccArray(document, "screens", 1);
+            RequireWinccArray(document, "components", 1);
+            RequireWinccArray(document, "tags", 0);
+            RequireWinccArray(document, "alarms", 0);
+        }
+
+        private static void RequireWinccArray(Dictionary<string, object> document, string name, int minimumCount)
+        {
+            object value;
+            if (!document.TryGetValue(name, out value) || value == null)
+            {
+                throw new InvalidDataException("WinCC设计规格缺少数组：" + name);
+            }
+
+            object[] rows = value as object[];
+            if (rows == null)
+            {
+                throw new InvalidDataException("WinCC设计规格字段必须是数组：" + name);
+            }
+            if (rows.Length < minimumCount)
+            {
+                throw new InvalidDataException("WinCC设计规格至少需要 " + minimumCount + " 条 " + name + "。");
+            }
         }
 
         private void AddLadConditionFromFields()
@@ -1964,8 +2562,9 @@ namespace SiemensTiaSkillSuite
             view.DropDownItems.Add(NewMenuItem("验证面板", delegate { SelectMainTab(6); }));
             view.DropDownItems.Add(NewMenuItem("项目模型", delegate { SelectMainTab(7); }));
             view.DropDownItems.Add(NewMenuItem("知识库", delegate { SelectMainTab(8); }));
-            view.DropDownItems.Add(NewMenuItem("参考图", delegate { SelectMainTab(9); }));
+            view.DropDownItems.Add(NewMenuItem("参考图", delegate { SelectMainTab(10); }));
             view.DropDownItems.Add(NewMenuItem("LAD结构编辑", delegate { SelectMainTab(11); }));
+            view.DropDownItems.Add(NewMenuItem("WinCC设计编辑", delegate { SelectMainTab(12); }));
             view.DropDownItems.Add(new ToolStripSeparator());
             view.DropDownItems.Add(NewMenuItem("恢复默认布局", delegate { RestoreDefaultLayout(); }));
             return view;
@@ -1985,6 +2584,7 @@ namespace SiemensTiaSkillSuite
             code.DropDownItems.Add(NewMenuItem("DB + 程序块协同", delegate { SelectCombo(workflowSelectBox, "DB+程序块协同"); ApplyWorkflowDefaults(false); }));
             code.DropDownItems.Add(NewMenuItem("WinCC 画面生成", delegate { SelectCombo(workflowSelectBox, "WinCC画面生成"); ApplyWorkflowDefaults(false); }));
             code.DropDownItems.Add(NewMenuItem("WinCC 参考图复刻", delegate { SelectCombo(workflowSelectBox, "WinCC参考图复刻"); ApplyWorkflowDefaults(false); }));
+            code.DropDownItems.Add(NewMenuItem("打开 WinCC 设计编辑器", delegate { SelectMainTab(12); }));
             return code;
         }
 
@@ -2052,6 +2652,8 @@ namespace SiemensTiaSkillSuite
             tools.DropDownItems.Add(NewMenuItem("联网扫描 WinCC 插件", delegate { StartCommand("wincc-plugins"); }));
             tools.DropDownItems.Add(NewMenuItem("查看 WinCC 插件路由", delegate { ShowWinccPluginRouting(); }));
             tools.DropDownItems.Add(NewMenuItem("生成 WinCC 视觉工程包", delegate { StartCommand("wincc-visual-package"); }));
+            tools.DropDownItems.Add(NewMenuItem("打开 WinCC 设计编辑器", delegate { SelectMainTab(12); }));
+            tools.DropDownItems.Add(NewMenuItem("编译当前 WinCC 设计工作流", delegate { CompileWinccDesignWorkflow(); }));
             tools.DropDownItems.Add(NewMenuItem("生成 WinCC 组件蓝图", delegate { StartCommand("wincc-component-blueprints"); }));
             tools.DropDownItems.Add(NewMenuItem("查看 WinCC 组件蓝图", delegate { ShowWinccComponentBlueprints(); }));
             tools.DropDownItems.Add(NewMenuItem("生成 WinCC 工程脚手架", delegate { StartCommand("wincc-engineering-scaffold"); }));
@@ -3031,6 +3633,53 @@ namespace SiemensTiaSkillSuite
             }
         }
 
+        private void ShowWinccDesignWorkflow()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string latestRoot = Path.Combine(root, "PLC_Code", "wincc", "design-workflow", "latest");
+                string reportPath = Path.Combine(latestRoot, "workflow-report.md");
+                string reportJsonPath = Path.Combine(latestRoot, "workflow-report.json");
+                string specPath = Path.Combine(latestRoot, "design-spec.json");
+                string screenMapPath = Path.Combine(latestRoot, "screen-map.md");
+                string componentMapPath = Path.Combine(latestRoot, "component-map.md");
+
+                if (!File.Exists(reportPath) && !File.Exists(reportJsonPath))
+                {
+                    statusLabel.Text = "尚未生成WinCC设计工作流，请先编译设计包";
+                    SelectMainTab(12);
+                    return;
+                }
+
+                string report = File.Exists(reportPath) ? ReadText(reportPath) : ReadText(reportJsonPath);
+                string json = File.Exists(reportJsonPath) ? ReadText(reportJsonPath) : "";
+                string evidence = report;
+                if (File.Exists(screenMapPath))
+                {
+                    evidence += Environment.NewLine + Environment.NewLine + "===== screen-map.md =====" + Environment.NewLine + ReadText(screenMapPath);
+                }
+                if (File.Exists(componentMapPath))
+                {
+                    evidence += Environment.NewLine + Environment.NewLine + "===== component-map.md =====" + Environment.NewLine + ReadText(componentMapPath);
+                }
+
+                planBox.Text = evidence;
+                previewBox.Text = !string.IsNullOrWhiteSpace(json) ? json : evidence;
+                if (File.Exists(specPath))
+                {
+                    currentWinccDesignSpecPath = specPath;
+                }
+                SelectMainTab(1);
+                BuildProjectTree();
+                statusLabel.Text = "WinCC设计工作流已完成，报告和设计证据已载入";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "打开WinCC设计工作流失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
         private void ShowPlcChangePackage()
         {
             try
@@ -3823,6 +4472,11 @@ namespace SiemensTiaSkillSuite
                 if (File.Exists(currentLadSpecPath))
                 {
                     LoadLadEditorFromSpec();
+                }
+                currentWinccDesignSpecPath = Path.Combine(resolved, "PLC_Code", "wincc", "editor", "latest-design.json");
+                if (File.Exists(currentWinccDesignSpecPath))
+                {
+                    LoadWinccDesignEditorFromSpec();
                 }
                 statusLabel.Text = "已加载";
                 BuildProjectTree();
@@ -4733,6 +5387,10 @@ namespace SiemensTiaSkillSuite
                         {
                             ShowWinccVisualPackage();
                         }
+                        if (command == "wincc-design-workflow" && currentProcess.ExitCode == 0)
+                        {
+                            ShowWinccDesignWorkflow();
+                        }
                         if (command == "lad-preview" && currentProcess.ExitCode == 0)
                         {
                             ShowLadPreview();
@@ -5083,6 +5741,25 @@ namespace SiemensTiaSkillSuite
             else if (command == "wincc-visual-package")
             {
                 args.AddRange(new string[] { "wincc-visual-package", "-ProjectPath", root, "-TaskText", requestBox.Text.Trim() });
+                AddWorkflowConfigArg(args, configPath);
+                if (File.Exists(referenceImageBox.Text.Trim()))
+                {
+                    args.Add("-ReferenceImagePath");
+                    args.Add(referenceImageBox.Text.Trim());
+                }
+            }
+            else if (command == "wincc-design-workflow")
+            {
+                if (string.IsNullOrWhiteSpace(currentWinccDesignSpecPath) || !File.Exists(currentWinccDesignSpecPath))
+                {
+                    throw new FileNotFoundException("请先保存 WinCC 设计规格。", currentWinccDesignSpecPath);
+                }
+                args.AddRange(new string[] {
+                    "wincc-design-workflow",
+                    "-ProjectPath", root,
+                    "-DesignSpecPath", currentWinccDesignSpecPath,
+                    "-ForCloneOnly"
+                });
                 AddWorkflowConfigArg(args, configPath);
                 if (File.Exists(referenceImageBox.Text.Trim()))
                 {
@@ -5542,6 +6219,57 @@ namespace SiemensTiaSkillSuite
                 if (!string.IsNullOrWhiteSpace(Instance)) { text += "  |  " + Instance; }
                 if (!string.IsNullOrWhiteSpace(Pt)) { text += "  |  " + Pt; }
                 return text;
+            }
+        }
+
+        private sealed class WinccScreenEntry
+        {
+            public string Name;
+            public string Purpose;
+            public string Zone;
+
+            public override string ToString()
+            {
+                return Name + "  |  " + Purpose + "  |  " + Zone;
+            }
+        }
+
+        private sealed class WinccComponentEntry
+        {
+            public string Name;
+            public string Type;
+            public string Screen;
+            public string Tags;
+
+            public override string ToString()
+            {
+                return Name + "  |  " + Type + "  |  " + Screen + "  |  " + Tags;
+            }
+        }
+
+        private sealed class WinccTagEntry
+        {
+            public string ObjectName;
+            public string Tag;
+            public string Layer;
+            public string Access;
+
+            public override string ToString()
+            {
+                return ObjectName + "  |  " + Tag + "  |  " + Layer + "  |  " + Access;
+            }
+        }
+
+        private sealed class WinccAlarmEntry
+        {
+            public string AlarmName;
+            public string TriggerTag;
+            public string AlarmClass;
+            public string Ack;
+
+            public override string ToString()
+            {
+                return AlarmName + "  |  " + TriggerTag + "  |  " + AlarmClass + "  |  ack=" + Ack;
             }
         }
     }
