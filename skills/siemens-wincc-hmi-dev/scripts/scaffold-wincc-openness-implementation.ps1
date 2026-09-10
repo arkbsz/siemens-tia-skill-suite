@@ -104,7 +104,12 @@ $cs = New-Object System.Text.StringBuilder
 [void]$cs.AppendLine("                Console.WriteLine(""Clone-only guard: pass applyToClone=true after review."");")
 [void]$cs.AppendLine("                return 2;")
 [void]$cs.AppendLine("            }")
-[void]$cs.AppendLine("            string runner = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "".codex"", ""skills"", ""siemens-tia-plc-dev"", ""scripts"", ""run-wincc-implementation.ps1"");")
+[void]$cs.AppendLine("            string runtimeRoot = Environment.GetEnvironmentVariable(""SIEMENS_TIA_RUNTIME_ROOT"");")
+[void]$cs.AppendLine("            string runner = String.IsNullOrWhiteSpace(runtimeRoot) ? null : Path.Combine(runtimeRoot, ""skills"", ""siemens-tia-plc-dev"", ""scripts"", ""run-wincc-implementation.ps1"");")
+[void]$cs.AppendLine("            if (String.IsNullOrWhiteSpace(runner) || !File.Exists(runner))")
+[void]$cs.AppendLine("            {")
+[void]$cs.AppendLine("                runner = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "".codex"", ""skills"", ""siemens-tia-plc-dev"", ""scripts"", ""run-wincc-implementation.ps1"");")
+[void]$cs.AppendLine("            }")
 [void]$cs.AppendLine("            if (!File.Exists(runner))")
 [void]$cs.AppendLine("            {")
 [void]$cs.AppendLine("                throw new FileNotFoundException(""Installed WinCC implementation runner was not found."", runner);")
@@ -196,7 +201,14 @@ if (-not `$ApplyToClone) {
 if ([string]::IsNullOrWhiteSpace(`$ImplementationPath)) {
     `$ImplementationPath = `$PSScriptRoot
 }
-`$implementationScript = Join-Path `$env:USERPROFILE ".codex\skills\siemens-tia-plc-dev\scripts\run-wincc-implementation.ps1"
+`$runtimeRoot = `$env:SIEMENS_TIA_RUNTIME_ROOT
+`$implementationScript = ""
+if (-not [string]::IsNullOrWhiteSpace(`$runtimeRoot)) {
+    `$implementationScript = Join-Path `$runtimeRoot "skills\siemens-tia-plc-dev\scripts\run-wincc-implementation.ps1"
+}
+if (-not (Test-Path -LiteralPath `$implementationScript -PathType Leaf)) {
+    `$implementationScript = Join-Path `$env:USERPROFILE ".codex\skills\siemens-tia-plc-dev\scripts\run-wincc-implementation.ps1"
+}
 if (-not (Test-Path -LiteralPath `$implementationScript -PathType Leaf)) {
     throw "The installed Siemens TIA skill does not contain the real WinCC implementation runner: `$implementationScript"
 }

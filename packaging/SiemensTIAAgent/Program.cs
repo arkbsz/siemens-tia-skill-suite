@@ -54,11 +54,11 @@ internal static class Program
 
     private static string CreateRuntimeDirectory()
     {
-        string sessionsRoot = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "ArkBSZ",
-            "SiemensTIAAgent",
-            "sessions");
+        // Codex child agents can read the user's .codex workspace, while their
+        // sandbox may reject an otherwise valid runtime under AppData\Local.
+        // Keep the decrypted payload temporary and hidden, but place it where
+        // the built-in Agent can actually consume the bundled skills.
+        string sessionsRoot = GetSessionsRoot();
         Directory.CreateDirectory(sessionsRoot);
 
         string runtimeDirectory = Path.Combine(
@@ -68,6 +68,15 @@ internal static class Program
         TryRestrictToCurrentUser(runtimeDirectory);
         File.SetAttributes(runtimeDirectory, File.GetAttributes(runtimeDirectory) | FileAttributes.Hidden | FileAttributes.NotContentIndexed);
         return runtimeDirectory;
+    }
+
+    private static string GetSessionsRoot()
+    {
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            ".codex",
+            "siemens-tia-agent-runtime",
+            "sessions");
     }
 
     private static void ExtractPayload(string runtimeDirectory)
@@ -271,11 +280,7 @@ internal static class Program
 
     private static void CleanupExpiredRuntimes()
     {
-        string sessionsRoot = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "ArkBSZ",
-            "SiemensTIAAgent",
-            "sessions");
+        string sessionsRoot = GetSessionsRoot();
         if (!Directory.Exists(sessionsRoot))
         {
             return;

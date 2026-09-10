@@ -1,6 +1,6 @@
 {
     "packageName":  "siemens-tia-skill-suite_v1.0.0_20260810",
-    "version":  "1.0.0",
+    "version":  "1.0.1",
     "releaseDate":  "2026-08-10",
     "builtAt":  "2026-08-10T17:42:51",
     "installTarget":  "%USERPROFILE%\\.codex\\skills",
@@ -61,10 +61,10 @@
                               "singleFile":  true,
                               "payloadEncryption":  "AES-256-CBC",
                               "payloadIntegrity":  "HMAC-SHA256",
-                              "temporaryRuntime":  "%LOCALAPPDATA%\\ArkBSZ\\SiemensTIAAgent\\sessions",
+                              "temporaryRuntime":  "%USERPROFILE%\\.codex\\siemens-tia-agent-runtime\\sessions",
                               "sourceFilesDistributedBesideExe":  false,
-                              "lastBuiltAt":  "2026-09-10T14:06:15+08:00",
-                              "lastBuildSha256":  "FEDF9366AF549A30FFE73458F6791F07FE7C0320DF823F0BE2FB2D7B86D7E8D2",
+                              "lastBuiltAt":  "2026-09-10T14:30:00+08:00",
+                              "lastBuildSha256":  "ED7AD302AA853D08AE2CEC0B204698396CCF574A4CBB4E47A6ABFF2380C61BB6",
                               "lastBuildPayloadFiles":  225,
                               "lastBuildSelfTest":  "Passed"
                           },
@@ -211,6 +211,7 @@
                   "setup-siemens-tia-suite.ps1 installs skills with backup, detects all supported Agent CLIs, records runtime dependencies, builds the EXE, and optionally launches the project console.",
                   "build-protected-exe.ps1 produces a self-contained single-file Windows application with an encrypted, authenticated runtime payload and no adjacent source tree.",
                   "The native workbench command channel decodes Windows PowerShell 5.1 Chinese output with GB18030 while keeping Agent JSONL output on UTF-8.",
-                  "The browser-based console remains available only as the explicit console-web fallback."
+                  "The browser-based console remains available only as the explicit console-web fallback.",
+                  "The protected EXE runtime is placed under the user's .codex directory so built-in Agent child processes can consume bundled skills without falling back to an external source tree."
               ]
 }

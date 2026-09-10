@@ -54,7 +54,9 @@ $languagePreference = Get-ConfigValue -Config $config -Path @("routing", "langua
 $safetyMode = Get-ConfigValue -Config $config -Path @("safety", "safetyMode") -Fallback "clone-compile"
 $plcName = Get-ConfigValue -Config $config -Path @("tia", "plcName") -Fallback "PLC_1"
 $stepTimeout = Get-ConfigValue -Config $config -Path @("tia", "stepTimeoutSeconds") -Fallback "600"
-$invokePath = Join-Path $env:USERPROFILE ".codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1"
+# Generated change-package commands must follow the active skill package,
+# including the protected EXE runtime, instead of assuming a user install.
+$invokePath = Join-Path $PSScriptRoot "invoke-siemens-plc-dev.ps1"
 
 $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {

@@ -17,9 +17,9 @@ protected-release\SiemensTIAAgent.exe
 最近验证构建：
 
 ```text
-时间：2026-09-10 14:06 +08:00
+时间：2026-09-10 14:30 +08:00
 文件：protected-release\SiemensTIAAgent.exe
-SHA256：FEDF9366AF549A30FFE73458F6791F07FE7C0320DF823F0BE2FB2D7B86D7E8D2
+SHA256：ED7AD302AA853D08AE2CEC0B204698396CCF574A4CBB4E47A6ABFF2380C61BB6
 载荷文件数：225
 自检：Passed
 ```
@@ -41,11 +41,12 @@ SHA256：FEDF9366AF549A30FFE73458F6791F07FE7C0320DF823F0BE2FB2D7B86D7E8D2
 
 ## 运行时保护
 
-- 运行资源只解密到当前用户的 `%LOCALAPPDATA%\ArkBSZ\SiemensTIAAgent\sessions` 临时目录。
+- 运行资源只解密到当前用户的 `%USERPROFILE%\.codex\siemens-tia-agent-runtime\sessions` 临时目录，以便内置 Agent 子进程在其工作区沙箱中读取 skill。
 - EXE 内置 Codex、Claude Code、Trae Agent 和 Qoder 的适配与路由配置，但不内嵌第三方 CLI、商业模型、账号、Token 或 API Key；目标机器仍需按所选平台完成合法安装和授权。
 - 临时目录会收紧为当前 Windows 用户访问，并设置隐藏和禁止内容索引属性。
 - 交互窗口关闭后自动清理本次运行目录；异常残留会在下一次启动时清理。
 - EXE 内置 HMAC 完整性验证，被修改或载荷损坏时拒绝启动。
+- 保护版工作台生成的执行队列、变更包和 WinCC runner 会优先使用 `SIEMENS_TIA_RUNTIME_ROOT`，不会回退到发行包外的源码路径。
 - 本次构建包含真实 WinCC 读取、克隆应用预检、中文路径日志解码和 C# runner 适配器修复。
 - 可向构建脚本传入 `-CertificateThumbprint`，使用当前用户证书进行 Authenticode 签名。
 

@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-09-10 - 保护版工作台运行时修复
+
+- 修复保护版 EXE 解密目录位于 `AppData\Local` 时，内置 Codex Agent 子进程无法读取 skill 的问题。
+- 保护版运行时改为使用用户 `.codex` 下的随机临时会话目录，并继续保留隐藏、用户 ACL、退出清理和 HMAC 校验。
+- 修复执行队列和 PLC 变更包生成器，生成命令始终引用当前运行中的 skill 包。
+- 修复 WinCC Openness C# skeleton 和 PowerShell runner，优先读取 `SIEMENS_TIA_RUNTIME_ROOT`。
+- 通过保护版窗口真实触发 PLC 变更包、Agent 执行队列和当前阶段运行；确认 Agent 能读取内置 WinCC skill，未发生 `Access denied` 或生产工程写入。
+- 保护版版本标记为 `1.0.1`，载荷文件数为 225，自检通过。
+
 ## 2026-09-10 - 真实工作台执行链路
 
 - 验证安装目录中的 `PLCDevConsole.exe` 可启动并保持响应，窗口内可见项目树、日志、文件预览、AI 交互和工作流按钮。

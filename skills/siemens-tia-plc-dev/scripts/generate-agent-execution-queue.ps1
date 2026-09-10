@@ -135,7 +135,9 @@ New-Item -ItemType Directory -Path (Join-Path $latestDir "prompts") -Force | Out
 New-Item -ItemType Directory -Path (Join-Path $latestDir "logs") -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $latestDir "evidence") -Force | Out-Null
 
-$invokePath = Join-Path $env:USERPROFILE ".codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1"
+# Keep generated queue commands inside the active skill package. This matters for
+# the protected EXE, where the package is extracted to a per-session runtime root.
+$invokePath = Join-Path $PSScriptRoot "invoke-siemens-plc-dev.ps1"
 $routingMode = Get-ConfigValue -Config $config -Path @("platform", "routingMode") -Fallback "auto"
 $platform = Get-ConfigValue -Config $config -Path @("platform", "selected") -Fallback "auto"
 $model = Get-ConfigValue -Config $config -Path @("routing", "codeModel") -Fallback "inherit"
