@@ -1,8 +1,8 @@
 {
     "packageName":  "siemens-tia-skill-suite_v1.0.0_20260810",
-    "version":  "1.0.3",
-    "releaseDate":  "2026-08-10",
-    "builtAt":  "2026-08-10T17:42:51",
+    "version":  "1.0.4",
+    "releaseDate":  "2026-09-10",
+    "builtAt":  "2026-09-10T16:00:00+08:00",
     "installTarget":  "%USERPROFILE%\\.codex\\skills",
     "packagedSkills":  [
                            {
@@ -63,8 +63,8 @@
                               "payloadIntegrity":  "HMAC-SHA256",
                               "temporaryRuntime":  "%USERPROFILE%\\.codex\\siemens-tia-agent-runtime\\sessions",
                               "sourceFilesDistributedBesideExe":  false,
-                              "lastBuiltAt":  "2026-09-10T15:35:00+08:00",
-                              "lastBuildSha256":  "72E1C5B4CF2777F6B960CE9AC57AE6700D1468059C54D8B53CD91EE87118C281",
+                              "lastBuiltAt":  "2026-09-10T16:00:00+08:00",
+                              "lastBuildSha256":  "8D349F2AE8222D543F86463009262D535B68AE6258B5E41377FB73D9552FA2EA",
                               "lastBuildPayloadFiles":  227,
                               "lastBuildSelfTest":  "Passed"
                           },

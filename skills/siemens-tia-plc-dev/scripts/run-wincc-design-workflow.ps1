@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Parameter(Mandatory = $true)]
     [string]$ProjectPath,
 
@@ -80,6 +80,26 @@ function Invoke-ChildScript {
 function CsvValue {
     param([object]$Object, [string]$Name, [string]$Fallback = "")
     return [string](Get-PropertyValue -Object $Object -Name $Name -Fallback $Fallback)
+}
+
+function IntValue {
+    param([object]$Object, [string]$Name, [int]$Fallback = 0)
+    $raw = Get-PropertyValue -Object $Object -Name $Name -Fallback $null
+    $number = 0
+    if ($null -ne $raw -and [int]::TryParse([string]$raw, [ref]$number)) {
+        return $number
+    }
+    return $Fallback
+}
+
+function RectanglesOverlap {
+    param([object]$A, [object]$B)
+    return (
+        ([int]$A.x -lt ([int]$B.x + [int]$B.width)) -and
+        (([int]$A.x + [int]$A.width) -gt [int]$B.x) -and
+        ([int]$A.y -lt ([int]$B.y + [int]$B.height)) -and
+        (([int]$A.y + [int]$A.height) -gt [int]$B.y)
+    )
 }
 
 $root = Resolve-ProjectDirectory -Path $ProjectPath
@@ -283,6 +303,111 @@ $screenRows = foreach ($screen in $screens) {
     }
 }
 
+# Keep geometry validation independent from Openness so clone-only design checks remain deterministic.
+$geometryRows = foreach ($component in $components) {
+    [pscustomobject]@{
+        screen = CsvValue $component "screen"
+        component = CsvValue $component "name"
+        x = IntValue $component "x" 0
+        y = IntValue $component "y" 0
+        width = IntValue $component "width" 0
+        height = IntValue $component "height" 0
+    }
+}
+$layoutIssues = New-Object System.Collections.ArrayList
+foreach ($row in $geometryRows) {
+    if ($row.width -le 0 -or $row.height -le 0) {
+        [void]$layoutIssues.Add([pscustomobject]@{
+            severity = "warning"
+            code = "missing-size"
+            screen = $row.screen
+            component = $row.component
+            relatedComponent = ""
+            message = "组件缺少有效 width/height，无法进行遮挡校验。"
+        })
+        continue
+    }
+    if ($row.x -lt 0 -or $row.y -lt 0 -or ($row.x + $row.width) -gt $width -or ($row.y + $row.height) -gt $height) {
+        [void]$layoutIssues.Add([pscustomobject]@{
+            severity = "error"
+            code = "out-of-bounds"
+            screen = $row.screen
+            component = $row.component
+            relatedComponent = ""
+            message = "组件超出画面边界 ${width}x${height}。"
+        })
+    }
+}
+foreach ($screen in $screens) {
+    $screenName = CsvValue $screen "name"
+    $screenComponents = @($geometryRows | Where-Object { $_.screen -eq $screenName -and $_.width -gt 0 -and $_.height -gt 0 })
+    for ($i = 0; $i -lt $screenComponents.Count; $i++) {
+        for ($j = $i + 1; $j -lt $screenComponents.Count; $j++) {
+            if (RectanglesOverlap -A $screenComponents[$i] -B $screenComponents[$j]) {
+                [void]$layoutIssues.Add([pscustomobject]@{
+                    severity = "error"
+                    code = "overlap"
+                    screen = $screenName
+                    component = $screenComponents[$i].component
+                    relatedComponent = $screenComponents[$j].component
+                    message = "组件矩形相交，可能造成界面遮挡。"
+                })
+            }
+        }
+    }
+}
+$layoutStatus = if (@($layoutIssues | Where-Object { $_.severity -eq "error" }).Count -gt 0) { "REVIEW_REQUIRED" } else { "PASS" }
+$layoutValidation = [pscustomobject]@{
+    schemaVersion = 1
+    source = "design-spec.json"
+    screenSize = [pscustomobject]@{ width = $width; height = $height }
+    status = $layoutStatus
+    componentCount = $components.Count
+    issueCount = $layoutIssues.Count
+    overlapCount = @($layoutIssues | Where-Object { $_.code -eq "overlap" }).Count
+    outOfBoundsCount = @($layoutIssues | Where-Object { $_.code -eq "out-of-bounds" }).Count
+    incompleteGeometryCount = @($layoutIssues | Where-Object { $_.code -eq "missing-size" }).Count
+    issues = @($layoutIssues)
+}
+$layoutValidationMdBuilder = New-Object System.Text.StringBuilder
+[void]$layoutValidationMdBuilder.AppendLine("# WinCC Layout Validation")
+[void]$layoutValidationMdBuilder.AppendLine()
+[void]$layoutValidationMdBuilder.AppendLine("- Source: ``$DesignSpecPath``")
+[void]$layoutValidationMdBuilder.AppendLine("- Screen size: ``${width}x${height}``")
+[void]$layoutValidationMdBuilder.AppendLine("- Status: ``$layoutStatus``")
+[void]$layoutValidationMdBuilder.AppendLine("- Components: ``$($components.Count)``")
+[void]$layoutValidationMdBuilder.AppendLine("- Overlaps: ``$($layoutValidation.overlapCount)``")
+[void]$layoutValidationMdBuilder.AppendLine("- Out of bounds: ``$($layoutValidation.outOfBoundsCount)``")
+[void]$layoutValidationMdBuilder.AppendLine("- Missing size: ``$($layoutValidation.incompleteGeometryCount)``")
+[void]$layoutValidationMdBuilder.AppendLine()
+[void]$layoutValidationMdBuilder.AppendLine("| Severity | Code | Screen | Component | Related | Message |")
+[void]$layoutValidationMdBuilder.AppendLine("| --- | --- | --- | --- | --- | --- |")
+if ($layoutIssues.Count -eq 0) {
+    [void]$layoutValidationMdBuilder.AppendLine("| pass | none | - | - | - | 未发现组件重叠、越界或尺寸缺失。 |")
+}
+else {
+    foreach ($issue in $layoutIssues) {
+        [void]$layoutValidationMdBuilder.AppendLine("| $($issue.severity) | $($issue.code) | $($issue.screen) | $($issue.component) | $($issue.relatedComponent) | $($issue.message) |")
+    }
+}
+
+Write-JsonCopy -Object $layoutValidation -Paths @(
+    (Join-Path $runRoot "layout-validation.json"),
+    (Join-Path $latestRoot "layout-validation.json"),
+    (Join-Path $visualLatest "layout-validation.json"),
+    (Join-Path $engineeringLatest "layout-validation.json"),
+    (Join-Path $implementationLatest "layout-validation.json")
+)
+foreach ($target in @(
+    (Join-Path $runRoot "layout-validation.md"),
+    (Join-Path $latestRoot "layout-validation.md"),
+    (Join-Path $visualLatest "layout-validation.md"),
+    (Join-Path $engineeringLatest "layout-validation.md"),
+    (Join-Path $implementationLatest "layout-validation.md")
+)) {
+    Write-Utf8Bom -Path $target -Content $layoutValidationMdBuilder.ToString()
+}
+
 foreach ($dir in @($runRoot, $latestRoot, $engineeringLatest, $implementationLatest)) {
     New-Item -ItemType Directory -Path $dir -Force | Out-Null
 }
@@ -319,6 +444,8 @@ $layout = [pscustomobject]@{
     screenSize = [pscustomobject]@{ width = $width; height = $height }
     zones = @($zones)
     screens = @($screens)
+    components = @($components)
+    validation = $layoutValidation
     spacing = [int](Get-PropertyValue -Object $spec -Name "spacing" -Fallback 18)
     cornerRadius = [int](Get-PropertyValue -Object $spec -Name "cornerRadius" -Fallback 14)
 }
@@ -374,10 +501,15 @@ $report = [pscustomobject]@{
         componentBlueprints = (Join-Path $blueprintLatest "component-blueprints.json")
         engineeringScaffold = (Join-Path $engineeringLatest "wincc-engineering-scaffold.json")
         opennessImplementation = (Join-Path $implementationLatest "implementation-manifest.json")
+        layoutValidation = (Join-Path $latestRoot "layout-validation.json")
     }
     forCloneOnly = $true
     productionWrite = $false
     plcDownload = $false
+    layoutStatus = $layoutStatus
+    layoutIssueCount = $layoutIssues.Count
+    layoutOverlapCount = $layoutValidation.overlapCount
+    layoutOutOfBoundsCount = $layoutValidation.outOfBoundsCount
 }
 Write-JsonCopy -Object $report -Paths @(
     (Join-Path $runRoot "workflow-report.json"),
@@ -393,6 +525,9 @@ $reportMd = @"
 - Components: ``$($components.Count)``
 - HMI tags: ``$($tags.Count)``
 - Alarms: ``$($alarms.Count)``
+- Layout status: ``$layoutStatus``
+- Layout overlaps: ``$($layoutValidation.overlapCount)``
+- Layout out of bounds: ``$($layoutValidation.outOfBoundsCount)``
 - Clone only: ``true``
 - Production write: ``false``
 - PLC download: ``false``

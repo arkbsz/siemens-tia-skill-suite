@@ -55,7 +55,7 @@ Use the local visual console when the user wants a better interaction surface th
 - project-level configuration persistence at `PLC_Code\config\ai-workflow.json`; `read-cycle` and `write-cycle` consume the saved file and copy a snapshot into their run reports
 - common workflow buttons for `doctor`, `read-cycle`, `list-blocks`, and `write-cycle`
 - a native `LAD结构编辑` page with condition/action entry lists, bilingual titles/comments, editable LAD JSON, XML generation, XML validation, XML readback summary, and clone verification actions wired to the real PowerShell helpers
-- a native `WinCC设计编辑` page with editable screen/component/tag/alarm lists, free-form design JSON, save-time validation and backup, design-package compilation, component coordinates, and automatic report/implementation preview
+- a native `WinCC设计编辑` page with editable screen/component/tag/alarm lists, free-form design JSON, save-time validation and backup, design-package compilation, component coordinates, geometry overlap/bounds validation, and automatic report/implementation preview
 - native task orchestration through `agent-plan`, with a center `任务编排` tab that shows stages, tools, outputs, verification gates, safety gates, and release boundaries
 - native execution queue generation through `agent-queue`, converting a plan into stage prompts, command suggestions, verification gates, logs and evidence folders
 - queue state control through `queue-stage`, supporting start-next, complete-current, fail-current, block-current and reset transitions with current-stage previews

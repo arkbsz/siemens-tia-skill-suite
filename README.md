@@ -54,6 +54,7 @@
 - 本地编辑闭环：工作台可直接编辑导出的 XML/SCL/DB/Markdown/JSON 文件，保存前自动备份到 `PLC_Code\file-backups`，并支持一键生成 LAD XML 可读预览。
 - 原生 LAD 结构编辑：工作台的 `LAD结构编辑` 页可读取导出网络摘要、编辑条件/动作链、自由修改完整 LAD JSON、生成真实 LAD XML、校验并进入克隆编译验证；复杂网络仍可通过右侧 JSON、模板补丁和指令路由扩展。
 - 原生 WinCC 设计编辑：工作台的 `WinCC设计编辑` 页可维护画面、组件、HMI 标签和报警，右侧可自由编辑设计 JSON；保存前校验并自动备份，编译后生成带坐标和标签绑定的 screen/object 映射、工程脚手架和克隆实现包。
+- WinCC 几何校验：编译设计包时自动检查组件 `x/y/width/height`、画面越界、尺寸缺失和同画面矩形重叠；结果写入 `layout-validation.json/md`，发现遮挡会标记为 `REVIEW_REQUIRED`，不会静默进入后续实现包。
 - PLC 改动包：一键生成 `PLC_Code\changes\latest-plc-change-package`，包含块/DB契约、命名映射、LAD JSON 模板、SCL/DB 源码目录、导入清单、验证计划和安全风险评估。
 - 针对性自动路由：LAD、WinCC、Openness、SCL、DB 契约、诊断和审查使用独立的 skill 组合、平台优先级与任务指令
 - 文件上传：图片、PDF、文档、源码、XML 和日志自动复制到项目工作区并随当前消息交给 Agent

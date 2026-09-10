@@ -3644,6 +3644,8 @@ namespace SiemensTiaSkillSuite
                 string specPath = Path.Combine(latestRoot, "design-spec.json");
                 string screenMapPath = Path.Combine(latestRoot, "screen-map.md");
                 string componentMapPath = Path.Combine(latestRoot, "component-map.md");
+                string layoutValidationPath = Path.Combine(latestRoot, "layout-validation.md");
+                string layoutValidationJsonPath = Path.Combine(latestRoot, "layout-validation.json");
 
                 if (!File.Exists(reportPath) && !File.Exists(reportJsonPath))
                 {
@@ -3663,16 +3665,37 @@ namespace SiemensTiaSkillSuite
                 {
                     evidence += Environment.NewLine + Environment.NewLine + "===== component-map.md =====" + Environment.NewLine + ReadText(componentMapPath);
                 }
+                if (File.Exists(layoutValidationPath))
+                {
+                    evidence += Environment.NewLine + Environment.NewLine + "===== layout-validation.md =====" + Environment.NewLine + ReadText(layoutValidationPath);
+                    validationBox.Text = ReadText(layoutValidationPath);
+                }
+                else
+                {
+                    validationBox.Text = "尚未生成 WinCC 组件几何校验报告。";
+                }
 
                 planBox.Text = evidence;
-                previewBox.Text = !string.IsNullOrWhiteSpace(json) ? json : evidence;
+                if (File.Exists(layoutValidationJsonPath))
+                {
+                    previewBox.Text = (!string.IsNullOrWhiteSpace(json) ? json : evidence) +
+                        Environment.NewLine + Environment.NewLine +
+                        "===== layout-validation.json =====" + Environment.NewLine +
+                        ReadText(layoutValidationJsonPath);
+                }
+                else
+                {
+                    previewBox.Text = !string.IsNullOrWhiteSpace(json) ? json : evidence;
+                }
                 if (File.Exists(specPath))
                 {
                     currentWinccDesignSpecPath = specPath;
                 }
                 SelectMainTab(1);
                 BuildProjectTree();
-                statusLabel.Text = "WinCC设计工作流已完成，报告和设计证据已载入";
+                statusLabel.Text = File.Exists(layoutValidationPath)
+                    ? "WinCC设计工作流已完成，报告、对象映射和布局校验已载入"
+                    : "WinCC设计工作流已完成，报告和设计证据已载入";
             }
             catch (Exception ex)
             {
