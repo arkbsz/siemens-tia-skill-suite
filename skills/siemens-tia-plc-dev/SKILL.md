@@ -54,6 +54,7 @@ Use the local visual console when the user wants a better interaction surface th
 - a scrollable Tools settings panel for platform command overrides, model/workflow selection, API provider/base/key-env settings, image workflow/model/quality/size, WinCC component strategy, Windows font settings, and uploaded reference image path
 - project-level configuration persistence at `PLC_Code\config\ai-workflow.json`; `read-cycle` and `write-cycle` consume the saved file and copy a snapshot into their run reports
 - common workflow buttons for `doctor`, `read-cycle`, `list-blocks`, and `write-cycle`
+- a native `LAD结构编辑` page with condition/action entry lists, bilingual titles/comments, editable LAD JSON, XML generation, XML validation, XML readback summary, and clone verification actions wired to the real PowerShell helpers
 - native task orchestration through `agent-plan`, with a center `任务编排` tab that shows stages, tools, outputs, verification gates, safety gates, and release boundaries
 - native execution queue generation through `agent-queue`, converting a plan into stage prompts, command suggestions, verification gates, logs and evidence folders
 - queue state control through `queue-stage`, supporting start-next, complete-current, fail-current, block-current and reset transitions with current-stage previews
@@ -234,6 +235,8 @@ Current practical route for "most instructions":
 For advanced or mixed-instruction tasks, run `plc-instruction-plan` before authoring. It writes `PLC_Code\plc\instruction-plans\latest\instruction-route-table.md/json`, `technology-object-plan.md`, and `safety-risk-assessment.md`. Use it to decide which parts belong in LAD JSON, generic `CALL`, SCL source import, donor LAD networks, or technology-object configuration before creating the actual change package.
 
 For a generated LAD XML block, prefer `write-cycle` as the safe default before any real import. It verifies the block on a cloned project, compiles, re-exports, writes a readable summary, and prepares a release package only when compile succeeds. It does not write directly to the production project.
+
+The native workbench LAD editor is a code-like authoring surface, not a screenshot mockup. Use `从XML读取` to recover a best-effort network summary, edit common contacts/actions from the structured lists, or directly edit the complete JSON in `LAD JSON`. `生成XML` calls `write-lad-network` against the selected exported block and writes `PLC_Code\lad-editor\latest.generated.xml`; `校验XML` calls the LAD validator; `克隆验证` routes that generated artifact through `write-cycle`. Complex branches, named CALL parameters, technology instructions, and uncommon box shapes remain available through direct JSON, donor-network patching, or the existing instruction-routing workflow. Read `references/lad-workbench-editor.md` when this page is the primary authoring surface.
 
 If a live write verification takes longer than expected, inspect `PLC_Code\runs\write-cycle-*\current-step.json` and the matching `logs\*.stdout.tmp` / `logs\*.stderr.tmp` files before retrying. Do not start a second live TIA write/import command while the first one is still running.
 

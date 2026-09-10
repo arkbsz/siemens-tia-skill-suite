@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-09-10 - 原生 LAD 结构编辑工作区
+
+- 新增 Windows Forms `LAD结构编辑` 页，提供网络号、标题、注释、条件链和动作链编辑。
+- 支持 `NO/NC/P_EDGE/N_EDGE`、比较条件、`COIL/SET/RESET`、`TON/TOF/TP`、`MOVE`、`CTU/CTD/CTUD` 和通用 `CALL` 的常用输入。
+- 右侧保留完整 LAD JSON 自由编辑入口，可继续使用分支、CALL 参数、数组成员、作用域和其他脚本已支持的高级字段。
+- `从XML读取` 会从导出 XML 恢复常见网络摘要；`生成XML`、`校验XML`、`克隆验证` 已接入真实脚本和原有安全门禁。
+- 保存和覆盖 `PLC_Code\lad-editor` 产物前自动建立时间戳备份；不会直接修改 TIA 内部二进制工程，也不会下载 PLC。
+- 修复新 LAD 页在 WinForms 首次布局时设置 SplitContainer 最小尺寸导致的启动崩溃。
+
 ## 2026-09-10 - 保护版工作台运行时修复
 
 - 修复保护版 EXE 解密目录位于 `AppData\Local` 时，内置 Codex Agent 子进程无法读取 skill 的问题。

@@ -1,6 +1,6 @@
 {
     "packageName":  "siemens-tia-skill-suite_v1.0.0_20260810",
-    "version":  "1.0.1",
+    "version":  "1.0.2",
     "releaseDate":  "2026-08-10",
     "builtAt":  "2026-08-10T17:42:51",
     "installTarget":  "%USERPROFILE%\\.codex\\skills",
@@ -63,9 +63,9 @@
                               "payloadIntegrity":  "HMAC-SHA256",
                               "temporaryRuntime":  "%USERPROFILE%\\.codex\\siemens-tia-agent-runtime\\sessions",
                               "sourceFilesDistributedBesideExe":  false,
-                              "lastBuiltAt":  "2026-09-10T14:30:00+08:00",
-                              "lastBuildSha256":  "ED7AD302AA853D08AE2CEC0B204698396CCF574A4CBB4E47A6ABFF2380C61BB6",
-                              "lastBuildPayloadFiles":  225,
+                              "lastBuiltAt":  "2026-09-10T15:06:00+08:00",
+                              "lastBuildSha256":  "1F256E00A719729041E89CF2BB7476EA6B03FCA91A26000594E61E9618DE02FD",
+                              "lastBuildPayloadFiles":  226,
                               "lastBuildSelfTest":  "Passed"
                           },
     "excludedDirectories":  [
@@ -194,6 +194,7 @@
                   "write-cycle is the preferred generated LAD XML safety gate before applying any release to a production project.",
                   "write-cycle writes current-step.json plus stdout/stderr temp logs and supports StepTimeoutSeconds for no-hang live Openness operation.",
                   "The native PLCDevConsole.exe visual console is available through the console and console-exe commands and provides project tree, runs/logs, workflow buttons, and Codex-ready AI task drafting.",
+                  "The native workbench includes a real LAD structure editor with XML readback summaries, condition/action authoring, free-form LAD JSON, generated XML, validation, and clone-verification actions.",
                   "The native console embeds targeted Siemens Agent profiles and routes Codex, Claude Code, Trae Agent, and Qoder through one normalized JSONL adapter.",
                   "project-model creates PLC_Code\\workbench\\context\\latest\\project-model.json, agent-context.md, and file-index.csv for fast project understanding across local and external Agent engines.",
                   "knowledge-pack creates PLC_Code\\knowledge\\packs\\latest\\knowledge-brief.md/json with official-first Siemens sources, task search queries, reviewed-community route notes, and Agent retrieval prompts.",

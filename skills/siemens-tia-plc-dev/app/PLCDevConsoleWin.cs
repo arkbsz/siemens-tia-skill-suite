@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
+using System.Xml;
 
 namespace SiemensTiaSkillSuite
 {
@@ -77,7 +78,22 @@ namespace SiemensTiaSkillSuite
         private readonly RichTextBox contextBox = new RichTextBox();
         private readonly RichTextBox knowledgeBox = new RichTextBox();
         private readonly RichTextBox capabilityBox = new RichTextBox();
+        private readonly RichTextBox ladSpecBox = new RichTextBox();
         private readonly TextBox requestBox = new TextBox();
+        private readonly TextBox ladNetworkIndexBox = new TextBox();
+        private readonly TextBox ladTitleBox = new TextBox();
+        private readonly TextBox ladCommentBox = new TextBox();
+        private readonly ComboBox ladConditionKindBox = new ComboBox();
+        private readonly TextBox ladConditionLeftBox = new TextBox();
+        private readonly TextBox ladConditionRightBox = new TextBox();
+        private readonly TextBox ladConditionSourceTypeBox = new TextBox();
+        private readonly ListBox ladConditionList = new ListBox();
+        private readonly ComboBox ladActionKindBox = new ComboBox();
+        private readonly TextBox ladActionTargetBox = new TextBox();
+        private readonly TextBox ladActionInstanceBox = new TextBox();
+        private readonly TextBox ladActionPtBox = new TextBox();
+        private readonly ListBox ladActionList = new ListBox();
+        private readonly Label ladEditorStatusLabel = new Label();
         private readonly Label statusLabel = new Label();
         private readonly Label projectBadge = new Label();
         private readonly MenuStrip mainMenu = new MenuStrip();
@@ -165,6 +181,8 @@ namespace SiemensTiaSkillSuite
         private bool loadingWorkflowConfig;
         private bool workflowAutoMode = true;
         private string workflowConfigPath = "";
+        private string currentLadSpecPath = "";
+        private string currentLadGeneratedXmlPath = "";
 
         public MainForm(string projectPath, string invokeScriptArg)
         {
@@ -561,6 +579,7 @@ namespace SiemensTiaSkillSuite
             mainTabs.Controls.Add(NewTab("知识库", knowledgeBox));
             mainTabs.Controls.Add(NewTab("能力矩阵", capabilityBox));
             mainTabs.Controls.Add(NewTab("参考图", referencePreviewBox));
+            mainTabs.Controls.Add(NewTab("LAD结构编辑", BuildLadEditorPage()));
             mainLayout.Controls.Add(mainTabs, 0, 2);
 
             GroupBox aiInputBox = NewGroup("AI交互与工作流");
@@ -741,6 +760,894 @@ namespace SiemensTiaSkillSuite
                 SafeConfigureSplitter(outer, 240, 560, 360);
                 SafeConfigureSplitter(center, 300, 240, Math.Max(340, center.Height - 310));
             };
+        }
+
+        private Control BuildLadEditorPage()
+        {
+            TableLayoutPanel page = new TableLayoutPanel();
+            page.Dock = DockStyle.Fill;
+            page.BackColor = Canvas;
+            page.Padding = new Padding(8);
+            page.ColumnCount = 1;
+            page.RowCount = 3;
+            page.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
+            page.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            page.RowStyles.Add(new RowStyle(SizeType.Absolute, 24));
+
+            FlowLayoutPanel toolbar = new FlowLayoutPanel();
+            toolbar.Dock = DockStyle.Fill;
+            toolbar.WrapContents = false;
+            toolbar.AutoScroll = true;
+            toolbar.BackColor = CardSoft;
+            toolbar.Padding = new Padding(6, 7, 6, 5);
+
+            toolbar.Controls.Add(LadEditorLabel("网络"));
+            ladNetworkIndexBox.Width = 48;
+            StyleInput(ladNetworkIndexBox);
+            ladNetworkIndexBox.Text = "1";
+            toolbar.Controls.Add(ladNetworkIndexBox);
+            toolbar.Controls.Add(LadEditorLabel("标题"));
+            ladTitleBox.Width = 170;
+            StyleInput(ladTitleBox);
+            ladTitleBox.Text = "LAD network";
+            toolbar.Controls.Add(ladTitleBox);
+            toolbar.Controls.Add(LadEditorLabel("注释"));
+            ladCommentBox.Width = 260;
+            StyleInput(ladCommentBox);
+            toolbar.Controls.Add(ladCommentBox);
+
+            Button ladReadButton = NewButton("从XML读取", Teal);
+            ladReadButton.Width = 100;
+            ladReadButton.Height = 30;
+            ladReadButton.Margin = new Padding(5, 1, 3, 1);
+            ladReadButton.Click += delegate { LoadLadNetworkFromXml(); };
+            toolbar.Controls.Add(ladReadButton);
+            Button ladTemplateButton = NewButton("载入模板", Ink);
+            ladTemplateButton.Width = 82;
+            ladTemplateButton.Height = 30;
+            ladTemplateButton.Margin = new Padding(3, 1, 3, 1);
+            ladTemplateButton.Click += delegate { StartCommand("lad-scaffold"); };
+            toolbar.Controls.Add(ladTemplateButton);
+            Button ladSyncButton = NewButton("结构生成JSON", Teal);
+            ladSyncButton.Width = 106;
+            ladSyncButton.Height = 30;
+            ladSyncButton.Margin = new Padding(3, 1, 3, 1);
+            ladSyncButton.Click += delegate { SyncLadSpecFromEditor(); };
+            toolbar.Controls.Add(ladSyncButton);
+            Button ladLoadJsonButton = NewButton("JSON读入结构", Teal);
+            ladLoadJsonButton.Width = 106;
+            ladLoadJsonButton.Height = 30;
+            ladLoadJsonButton.Margin = new Padding(3, 1, 3, 1);
+            ladLoadJsonButton.Click += delegate { LoadLadEditorFromSpec(); };
+            toolbar.Controls.Add(ladLoadJsonButton);
+            Button ladSaveButton = NewButton("保存JSON", Gold);
+            ladSaveButton.ForeColor = Ink;
+            ladSaveButton.Width = 76;
+            ladSaveButton.Height = 30;
+            ladSaveButton.Margin = new Padding(3, 1, 3, 1);
+            ladSaveButton.Click += delegate { SaveLadSpecToDisk(); };
+            toolbar.Controls.Add(ladSaveButton);
+            Button ladGenerateButton = NewButton("生成XML", Orange);
+            ladGenerateButton.Width = 78;
+            ladGenerateButton.Height = 30;
+            ladGenerateButton.Margin = new Padding(3, 1, 3, 1);
+            ladGenerateButton.Click += delegate { GenerateLadXml(); };
+            toolbar.Controls.Add(ladGenerateButton);
+            Button ladValidateButton = NewButton("校验XML", Ink);
+            ladValidateButton.Width = 78;
+            ladValidateButton.Height = 30;
+            ladValidateButton.Margin = new Padding(3, 1, 3, 1);
+            ladValidateButton.Click += delegate { StartCommand("lad-validate"); };
+            toolbar.Controls.Add(ladValidateButton);
+            Button ladVerifyButton = NewButton("克隆验证", Orange);
+            ladVerifyButton.Width = 86;
+            ladVerifyButton.Height = 30;
+            ladVerifyButton.Margin = new Padding(3, 1, 3, 1);
+            ladVerifyButton.Click += delegate { VerifyLadEditorOutput(); };
+            toolbar.Controls.Add(ladVerifyButton);
+            page.Controls.Add(toolbar, 0, 0);
+
+            SplitContainer editorSplitter = new SplitContainer();
+            editorSplitter.Dock = DockStyle.Fill;
+            editorSplitter.Orientation = Orientation.Vertical;
+            editorSplitter.SplitterWidth = 7;
+            // The tab has no client size while the form is being constructed.
+            // Keep minimums small here; WinForms will otherwise throw before
+            // the first layout pass. The editor remains resizable afterwards.
+            editorSplitter.Panel1MinSize = 1;
+            editorSplitter.Panel2MinSize = 1;
+            editorSplitter.BackColor = Canvas;
+            page.Controls.Add(editorSplitter, 0, 1);
+
+            TableLayoutPanel structureLayout = new TableLayoutPanel();
+            structureLayout.Dock = DockStyle.Fill;
+            structureLayout.Padding = new Padding(2);
+            structureLayout.ColumnCount = 1;
+            structureLayout.RowCount = 2;
+            structureLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+            structureLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+            editorSplitter.Panel1.Controls.Add(structureLayout);
+
+            GroupBox conditionGroup = NewGroup("条件链 / Conditions");
+            conditionGroup.Dock = DockStyle.Fill;
+            TableLayoutPanel conditionLayout = new TableLayoutPanel();
+            conditionLayout.Dock = DockStyle.Fill;
+            conditionLayout.ColumnCount = 1;
+            conditionLayout.RowCount = 2;
+            conditionLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            conditionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+            ladConditionList.Dock = DockStyle.Fill;
+            ladConditionList.BorderStyle = BorderStyle.None;
+            ladConditionList.BackColor = CardSoft;
+            ladConditionList.ForeColor = Ink;
+            ladConditionList.Font = new Font("Cascadia Mono", 9F);
+            conditionLayout.Controls.Add(ladConditionList, 0, 0);
+
+            FlowLayoutPanel conditionInput = new FlowLayoutPanel();
+            conditionInput.Dock = DockStyle.Fill;
+            conditionInput.WrapContents = false;
+            conditionInput.AutoScroll = true;
+            conditionInput.Padding = new Padding(0, 4, 0, 2);
+            ConfigureCombo(ladConditionKindBox, new string[] { "NO", "NC", "P_EDGE", "N_EDGE", "EQ", "NE", "GE", "GT", "LE", "LT" }, "NO", 74);
+            ladConditionLeftBox.Width = 142;
+            ladConditionRightBox.Width = 122;
+            ladConditionSourceTypeBox.Width = 72;
+            StyleInput(ladConditionLeftBox);
+            StyleInput(ladConditionRightBox);
+            StyleInput(ladConditionSourceTypeBox);
+            conditionInput.Controls.Add(ladConditionKindBox);
+            conditionInput.Controls.Add(ladConditionLeftBox);
+            conditionInput.Controls.Add(ladConditionRightBox);
+            conditionInput.Controls.Add(ladConditionSourceTypeBox);
+            Button addConditionButton = NewButton("+条件", Teal);
+            addConditionButton.Width = 64;
+            addConditionButton.Height = 28;
+            addConditionButton.Margin = new Padding(3, 1, 2, 1);
+            addConditionButton.Click += delegate { AddLadConditionFromFields(); };
+            conditionInput.Controls.Add(addConditionButton);
+            Button removeConditionButton = NewButton("-条件", Ink);
+            removeConditionButton.Width = 64;
+            removeConditionButton.Height = 28;
+            removeConditionButton.Margin = new Padding(2, 1, 2, 1);
+            removeConditionButton.Click += delegate { RemoveSelectedLadCondition(); };
+            conditionInput.Controls.Add(removeConditionButton);
+            conditionLayout.Controls.Add(conditionInput, 0, 1);
+            conditionGroup.Controls.Add(conditionLayout);
+            structureLayout.Controls.Add(conditionGroup, 0, 0);
+
+            GroupBox actionGroup = NewGroup("动作链 / Actions");
+            actionGroup.Dock = DockStyle.Fill;
+            TableLayoutPanel actionLayout = new TableLayoutPanel();
+            actionLayout.Dock = DockStyle.Fill;
+            actionLayout.ColumnCount = 1;
+            actionLayout.RowCount = 2;
+            actionLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            actionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+            ladActionList.Dock = DockStyle.Fill;
+            ladActionList.BorderStyle = BorderStyle.None;
+            ladActionList.BackColor = CardSoft;
+            ladActionList.ForeColor = Ink;
+            ladActionList.Font = new Font("Cascadia Mono", 9F);
+            actionLayout.Controls.Add(ladActionList, 0, 0);
+
+            FlowLayoutPanel actionInput = new FlowLayoutPanel();
+            actionInput.Dock = DockStyle.Fill;
+            actionInput.WrapContents = false;
+            actionInput.AutoScroll = true;
+            actionInput.Padding = new Padding(0, 4, 0, 2);
+            ConfigureCombo(ladActionKindBox, new string[] { "COIL", "SET", "RESET", "TON", "TOF", "TP", "MOVE", "CTU", "CTD", "CTUD", "CALL" }, "COIL", 78);
+            ladActionTargetBox.Width = 132;
+            ladActionInstanceBox.Width = 132;
+            ladActionPtBox.Width = 82;
+            StyleInput(ladActionTargetBox);
+            StyleInput(ladActionInstanceBox);
+            StyleInput(ladActionPtBox);
+            actionInput.Controls.Add(ladActionKindBox);
+            actionInput.Controls.Add(ladActionTargetBox);
+            actionInput.Controls.Add(ladActionInstanceBox);
+            actionInput.Controls.Add(ladActionPtBox);
+            Button addActionButton = NewButton("+动作", Teal);
+            addActionButton.Width = 64;
+            addActionButton.Height = 28;
+            addActionButton.Margin = new Padding(3, 1, 2, 1);
+            addActionButton.Click += delegate { AddLadActionFromFields(); };
+            actionInput.Controls.Add(addActionButton);
+            Button removeActionButton = NewButton("-动作", Ink);
+            removeActionButton.Width = 64;
+            removeActionButton.Height = 28;
+            removeActionButton.Margin = new Padding(2, 1, 2, 1);
+            removeActionButton.Click += delegate { RemoveSelectedLadAction(); };
+            actionInput.Controls.Add(removeActionButton);
+            actionLayout.Controls.Add(actionInput, 0, 1);
+            actionGroup.Controls.Add(actionLayout);
+            structureLayout.Controls.Add(actionGroup, 0, 1);
+
+            GroupBox jsonGroup = NewGroup("自由规格 / LAD JSON");
+            jsonGroup.Dock = DockStyle.Fill;
+            ladSpecBox.Dock = DockStyle.Fill;
+            ladSpecBox.Multiline = true;
+            ladSpecBox.AcceptsTab = true;
+            ladSpecBox.ScrollBars = RichTextBoxScrollBars.Both;
+            ladSpecBox.WordWrap = false;
+            ladSpecBox.BorderStyle = BorderStyle.None;
+            ladSpecBox.BackColor = CodeBack;
+            ladSpecBox.ForeColor = CodeFore;
+            ladSpecBox.Font = new Font("Cascadia Code", 9.2F);
+            ladSpecBox.Text = DefaultLadSpecJson();
+            jsonGroup.Controls.Add(ladSpecBox);
+            editorSplitter.Panel2.Controls.Add(jsonGroup);
+
+            ladEditorStatusLabel.Dock = DockStyle.Fill;
+            ladEditorStatusLabel.TextAlign = ContentAlignment.MiddleLeft;
+            ladEditorStatusLabel.ForeColor = MutedInk;
+            ladEditorStatusLabel.Padding = new Padding(8, 0, 0, 0);
+            ladEditorStatusLabel.Text = "LAD编辑器：支持条件、定时器、线圈、置位/复位、MOVE、计数器和通用CALL；高级形状可直接编辑JSON。";
+            page.Controls.Add(ladEditorStatusLabel, 0, 2);
+
+            LoadLadEditorFromSpec();
+            return page;
+        }
+
+        private static Label LadEditorLabel(string text)
+        {
+            Label label = new Label();
+            label.Text = text;
+            label.AutoSize = true;
+            label.ForeColor = MutedInk;
+            label.TextAlign = ContentAlignment.MiddleLeft;
+            label.Margin = new Padding(3, 7, 2, 3);
+            return label;
+        }
+
+        private static string DefaultLadSpecJson()
+        {
+            return "{\r\n" +
+                "  \"title\": \"Motor start stop / 电机启停\",\r\n" +
+                "  \"comment\": \"LAD结构化编辑器生成的网络\",\r\n" +
+                "  \"conditions\": [\r\n" +
+                "    { \"kind\": \"NO\", \"symbol\": \"Start_PB_启动按钮\" },\r\n" +
+                "    { \"kind\": \"NC\", \"symbol\": \"Stop_OK_停止正常\" }\r\n" +
+                "  ],\r\n" +
+                "  \"actions\": [\r\n" +
+                "    { \"kind\": \"COIL\", \"symbol\": \"Motor_Run_电机运行\" }\r\n" +
+                "  ]\r\n" +
+                "}";
+        }
+
+        private void AddLadConditionFromFields()
+        {
+            string kind = SelectedText(ladConditionKindBox, "NO").Trim().ToUpperInvariant();
+            string left = ladConditionLeftBox.Text.Trim();
+            string right = ladConditionRightBox.Text.Trim();
+            string sourceType = ladConditionSourceTypeBox.Text.Trim();
+            if (string.IsNullOrWhiteSpace(left))
+            {
+                MessageBox.Show("请填写符号或左操作数。", "添加LAD条件", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            if ((kind == "P_EDGE" || kind == "N_EDGE") && string.IsNullOrWhiteSpace(right))
+            {
+                MessageBox.Show("P_EDGE/N_EDGE 需要填写边沿记忆位。", "添加LAD条件", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            if (kind == "EQ" || kind == "NE" || kind == "GE" || kind == "GT" || kind == "LE" || kind == "LT")
+            {
+                if (string.IsNullOrWhiteSpace(right))
+                {
+                    MessageBox.Show("比较条件需要填写右操作数。", "添加LAD条件", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+                if (string.IsNullOrWhiteSpace(sourceType)) { sourceType = "Int"; }
+            }
+
+            ladConditionList.Items.Add(new LadConditionEntry
+            {
+                Kind = kind,
+                Left = left,
+                Right = right,
+                SourceType = sourceType
+            });
+            ladConditionLeftBox.Clear();
+            ladConditionRightBox.Clear();
+            SyncLadSpecFromEditor();
+        }
+
+        private void RemoveSelectedLadCondition()
+        {
+            if (ladConditionList.SelectedIndex >= 0)
+            {
+                ladConditionList.Items.RemoveAt(ladConditionList.SelectedIndex);
+                SyncLadSpecFromEditor();
+            }
+        }
+
+        private void AddLadActionFromFields()
+        {
+            string kind = SelectedText(ladActionKindBox, "COIL").Trim().ToUpperInvariant();
+            string target = ladActionTargetBox.Text.Trim();
+            string instance = ladActionInstanceBox.Text.Trim();
+            string pt = ladActionPtBox.Text.Trim();
+            if ((kind == "COIL" || kind == "SET" || kind == "RESET") && string.IsNullOrWhiteSpace(target))
+            {
+                MessageBox.Show("线圈、置位和复位动作需要填写目标符号。", "添加LAD动作", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            if ((kind == "TON" || kind == "TOF" || kind == "TP") &&
+                (string.IsNullOrWhiteSpace(instance) || string.IsNullOrWhiteSpace(pt)))
+            {
+                MessageBox.Show("定时器动作需要填写实例和PT，例如 IEC_Timer_0_DB_1、T#1s。", "添加LAD动作", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            if ((kind == "CTU" || kind == "CTD" || kind == "CTUD") && string.IsNullOrWhiteSpace(instance))
+            {
+                MessageBox.Show("计数器动作需要填写实例。目标栏可填写PV符号，留空时默认为1。", "添加LAD动作", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            if (kind == "MOVE" && (string.IsNullOrWhiteSpace(target) || (string.IsNullOrWhiteSpace(instance) && target.IndexOf("->", StringComparison.Ordinal) < 0)))
+            {
+                MessageBox.Show("MOVE 请在目标栏填写 源 -> 目标，或目标栏填目标、实例栏填源。", "添加LAD动作", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            if (kind == "CALL" && string.IsNullOrWhiteSpace(target))
+            {
+                MessageBox.Show("CALL 动作需要在目标栏填写块名，例如 MC_Power。", "添加LAD动作", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            ladActionList.Items.Add(new LadActionEntry
+            {
+                Kind = kind,
+                Target = target,
+                Instance = instance,
+                Pt = pt
+            });
+            ladActionTargetBox.Clear();
+            ladActionInstanceBox.Clear();
+            ladActionPtBox.Clear();
+            SyncLadSpecFromEditor();
+        }
+
+        private void RemoveSelectedLadAction()
+        {
+            if (ladActionList.SelectedIndex >= 0)
+            {
+                ladActionList.Items.RemoveAt(ladActionList.SelectedIndex);
+                SyncLadSpecFromEditor();
+            }
+        }
+
+        private void SyncLadSpecFromEditor()
+        {
+            ladSpecBox.Text = BuildLadSpecJsonFromEditor();
+            ladEditorStatusLabel.Text = "结构化输入已同步到 JSON；可继续直接编辑右侧规格，再点击“JSON读入结构”检查可视化条目。";
+        }
+
+        private string BuildLadSpecJsonFromEditor()
+        {
+            StringBuilder builder = new StringBuilder();
+            builder.AppendLine("{");
+            builder.AppendLine("  \"title\": " + JsonString(ladTitleBox.Text.Trim()) + ",");
+            builder.AppendLine("  \"comment\": " + JsonString(ladCommentBox.Text.Trim()) + ",");
+            builder.AppendLine("  \"conditions\": [");
+            for (int i = 0; i < ladConditionList.Items.Count; i++)
+            {
+                LadConditionEntry entry = ladConditionList.Items[i] as LadConditionEntry;
+                if (entry == null) { continue; }
+                builder.Append("    { \"kind\": " + JsonString(entry.Kind));
+                if (entry.Kind == "NO" || entry.Kind == "NC")
+                {
+                    builder.Append(", \"symbol\": " + JsonString(entry.Left));
+                }
+                else if (entry.Kind == "P_EDGE" || entry.Kind == "N_EDGE")
+                {
+                    builder.Append(", \"symbol\": " + JsonString(entry.Left));
+                    builder.Append(", \"bitSymbol\": " + JsonString(entry.Right));
+                }
+                else
+                {
+                    builder.Append(", \"sourceType\": " + JsonString(string.IsNullOrWhiteSpace(entry.SourceType) ? "Int" : entry.SourceType));
+                    builder.Append(", \"left\": " + BuildLadOperandJson(entry.Left, entry.SourceType));
+                    builder.Append(", \"right\": " + BuildLadOperandJson(entry.Right, entry.SourceType));
+                }
+                builder.Append(" }");
+                if (i < ladConditionList.Items.Count - 1) { builder.Append(","); }
+                builder.AppendLine();
+            }
+            builder.AppendLine("  ],");
+            builder.AppendLine("  \"actions\": [");
+            for (int i = 0; i < ladActionList.Items.Count; i++)
+            {
+                LadActionEntry entry = ladActionList.Items[i] as LadActionEntry;
+                if (entry == null) { continue; }
+                builder.Append("    { \"kind\": " + JsonString(entry.Kind));
+                if (entry.Kind == "COIL" || entry.Kind == "SET" || entry.Kind == "RESET")
+                {
+                    builder.Append(", \"symbol\": " + JsonString(entry.Target));
+                }
+                else if (entry.Kind == "TON" || entry.Kind == "TOF" || entry.Kind == "TP")
+                {
+                    builder.Append(", \"instance\": " + JsonString(entry.Instance));
+                    builder.Append(", \"pt\": " + JsonString(entry.Pt));
+                }
+                else if (entry.Kind == "MOVE")
+                {
+                    string source = entry.Instance;
+                    string target = entry.Target;
+                    int arrow = target.IndexOf("->", StringComparison.Ordinal);
+                    if (arrow >= 0)
+                    {
+                        source = target.Substring(0, arrow).Trim();
+                        target = target.Substring(arrow + 2).Trim();
+                    }
+                    builder.Append(", \"source\": " + BuildLadOperandJson(source, ""));
+                    builder.Append(", \"target\": { \"symbol\": " + JsonString(target) + " }");
+                }
+                else if (entry.Kind == "CTU" || entry.Kind == "CTD" || entry.Kind == "CTUD")
+                {
+                    builder.Append(", \"instance\": " + JsonString(entry.Instance));
+                    builder.Append(", \"valueType\": \"Int\"");
+                    builder.Append(", \"pv\": " + BuildLadOperandJson(string.IsNullOrWhiteSpace(entry.Target) ? "1" : entry.Target, "Int"));
+                }
+                else if (entry.Kind == "CALL")
+                {
+                    builder.Append(", \"partName\": " + JsonString(entry.Target));
+                    if (!string.IsNullOrWhiteSpace(entry.Instance))
+                    {
+                        builder.Append(", \"instance\": " + JsonString(entry.Instance));
+                    }
+                    builder.Append(", \"powerRail\": true");
+                }
+                builder.Append(" }");
+                if (i < ladActionList.Items.Count - 1) { builder.Append(","); }
+                builder.AppendLine();
+            }
+            builder.AppendLine("  ]");
+            builder.Append("}");
+            return builder.ToString();
+        }
+
+        private static string BuildLadOperandJson(string value, string constantType)
+        {
+            string text = (value ?? "").Trim();
+            if (Regex.IsMatch(text, "^(T#|L#|D#|-?\\d+(\\.\\d+)?$|TRUE$|FALSE$)", RegexOptions.IgnoreCase))
+            {
+                return "{ \"value\": " + JsonString(text) + ", \"constantType\": " + JsonString(string.IsNullOrWhiteSpace(constantType) ? "Int" : constantType) + " }";
+            }
+            return "{ \"symbol\": " + JsonString(text) + " }";
+        }
+
+        private void SaveLadSpecToDisk()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                string directory = Path.Combine(root, "PLC_Code", "lad-editor");
+                Directory.CreateDirectory(directory);
+                if (string.IsNullOrWhiteSpace(currentLadSpecPath))
+                {
+                    currentLadSpecPath = Path.Combine(directory, "latest-network.json");
+                }
+                BackupLadArtifact(currentLadSpecPath);
+                File.WriteAllText(currentLadSpecPath, ladSpecBox.Text, Encoding.UTF8);
+                ladEditorStatusLabel.Text = "JSON规格已保存：" + currentLadSpecPath;
+                jobBox.AppendText(Environment.NewLine + "LAD JSON已保存：" + currentLadSpecPath + Environment.NewLine);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "保存LAD JSON失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void LoadLadEditorFromSpec()
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(currentLadSpecPath) && !string.IsNullOrWhiteSpace(projectRoot))
+                {
+                    currentLadSpecPath = Path.Combine(projectRoot, "PLC_Code", "lad-editor", "latest-network.json");
+                }
+                string json = !string.IsNullOrWhiteSpace(currentLadSpecPath) && File.Exists(currentLadSpecPath)
+                    ? ReadText(currentLadSpecPath)
+                    : ladSpecBox.Text;
+                if (string.IsNullOrWhiteSpace(json)) { json = DefaultLadSpecJson(); }
+
+                ladTitleBox.Text = JsonStringValue(json, "title", "LAD network");
+                ladCommentBox.Text = JsonStringValue(json, "comment", "");
+                ladConditionList.Items.Clear();
+                ladActionList.Items.Clear();
+
+                foreach (string item in ExtractJsonObjects(ExtractJsonArray(json, "conditions")))
+                {
+                    string kind = JsonStringValue(item, "kind", "NO").ToUpperInvariant();
+                    string left = JsonStringValue(item, "symbol", "");
+                    string right = JsonStringValue(item, "bitSymbol", "");
+                    string sourceType = JsonStringValue(item, "sourceType", "");
+                    string leftObject = ExtractJsonObject(item, "left");
+                    string rightObject = ExtractJsonObject(item, "right");
+                    if (string.IsNullOrWhiteSpace(left) && !string.IsNullOrWhiteSpace(leftObject))
+                    {
+                        left = JsonStringValue(leftObject, "symbol", JsonStringValue(leftObject, "value", ""));
+                    }
+                    if (string.IsNullOrWhiteSpace(right) && !string.IsNullOrWhiteSpace(rightObject))
+                    {
+                        right = JsonStringValue(rightObject, "symbol", JsonStringValue(rightObject, "value", ""));
+                    }
+                    ladConditionList.Items.Add(new LadConditionEntry
+                    {
+                        Kind = kind,
+                        Left = left,
+                        Right = right,
+                        SourceType = sourceType
+                    });
+                }
+
+                foreach (string item in ExtractJsonObjects(ExtractJsonArray(json, "actions")))
+                {
+                    string kind = JsonStringValue(item, "kind", "COIL").ToUpperInvariant();
+                    string target = JsonStringValue(item, "symbol", "");
+                    string instance = JsonStringValue(item, "instance", "");
+                    string pt = JsonStringValue(item, "pt", "");
+                    if (kind == "MOVE")
+                    {
+                        string sourceObject = ExtractJsonObject(item, "source");
+                        string targetObject = ExtractJsonObject(item, "target");
+                        string source = JsonStringValue(sourceObject, "symbol", JsonStringValue(sourceObject, "value", ""));
+                        target = JsonStringValue(targetObject, "symbol", target);
+                        target = source + " -> " + target;
+                    }
+                    else if (kind == "CALL")
+                    {
+                        target = JsonStringValue(item, "partName", target);
+                    }
+                    else if (kind == "CTU" || kind == "CTD" || kind == "CTUD")
+                    {
+                        string pvObject = ExtractJsonObject(item, "pv");
+                        target = JsonStringValue(pvObject, "symbol", JsonStringValue(pvObject, "value", ""));
+                    }
+                    ladActionList.Items.Add(new LadActionEntry
+                    {
+                        Kind = kind,
+                        Target = target,
+                        Instance = instance,
+                        Pt = pt
+                    });
+                }
+
+                ladSpecBox.Text = json;
+                ladEditorStatusLabel.Text = "已从JSON读入结构；右侧仍可直接编辑完整规格。";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "读取LAD JSON失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private static string ExtractJsonArray(string json, string propertyName)
+        {
+            string source = json ?? "";
+            Match match = Regex.Match(source, "\\\"" + Regex.Escape(propertyName) + "\\\"\\s*:\\s*\\[", RegexOptions.Singleline);
+            if (!match.Success) { return ""; }
+            int start = source.IndexOf('[', match.Index);
+            int end = FindJsonClosingToken(source, start, '[', ']');
+            return end > start ? source.Substring(start + 1, end - start - 1) : "";
+        }
+
+        private static string ExtractJsonObject(string json, string propertyName)
+        {
+            string source = json ?? "";
+            Match match = Regex.Match(source, "\\\"" + Regex.Escape(propertyName) + "\\\"\\s*:\\s*\\{", RegexOptions.Singleline);
+            if (!match.Success) { return ""; }
+            int start = source.IndexOf('{', match.Index);
+            int end = FindJsonClosingToken(source, start, '{', '}');
+            return end > start ? source.Substring(start, end - start + 1) : "";
+        }
+
+        private static IEnumerable<string> ExtractJsonObjects(string arrayBody)
+        {
+            if (string.IsNullOrWhiteSpace(arrayBody)) { yield break; }
+            int depth = 0;
+            int start = -1;
+            bool quoted = false;
+            bool escaped = false;
+            for (int i = 0; i < arrayBody.Length; i++)
+            {
+                char c = arrayBody[i];
+                if (quoted)
+                {
+                    if (escaped) { escaped = false; }
+                    else if (c == '\\') { escaped = true; }
+                    else if (c == '"') { quoted = false; }
+                    continue;
+                }
+                if (c == '"') { quoted = true; continue; }
+                if (c == '{')
+                {
+                    if (depth == 0) { start = i; }
+                    depth++;
+                }
+                else if (c == '}')
+                {
+                    depth--;
+                    if (depth == 0 && start >= 0)
+                    {
+                        yield return arrayBody.Substring(start, i - start + 1);
+                        start = -1;
+                    }
+                }
+            }
+        }
+
+        private static int FindJsonClosingToken(string text, int start, char open, char close)
+        {
+            if (start < 0 || start >= text.Length) { return -1; }
+            int depth = 0;
+            bool quoted = false;
+            bool escaped = false;
+            for (int i = start; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (quoted)
+                {
+                    if (escaped) { escaped = false; }
+                    else if (c == '\\') { escaped = true; }
+                    else if (c == '"') { quoted = false; }
+                    continue;
+                }
+                if (c == '"') { quoted = true; continue; }
+                if (c == open) { depth++; }
+                else if (c == close)
+                {
+                    depth--;
+                    if (depth == 0) { return i; }
+                }
+            }
+            return -1;
+        }
+
+        private void LoadLadNetworkFromXml()
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(inputXmlBox.Text) || !File.Exists(inputXmlBox.Text))
+                {
+                    throw new FileNotFoundException("请先在项目树选择导出的 LAD XML。", inputXmlBox.Text);
+                }
+                int index;
+                if (!int.TryParse(ladNetworkIndexBox.Text.Trim(), out index) || index < 1)
+                {
+                    throw new InvalidOperationException("网络编号必须是大于0的整数。");
+                }
+
+                XmlDocument document = new XmlDocument();
+                document.PreserveWhitespace = true;
+                document.Load(inputXmlBox.Text);
+                XmlNodeList units = document.SelectNodes("//*[local-name()='CompileUnit' or local-name()='SW.Blocks.CompileUnit']");
+                if (units == null || index > units.Count)
+                {
+                    throw new InvalidOperationException("XML中没有找到第 " + index.ToString() + " 个网络。");
+                }
+
+                XmlNode unit = units[index - 1];
+                ladTitleBox.Text = LadXmlText(unit, "Title", ladTitleBox.Text);
+                ladCommentBox.Text = LadXmlText(unit, "Comment", ladCommentBox.Text);
+                Dictionary<string, string> accessMap = LadAccessMap(unit);
+                Dictionary<string, Dictionary<string, string>> connectionMap = LadConnectionMap(unit, accessMap);
+                ladConditionList.Items.Clear();
+                ladActionList.Items.Clear();
+
+                XmlNodeList parts = unit.SelectNodes(".//*[local-name()='FlgNet']/*[local-name()='Parts']/*[local-name()='Part']");
+                if (parts != null)
+                {
+                    foreach (XmlNode part in parts)
+                    {
+                        string name = part.Attributes["Name"] == null ? "" : part.Attributes["Name"].Value;
+                        string uid = part.Attributes["UId"] == null ? "" : part.Attributes["UId"].Value;
+                        string first = LadConnection(connectionMap, uid, "operand");
+                        if (name == "Contact" || name == "PContact" || name == "NContact")
+                        {
+                            ladConditionList.Items.Add(new LadConditionEntry
+                            {
+                                Kind = name == "Contact" ? (part.SelectSingleNode("./*[local-name()='Negated' and @Name='operand']") == null ? "NO" : "NC") : (name == "PContact" ? "P_EDGE" : "N_EDGE"),
+                                Left = first,
+                                Right = name == "Contact" ? "" : LadConnection(connectionMap, uid, "bit"),
+                                SourceType = ""
+                            });
+                        }
+                        else if (name == "Eq" || name == "Ne" || name == "Ge" || name == "Gt" || name == "Le" || name == "Lt")
+                        {
+                            ladConditionList.Items.Add(new LadConditionEntry
+                            {
+                                Kind = name.ToUpperInvariant(),
+                                Left = LadConnection(connectionMap, uid, "in1"),
+                                Right = LadConnection(connectionMap, uid, "in2"),
+                                SourceType = LadTemplateValue(part, "SrcType", "Int")
+                            });
+                        }
+                        else if (IsLadActionPart(name))
+                        {
+                            string actionKind = LadActionKind(name);
+                            string target = first;
+                            string instance = LadInstanceName(part);
+                            string pt = LadConnection(connectionMap, uid, "PT");
+                            if (actionKind == "MOVE")
+                            {
+                                target = LadConnection(connectionMap, uid, "in") + " -> " + LadConnection(connectionMap, uid, "out1");
+                            }
+                            else if (actionKind == "CALL")
+                            {
+                                target = name;
+                            }
+                            ladActionList.Items.Add(new LadActionEntry
+                            {
+                                Kind = actionKind,
+                                Target = target,
+                                Instance = instance,
+                                Pt = pt
+                            });
+                        }
+                    }
+                }
+
+                SyncLadSpecFromEditor();
+                ladEditorStatusLabel.Text = "已从 XML 读取网络 " + index.ToString() + " 的可编辑摘要；复杂分支和CALL参数请在右侧JSON中补全。";
+                SelectMainTab(11);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "读取LAD网络失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void GenerateLadXml()
+        {
+            try
+            {
+                string root = ResolveProjectRoot(projectPathBox.Text);
+                if (string.IsNullOrWhiteSpace(inputXmlBox.Text) || !File.Exists(inputXmlBox.Text))
+                {
+                    throw new FileNotFoundException("请先选择目标 LAD XML，生成器会在其基础上替换指定网络。", inputXmlBox.Text);
+                }
+                int index;
+                if (!int.TryParse(ladNetworkIndexBox.Text.Trim(), out index) || index < 1)
+                {
+                    throw new InvalidOperationException("网络编号必须是大于0的整数。");
+                }
+                string directory = Path.Combine(root, "PLC_Code", "lad-editor");
+                Directory.CreateDirectory(directory);
+                if (string.IsNullOrWhiteSpace(currentLadSpecPath))
+                {
+                    currentLadSpecPath = Path.Combine(directory, "latest-network.json");
+                }
+                BackupLadArtifact(currentLadSpecPath);
+                File.WriteAllText(currentLadSpecPath, ladSpecBox.Text, Encoding.UTF8);
+                currentLadGeneratedXmlPath = Path.Combine(directory, "latest.generated.xml");
+                BackupLadArtifact(currentLadGeneratedXmlPath);
+                StartCommand("write-lad-network");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "生成LAD XML失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void VerifyLadEditorOutput()
+        {
+            string candidate = currentLadGeneratedXmlPath;
+            if (string.IsNullOrWhiteSpace(candidate) || !File.Exists(candidate))
+            {
+                MessageBox.Show("请先点击“生成XML”，再进行克隆编译验证。", "LAD克隆验证", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            inputXmlBox.Text = candidate;
+            StartCommand("write-cycle");
+        }
+
+        private void BackupLadArtifact(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) { return; }
+            string root = ResolveProjectRoot(projectPathBox.Text);
+            string backupDirectory = Path.Combine(root, "PLC_Code", "lad-editor", "backups", DateTime.Now.ToString("yyyyMMdd-HHmmssfff"));
+            Directory.CreateDirectory(backupDirectory);
+            File.Copy(path, Path.Combine(backupDirectory, Path.GetFileName(path)), false);
+        }
+
+        private static bool IsLadActionPart(string name)
+        {
+            return name == "Coil" || name == "SCoil" || name == "RCoil" ||
+                name == "TON" || name == "TOF" || name == "TP" || name == "Move" ||
+                name == "CTU" || name == "CTD" || name == "CTUD";
+        }
+
+        private static string LadActionKind(string name)
+        {
+            if (name == "Coil") { return "COIL"; }
+            if (name == "SCoil") { return "SET"; }
+            if (name == "RCoil") { return "RESET"; }
+            return name.ToUpperInvariant();
+        }
+
+        private static string LadXmlText(XmlNode unit, string compositionName, string fallback)
+        {
+            XmlNode node = unit.SelectSingleNode("./*[local-name()='ObjectList']/*[local-name()='MultilingualText' and @CompositionName='" + compositionName + "']//*[local-name()='Text']");
+            return node == null ? fallback : node.InnerText;
+        }
+
+        private static string LadTemplateValue(XmlNode node, string name, string fallback)
+        {
+            XmlNode value = node.SelectSingleNode("./*[local-name()='TemplateValue' and @Name='" + name + "']");
+            return value == null || string.IsNullOrWhiteSpace(value.InnerText) ? fallback : value.InnerText;
+        }
+
+        private static Dictionary<string, string> LadAccessMap(XmlNode unit)
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            XmlNodeList accesses = unit.SelectNodes(".//*[local-name()='Access']");
+            if (accesses == null) { return result; }
+            foreach (XmlNode access in accesses)
+            {
+                XmlAttribute uid = access.Attributes["UId"];
+                if (uid == null) { continue; }
+                List<string> components = new List<string>();
+                foreach (XmlNode component in access.SelectNodes("./*[local-name()='Symbol']/*[local-name()='Component']"))
+                {
+                    XmlAttribute name = component.Attributes["Name"];
+                    if (name != null) { components.Add(name.Value); }
+                }
+                string value = string.Join(".", components.ToArray());
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    XmlNode constant = access.SelectSingleNode(".//*[local-name()='ConstantValue']");
+                    value = constant == null ? "" : constant.InnerText;
+                }
+                result[uid.Value] = value;
+            }
+            return result;
+        }
+
+        private static Dictionary<string, Dictionary<string, string>> LadConnectionMap(XmlNode unit, Dictionary<string, string> accessMap)
+        {
+            Dictionary<string, Dictionary<string, string>> result = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+            XmlNodeList wires = unit.SelectNodes(".//*[local-name()='FlgNet']/*[local-name()='Wires']/*[local-name()='Wire']");
+            if (wires == null) { return result; }
+            foreach (XmlNode wire in wires)
+            {
+                string accessUid = "";
+                XmlNode ident = wire.SelectSingleNode("./*[local-name()='IdentCon']");
+                if (ident != null && ident.Attributes["UId"] != null) { accessUid = ident.Attributes["UId"].Value; }
+                if (string.IsNullOrWhiteSpace(accessUid) || !accessMap.ContainsKey(accessUid)) { continue; }
+                XmlNodeList names = wire.SelectNodes("./*[local-name()='NameCon']");
+                if (names == null) { continue; }
+                foreach (XmlNode nameCon in names)
+                {
+                    if (nameCon.Attributes["UId"] == null || nameCon.Attributes["Name"] == null) { continue; }
+                    string partUid = nameCon.Attributes["UId"].Value;
+                    if (!result.ContainsKey(partUid)) { result[partUid] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); }
+                    string port = nameCon.Attributes["Name"].Value;
+                    if (!result[partUid].ContainsKey(port) || string.IsNullOrWhiteSpace(result[partUid][port]))
+                    {
+                        result[partUid][port] = accessMap[accessUid];
+                    }
+                }
+            }
+            return result;
+        }
+
+        private static string LadConnection(Dictionary<string, Dictionary<string, string>> map, string partUid, string port)
+        {
+            Dictionary<string, string> ports;
+            string value;
+            return map.TryGetValue(partUid, out ports) && ports.TryGetValue(port, out value) ? value : "";
+        }
+
+        private static string LadInstanceName(XmlNode part)
+        {
+            List<string> components = new List<string>();
+            foreach (XmlNode component in part.SelectNodes("./*[local-name()='Instance']/*[local-name()='Component']"))
+            {
+                XmlAttribute name = component.Attributes["Name"];
+                if (name != null) { components.Add(name.Value); }
+            }
+            return string.Join(".", components.ToArray());
         }
 
         private void WireEvents()
@@ -1058,6 +1965,7 @@ namespace SiemensTiaSkillSuite
             view.DropDownItems.Add(NewMenuItem("项目模型", delegate { SelectMainTab(7); }));
             view.DropDownItems.Add(NewMenuItem("知识库", delegate { SelectMainTab(8); }));
             view.DropDownItems.Add(NewMenuItem("参考图", delegate { SelectMainTab(9); }));
+            view.DropDownItems.Add(NewMenuItem("LAD结构编辑", delegate { SelectMainTab(11); }));
             view.DropDownItems.Add(new ToolStripSeparator());
             view.DropDownItems.Add(NewMenuItem("恢复默认布局", delegate { RestoreDefaultLayout(); }));
             return view;
@@ -1067,6 +1975,10 @@ namespace SiemensTiaSkillSuite
         {
             ToolStripMenuItem code = NewMenu("代码(&C)");
             code.DropDownItems.Add(NewMenuItem("LAD 编写与验证", delegate { SelectCombo(workflowSelectBox, "LAD编写与验证"); ApplyWorkflowDefaults(false); }));
+            code.DropDownItems.Add(NewMenuItem("打开 LAD 结构编辑器", delegate { SelectMainTab(11); }));
+            code.DropDownItems.Add(NewMenuItem("载入 LAD JSON 模板", delegate { StartCommand("lad-scaffold"); }));
+            code.DropDownItems.Add(NewMenuItem("生成 LAD XML", delegate { GenerateLadXml(); }));
+            code.DropDownItems.Add(NewMenuItem("克隆验证当前 LAD", delegate { VerifyLadEditorOutput(); }));
             code.DropDownItems.Add(NewMenuItem("生成当前 LAD 预览", delegate { StartCommand("lad-preview"); }));
             code.DropDownItems.Add(NewMenuItem("PLC 高级指令与工艺对象", delegate { SelectCombo(workflowSelectBox, "PLC高级指令与工艺对象"); ApplyWorkflowDefaults(false); }));
             code.DropDownItems.Add(NewMenuItem("生成 PLC 指令/工艺对象方案", delegate { StartCommand("plc-instruction-plan"); }));
@@ -2907,6 +3819,11 @@ namespace SiemensTiaSkillSuite
                 projectRoot = resolved;
                 projectPathBox.Text = resolved;
                 LoadWorkflowConfig(resolved);
+                currentLadSpecPath = Path.Combine(resolved, "PLC_Code", "lad-editor", "latest-network.json");
+                if (File.Exists(currentLadSpecPath))
+                {
+                    LoadLadEditorFromSpec();
+                }
                 statusLabel.Text = "已加载";
                 BuildProjectTree();
                 RefreshRuns();
@@ -3820,6 +4737,24 @@ namespace SiemensTiaSkillSuite
                         {
                             ShowLadPreview();
                         }
+                        if (command == "lad-scaffold" && currentProcess.ExitCode == 0)
+                        {
+                            LoadLadEditorFromSpec();
+                            SelectMainTab(11);
+                            ladEditorStatusLabel.Text = "已载入 LAD JSON 模板：" + currentLadSpecPath;
+                        }
+                        if (command == "write-lad-network" && currentProcess.ExitCode == 0)
+                        {
+                            inputXmlBox.Text = currentLadGeneratedXmlPath;
+                            ShowFile(currentLadGeneratedXmlPath);
+                            SelectMainTab(11);
+                            ladEditorStatusLabel.Text = "LAD XML 已生成，可点击“校验XML”或“克隆验证”。";
+                            BuildProjectTree();
+                        }
+                        if (command == "lad-validate" && currentProcess.ExitCode == 0)
+                        {
+                            ladEditorStatusLabel.Text = "LAD XML 校验通过。";
+                        }
                         if (command == "plc-change-package" && currentProcess.ExitCode == 0)
                         {
                             ShowPlcChangePackage();
@@ -3925,6 +4860,55 @@ namespace SiemensTiaSkillSuite
                 Directory.CreateDirectory(previewDir);
                 string latest = Path.Combine(previewDir, "latest-lad-preview.md");
                 args.AddRange(new string[] { "summarize-lad", "-Path", inputXmlBox.Text, "-OutputPath", latest });
+            }
+            else if (command == "lad-scaffold")
+            {
+                string directory = Path.Combine(root, "PLC_Code", "lad-editor");
+                Directory.CreateDirectory(directory);
+                currentLadSpecPath = Path.Combine(directory, "latest-network.json");
+                args.AddRange(new string[] {
+                    "scaffold-lad-network-json",
+                    "-OutputPath", currentLadSpecPath,
+                    "-Title", string.IsNullOrWhiteSpace(ladTitleBox.Text) ? "LAD network" : ladTitleBox.Text.Trim(),
+                    "-Comment", ladCommentBox.Text.Trim()
+                });
+            }
+            else if (command == "lad-validate")
+            {
+                string candidate = File.Exists(currentLadGeneratedXmlPath) ? currentLadGeneratedXmlPath : inputXmlBox.Text.Trim();
+                if (string.IsNullOrWhiteSpace(candidate) || !File.Exists(candidate))
+                {
+                    throw new FileNotFoundException("请先生成或选择要校验的 LAD XML。", candidate);
+                }
+                args.AddRange(new string[] { "validate-lad", "-Path", candidate });
+            }
+            else if (command == "write-lad-network")
+            {
+                if (string.IsNullOrWhiteSpace(inputXmlBox.Text) || !File.Exists(inputXmlBox.Text))
+                {
+                    throw new FileNotFoundException("请先选择目标 LAD XML。", inputXmlBox.Text);
+                }
+                if (string.IsNullOrWhiteSpace(currentLadSpecPath) || !File.Exists(currentLadSpecPath))
+                {
+                    throw new FileNotFoundException("请先保存 LAD JSON 规格。", currentLadSpecPath);
+                }
+                int networkIndex;
+                if (!int.TryParse(ladNetworkIndexBox.Text.Trim(), out networkIndex) || networkIndex < 1)
+                {
+                    throw new InvalidOperationException("网络编号必须是大于0的整数。");
+                }
+                if (string.IsNullOrWhiteSpace(currentLadGeneratedXmlPath))
+                {
+                    currentLadGeneratedXmlPath = Path.Combine(root, "PLC_Code", "lad-editor", "latest.generated.xml");
+                }
+                Directory.CreateDirectory(Path.GetDirectoryName(currentLadGeneratedXmlPath));
+                args.AddRange(new string[] {
+                    "write-lad-network",
+                    "-TargetXml", inputXmlBox.Text.Trim(),
+                    "-SpecPath", currentLadSpecPath,
+                    "-OutputXml", currentLadGeneratedXmlPath,
+                    "-NetworkIndex", networkIndex.ToString()
+                });
             }
             else if (command == "plc-change-package")
             {
@@ -4526,6 +5510,38 @@ namespace SiemensTiaSkillSuite
             public override string ToString()
             {
                 return Modified.ToString("MM-dd HH:mm:ss") + "  " + Name;
+            }
+        }
+
+        private sealed class LadConditionEntry
+        {
+            public string Kind;
+            public string Left;
+            public string Right;
+            public string SourceType;
+
+            public override string ToString()
+            {
+                string text = Kind + "  |  " + Left;
+                if (!string.IsNullOrWhiteSpace(Right)) { text += "  |  " + Right; }
+                if (!string.IsNullOrWhiteSpace(SourceType)) { text += "  |  " + SourceType; }
+                return text;
+            }
+        }
+
+        private sealed class LadActionEntry
+        {
+            public string Kind;
+            public string Target;
+            public string Instance;
+            public string Pt;
+
+            public override string ToString()
+            {
+                string text = Kind + "  |  " + Target;
+                if (!string.IsNullOrWhiteSpace(Instance)) { text += "  |  " + Instance; }
+                if (!string.IsNullOrWhiteSpace(Pt)) { text += "  |  " + Pt; }
+                return text;
             }
         }
     }

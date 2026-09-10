@@ -52,6 +52,7 @@
 - 工作台审查包：一键生成 `PLC_Code\review-packages\latest`，汇总计划、队列、PLC 改动包、WinCC 工程包、文件哈希、git diff 和导入就绪检查
 - 离线图形预览适配：可配置 TIA Viewer / ImportExport 类工具路径，用于后续把 SimaticML、LAD/FBD、GRAPH、SCL、DB、UDT 导出文件渲染到工作台预览
 - 本地编辑闭环：工作台可直接编辑导出的 XML/SCL/DB/Markdown/JSON 文件，保存前自动备份到 `PLC_Code\file-backups`，并支持一键生成 LAD XML 可读预览。
+- 原生 LAD 结构编辑：工作台的 `LAD结构编辑` 页可读取导出网络摘要、编辑条件/动作链、自由修改完整 LAD JSON、生成真实 LAD XML、校验并进入克隆编译验证；复杂网络仍可通过右侧 JSON、模板补丁和指令路由扩展。
 - PLC 改动包：一键生成 `PLC_Code\changes\latest-plc-change-package`，包含块/DB契约、命名映射、LAD JSON 模板、SCL/DB 源码目录、导入清单、验证计划和安全风险评估。
 - 针对性自动路由：LAD、WinCC、Openness、SCL、DB 契约、诊断和审查使用独立的 skill 组合、平台优先级与任务指令
 - 文件上传：图片、PDF、文档、源码、XML 和日志自动复制到项目工作区并随当前消息交给 Agent
@@ -148,6 +149,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex
 - 工作台审查包：`审查包` 按钮用于把当前 PLC/WinCC/Agent 产物整理成 PR 式审查材料，适合导入、编译或发布前检查。
 - 离线预览配置：高级设置里的 `离线预览` 可填入经过审查的 TIA Viewer / ImportExport 适配器路径，目前按只读预览能力记录到插件路由。
 - 文件编辑：项目树选择文件后可在 `文件预览` 中切换 `编辑预览` 并保存；保存前自动生成项目内备份。`LAD预览` 按钮会把当前 LAD XML 转为可读 Markdown 摘要。
+- LAD结构编辑：打开 `LAD结构编辑` 页后，可选择网络号和导出 XML，用条件/动作列表编写常用梯形图，或直接编辑右侧 JSON；`生成XML`、`校验XML`、`克隆验证` 分别调用真实写入脚本、校验脚本和 `write-cycle`，结果回到日志、文件预览和项目树。
 - PLC 改动包：`PLC改动包` 按钮为当前任务创建结构化编辑工作区，让 LAD、SCL、DB、导入和验证资料集中管理。
 - 视觉设置：使用柔和工业渐变、卡片式区域、圆角按钮，并读取 Windows 本机字体库供界面文字配置。
 
