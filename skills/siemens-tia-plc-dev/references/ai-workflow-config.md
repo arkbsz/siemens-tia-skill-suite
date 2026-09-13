@@ -48,6 +48,8 @@ PLC_Code\config\ai-workflow.json
 
 `read-cycle` 和 `write-cycle` 都接受 `-WorkflowConfigPath`，并在运行报告旁保存配置快照。Agent 调用也记录实际的 `platform.selected` 事件，因此可以追溯最终使用的平台、模型、工作流和 Agent。
 
+每次工作台 Agent 对话不会把上下文文件路径永久塞进全局配置，而是在本轮会话目录生成 `context-manifest.json`。清单按任务需要绑定当前工程总览、项目模型、计划/队列、知识包、能力矩阵、PLC/WinCC 证据和当前选中文件；适配器会校验清单中的文件必须存在且位于项目根目录内，并在任务审计中记录清单路径和文件列表。这样既能让模型获得真实工程上下文，也避免无边界扫描历史备份和克隆目录。
+
 WinCC 插件路由读取 `wincc` 与 `image` 配置。`wincc-plugins` 刷新插件能力并写入 `PLC_Code\wincc\plugin-routing.json`，WinCC Agent 再结合参考图、PLC/HMI 标签契约和目标 WinCC 类型选择 Openness、SiVArc、MCP、GraphQL、脚本或原生控件路线。
 
 `knowledge-pack` 会读取同一份配置，并生成 `PLC_Code\knowledge\packs\latest\knowledge-brief.md/json`，把 Siemens 官方文档、官方 GitHub 示例、当前项目结构和需审查社区路线整理为 Agent 可读检索包。启用联网时只刷新元数据和源锚点；社区二进制仍不会自动执行。

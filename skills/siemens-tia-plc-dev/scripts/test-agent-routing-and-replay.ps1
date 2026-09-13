@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$SkillRoot = ""
 )
 
@@ -26,12 +26,14 @@ $fakeBin = Join-Path $tempRoot "fake-bin"
 $fakeCommand = Join-Path $fakeBin "fake-codex.cmd"
 $promptPath = Join-Path $projectRoot "prompt.txt"
 $configPath = Join-Path $projectRoot "ai-workflow.json"
+$contextEvidencePath = Join-Path $projectRoot "PLC_Code\workbench\context\latest\agent-context.md"
+$contextManifestPath = Join-Path $projectRoot "context-manifest.json"
 $capturePath = Join-Path $fakeBin "last-args.txt"
 
-New-Item -ItemType Directory -Path $projectRoot, $fakeBin -Force | Out-Null
+New-Item -ItemType Directory -Path $projectRoot, $fakeBin, (Split-Path -Parent $contextEvidencePath) -Force | Out-Null
 
 try {
-    @'
+@'
 @echo off
 set "CAPTURE=%~dp0last-args.txt"
 > "%CAPTURE%" echo %*
@@ -41,6 +43,21 @@ exit /b 0
 '@ | Set-Content -LiteralPath $fakeCommand -Encoding ASCII
 
     Set-Content -LiteralPath $promptPath -Value "offline routing test" -Encoding UTF8
+    Set-Content -LiteralPath $contextEvidencePath -Value "# context evidence`r`nread-only" -Encoding UTF8
+    [ordered]@{
+        schemaVersion = 1
+        kind = "siemens-agent-context"
+        projectRoot = $projectRoot
+        readOnly = $true
+        files = @(
+            [ordered]@{
+                path = $contextEvidencePath
+                relativePath = "PLC_Code\workbench\context\latest\agent-context.md"
+                role = "工程总览与开发规则"
+                priority = 10
+            }
+        )
+    } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $contextManifestPath -Encoding UTF8
     [ordered]@{
         schemaVersion = 2
         projectRoot = $projectRoot
@@ -75,7 +92,8 @@ exit /b 0
             "-Platform", "codex",
             "-Model", "inherit",
             "-Sandbox", "read-only",
-            "-WorkflowConfigPath", $configPath
+            "-WorkflowConfigPath", $configPath,
+            "-ContextManifest", $contextManifestPath
         )
         if ($SessionId) {
             $arguments += @("-SessionId", $SessionId)
@@ -115,12 +133,18 @@ exit /b 0
         $retryRun.Arguments -match "(?i)fake-session") {
         throw "Retry Agent invocation unexpectedly retained the old session."
     }
+    if (($newRun.Output -join [Environment]::NewLine) -notmatch '"context_files"\s*:\s*1') {
+        throw "Agent selection event did not report the curated context file count."
+    }
 
     $sourceText = Get-Content -LiteralPath $consoleSource -Raw -Encoding UTF8
     foreach ($marker in @(
         'ReplaceAgentSessionArguments(args, "", "")',
         'CopyReplayPrompt',
         'CopyReplayAttachmentManifest',
+        'BuildAgentContextManifest',
+        'ContextManifestPath',
+        'ContextFiles',
         'job.StopRequested',
         'job.TimedOut'
     )) {

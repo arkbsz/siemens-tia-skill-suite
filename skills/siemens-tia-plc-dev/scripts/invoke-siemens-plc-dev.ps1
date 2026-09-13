@@ -19,7 +19,8 @@ Commands:
   console [-ProjectPath <projectDir|ap16..ap21>] [-Wait] [-ForceBuild]
   console-exe [-ProjectPath <projectDir|ap16..ap21>] [-Wait] [-ForceBuild]
   console-web [-ProjectPath <projectDir|ap16..ap21>] [-Port <n>] [-Background] [-NoOpen]
-  agent-chat -ProjectPath <projectDir|ap16..ap21> -PromptFile <text> [-AgentId <id>] [-Workflow <id>] [-RoutingMode auto|manual] [-Platform auto|codex|claude-code|trae-agent|qoder] [-Model <id>] [-SessionId <id>] [-AttachmentManifest <text>] [-Sandbox <mode>] [-Search]
+  agent-chat -ProjectPath <projectDir|ap16..ap21> -PromptFile <text> [-AgentId <id>] [-Workflow <id>] [-RoutingMode auto|manual] [-Platform auto|codex|claude-code|trae-agent|qoder] [-Model <id>] [-SessionId <id>] [-AttachmentManifest <text>] [-ContextManifest <json>] [-Sandbox <mode>] [-Search]
+  prepare-agent-context -ProjectPath <projectDir|ap16..ap21> [-TaskText <text>] [-SelectedFilePath <path>] [-OutputPath <json>]
   agent-plan -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-Workflow <id>] [-AgentId <id>] [-ReferenceImagePath <image>] [-OutputDirectory <dir>]
   agent-queue -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-PlanPath <json>] [-TaskText <text>] [-OutputDirectory <dir>]
   queue-stage -ProjectPath <projectDir|ap16..ap21> [-Action start-next|record-current|complete-current|fail-current|block-current|reset] [-QueuePath <json>] [-Note <text>] [-EvidencePath <path>]
@@ -195,6 +196,10 @@ switch ($Command.ToLowerInvariant()) {
             throw "Unified AI platform adapter was not found: $aiPlatformAgentScript"
         }
         Invoke-PowerShellFile -Path $aiPlatformAgentScript -Arguments $CommandArgs
+        break
+    }
+    "prepare-agent-context" {
+        Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "prepare-agent-context-manifest.ps1") -Arguments $CommandArgs
         break
     }
     "agent-plan" {

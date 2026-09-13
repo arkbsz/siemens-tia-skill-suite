@@ -74,7 +74,8 @@ function Parse-BlockList {
 
 function Infer-ProjectVersion {
     param([string]$Root)
-    $projectFile = Get-ChildItem -LiteralPath $Root -File -Include "*.ap16","*.ap17","*.ap18","*.ap19","*.ap20","*.ap21" -ErrorAction SilentlyContinue |
+    $projectFile = Get-ChildItem -LiteralPath $Root -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Extension -match '^\.ap(16|17|18|19|20|21)$' } |
         Sort-Object LastWriteTime -Descending |
         Select-Object -First 1
     if (-not $projectFile) { return [pscustomobject]@{ version = ""; projectFile = "" } }

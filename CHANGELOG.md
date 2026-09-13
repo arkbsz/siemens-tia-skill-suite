@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-13 - Agent 工程上下文注入
+
+- 工作台每个 Agent 回合自动生成受控 `context-manifest.json`，绑定工程总览、项目模型、计划、队列、知识包、能力矩阵、PLC 指令路由、WinCC 证据和仿真证据。
+- `invoke-ai-platform-agent.ps1` 新增 `-ContextManifest`，校验清单中的文件必须存在且位于当前项目目录，并将上下文作为只读证据注入各平台提示词。
+- `platform.selected` 事件和 `PLC_Code\console-jobs` 任务清单现在记录实际上下文清单及文件数量，重试/继续会复制上下文输入证据。
+- `queue-run-current` 自动创建阶段级上下文清单，避免队列 Agent 只拿到项目路径或无边界地扫描历史克隆。
+- 修复项目模型版本探测误选 `.info` 文件的问题，现在严格识别 TIA Portal `.ap16` 到 `.ap21` 项目文件。
+
 ## 2026-09-13 - Agent 对话统一任务审计
 
 - 将工作台内置 Codex、Claude Code、Trae Agent 和 Qoder 的每次对话接入 `PLC_Code\console-jobs` 任务模型，不再只保存在 `agent-sessions` 目录。

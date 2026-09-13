@@ -116,6 +116,20 @@ $stdoutPath = Join-Path $stageLogs "agent.stdout.jsonl"
 $stderrPath = Join-Path $stageLogs "agent.stderr.log"
 $metadataPath = Join-Path $stageEvidence "stage-run.json"
 $summaryPath = Join-Path $stageEvidence "stage-run.md"
+$contextManifestPath = Join-Path $stageEvidence "context-manifest.json"
+
+$contextScript = Join-Path $PSScriptRoot "prepare-agent-context-manifest.ps1"
+if (-not (Test-Path -LiteralPath $contextScript -PathType Leaf)) {
+    throw "Agent context manifest generator was not found: $contextScript"
+}
+$stageTaskText = Get-Content -LiteralPath $promptPath -Raw -Encoding UTF8
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $contextScript `
+    -ProjectPath $root `
+    -TaskText $stageTaskText `
+    -OutputPath $contextManifestPath | Out-Null
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $contextManifestPath -PathType Leaf)) {
+    throw "Agent context manifest generation failed."
+}
 
 $stageAgent = [string]$active.agent
 if ([string]::IsNullOrWhiteSpace($stageAgent)) { $stageAgent = "auto" }
@@ -136,7 +150,8 @@ $arguments = @(
     "-RoutingMode", $RoutingMode,
     "-Platform", $Platform,
     "-Model", $Model,
-    "-Sandbox", $Sandbox
+    "-Sandbox", $Sandbox,
+    "-ContextManifest", $contextManifestPath
 )
 if ($WorkflowConfigPath -and (Test-Path -LiteralPath $WorkflowConfigPath -PathType Leaf)) {
     $arguments += @("-WorkflowConfigPath", $WorkflowConfigPath)
@@ -204,6 +219,13 @@ $metadata = [pscustomobject]@{
     timeoutSeconds = $TimeoutSeconds
     completeOnSuccess = [bool]$CompleteOnSuccess
     promptPath = $promptPath
+    contextManifestPath = $contextManifestPath
+    contextFiles = @(
+        if (Test-Path -LiteralPath $contextManifestPath -PathType Leaf) {
+            $contextDocument = Get-Content -LiteralPath $contextManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+            @($contextDocument.files | ForEach-Object { [string]$_.path })
+        }
+    )
     stdoutPath = $stdoutPath
     stderrPath = $stderrPath
     evidencePath = $stageEvidence
@@ -225,6 +247,7 @@ $summary = @"
 - Selected platform: `$(if ($selectedPlatform) { $selectedPlatform } else { "not reported" })`
 - Model: `$(if ($selectedModel) { $selectedModel } else { $Model })`
 - Prompt: `$promptPath`
+- Context manifest: `$contextManifestPath`
 - Stdout: `$stdoutPath`
 - Stderr: `$stderrPath`
 - Started: `$startedAt`

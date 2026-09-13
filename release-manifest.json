@@ -1,8 +1,8 @@
 {
   "packageName": "siemens-tia-skill-suite_v1.0.0_20260810",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "releaseDate": "2026-09-13",
-  "builtAt": "2026-09-13T15:44:28+08:00",
+  "builtAt": "2026-09-13T16:28:04+08:00",
   "installTarget": "%USERPROFILE%\\.codex\\skills",
   "packagedSkills": [
     {
@@ -66,9 +66,9 @@
     "payloadIntegrity": "HMAC-SHA256",
     "temporaryRuntime": "%USERPROFILE%\\.codex\\siemens-tia-agent-runtime\\sessions",
     "sourceFilesDistributedBesideExe": false,
-    "lastBuiltAt": "2026-09-13T15:44:28+08:00",
-    "lastBuildSha256": "6644F74D2B851284C3637C9DE7B59B72988ADC1600994096DA44C738735E464D",
-    "lastBuildPayloadFiles": 230,
+    "lastBuiltAt": "2026-09-13T16:28:04+08:00",
+    "lastBuildSha256": "FB1D31622979FFE58C17E486B7FA1E83DA76CC789473D0908C9B9F9CD73FC4A0",
+    "lastBuildPayloadFiles": 231,
     "lastBuildSelfTest": "Passed"
   },
   "excludedDirectories": [
@@ -216,6 +216,7 @@
     "The browser-based console remains available only as the explicit console-web fallback.",
     "The protected EXE runtime is placed under the user's .codex directory so built-in Agent child processes can consume bundled skills without falling back to an external source tree.",
     "The native WinCC design editor now validates and backs up JSON, compiles user-defined screen/component/tag/alarm structures, preserves component geometry, and feeds the clone-only implementation manifest.",
-    "Agent retry and continue now create isolated input-evidence copies; retry clears stale sessions, continue restores only platform-compatible sessions, and task-level stop/timeout flags prevent late process events from corrupting job status."
+    "Agent retry and continue now create isolated input-evidence copies; retry clears stale sessions, continue restores only platform-compatible sessions, and task-level stop/timeout flags prevent late process events from corrupting job status.",
+    "Agent turns now create a path-bounded context-manifest.json that records the curated project evidence supplied to each platform."
   ]
 }

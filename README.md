@@ -1,6 +1,6 @@
 # 西门子 TIA 自动化开发技能套件
 
-版本：`1.0.6`
+版本：`1.0.7`
 发布日期：`2026-09-13`
 
 面向 Siemens TIA Portal 的多平台技能套件，支持 Codex、Claude Code、Trae Agent、Qoder、Cursor 等开发入口，兼容 TIA Portal `V16-V21`，主打 PLC-as-code 与 HMI/WinCC 自动化工作流。适合做项目备份、块导出、LAD/XML 编辑、WinCC 画面与标签自动化、源码导入、编译验证，以及本地 Openness / REST 桥接自动化。
@@ -39,9 +39,10 @@
 - 本地工作台任务编排：一键生成 `PLC_Code\agent-plans\latest-plan.md/json`，把任务拆成读取、知识检索、DB/块契约、LAD/SCL/高级指令、WinCC 组件拆分、验证、安全评估和发布包阶段
 - 本地工作台执行队列：一键生成 `PLC_Code\agent-queues\latest\queue.md/json` 和阶段 prompt，把计划拆成可逐项执行、记录日志和保存验证证据的 Agent 队列
 - 本地工作台命令面板：直接选择并执行真实的 `invoke-siemens-plc-dev.ps1` 命令，不是模拟按钮
-- 可恢复任务状态：每条命令和每个 Agent 回合都在 `PLC_Code\console-jobs` 保存参数、配置快照、stdout/stderr、进程号、退出码和重试/继续关系；Agent 任务同时记录平台、模型、Agent、会话、提示词和附件，重启后可查看、重试或按原参数重放
+- 可恢复任务状态：每条命令和每个 Agent 回合都在 `PLC_Code\console-jobs` 保存参数、配置快照、stdout/stderr、进程号、退出码和重试/继续关系；Agent 任务同时记录平台、模型、Agent、会话、提示词、附件和受控上下文文件清单，重启后可查看、重试或按原参数重放
 - 工作台可执行入口：支持 `--run-command <command>` 触发与界面按钮相同的受控命令链，便于部署脚本、集成测试和无鼠标操作
 - 项目对象模型：一键生成 `PLC_Code\workbench\context\latest\project-model.json`、`agent-context.md` 和 `file-index.csv`，把 TIA 版本、程序块、DB、导出文件、WinCC 包、队列和风险整理成 Agent 可读上下文
+- Agent 工程上下文注入：每次工作台对话和队列阶段自动生成 `context-manifest.json`，按优先级绑定当前工程证据，校验路径只允许指向项目目录，并将实际文件清单写入任务审计
 - 任务知识检索包：一键生成 `PLC_Code\knowledge\packs\latest\knowledge-brief.md/json`，优先绑定 Siemens 官方文档、官方 GitHub 示例、当前项目证据和需审查社区路线
 - 工作台能力矩阵：一键生成 `PLC_Code\workbench\capabilities\latest\capability-map.md/json`，明确本地窗口对项目读取、LAD 读写、SCL/DB、WinCC、Agent 队列、仿真验证和发布审查的覆盖度与缺口
 - PLC 指令库：一键生成 `PLC_Code\plc\instruction-cookbook\latest`，把位逻辑、比较、定时、计数、运动、驱动通信、PID、诊断、数组、配方、数学和转换指令路由到 LAD JSON、通用 `CALL`、SCL、donor LAD 或工艺对象配置

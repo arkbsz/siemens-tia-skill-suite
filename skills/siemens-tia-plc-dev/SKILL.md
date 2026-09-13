@@ -48,7 +48,7 @@ Use the local visual console when the user wants a better interaction surface th
 - a draggable left project tree for TIA projects, exported XML/SCL/DB/UDT, reports, and logs
 - switchable center pages for AI chat, command logs, file preview, runs, and reference-image preview
 - a bottom AI task box focused on the user request, with settings moved into the Tools menu to avoid crowding
-- direct built-in Agent conversations through Codex, Claude Code, Trae Agent, or Qoder, with automatic task routing, manual platform/model overrides, compatible session handling, stop/new-session controls, and no separate AI window
+- direct built-in Agent conversations through Codex, Claude Code, Trae Agent, or Qoder, with automatic task routing, manual platform/model overrides, curated project-context injection, compatible session handling, stop/new-session controls, and no separate AI window
 - Agent conversations are persisted as `agent-chat` workbench jobs with prompt/attachment manifests, configuration snapshots, selected platform/model/Agent/session metadata, stdout/stderr evidence, timeout handling, interruption detection, and task-page retry/continue actions
 - project-local file uploads for images, PDFs, documents, source files, exported XML, and logs
 - a responsive two-row quick-configuration grid in the AI area for routing mode, platform, Agent, model, workflow, language preference, TIA session mode, safety mode, and step timeout, without horizontal control overlap
@@ -78,7 +78,7 @@ Use the local visual console when the user wants a better interaction surface th
 - editable file preview with backup-on-save to `PLC_Code\file-backups`, plus `lad-preview` for readable LAD XML summaries
 - PLC change packages through `plc-change-package`, creating a structured editing workspace for DB contracts, LAD JSON, SCL sources, import manifests, verification plans, and safety risk notes
 - run and log preview panels for `PLC_Code\runs` and `PLC_Code\console-jobs`
-- executable command palette with persisted job manifests under `PLC_Code\console-jobs`, including original arguments, workflow-config snapshots, stdout/stderr, process id, exit code, timestamps, retry/continue lineage, and stop state
+- executable command palette with persisted job manifests under `PLC_Code\console-jobs`, including original arguments, workflow-config snapshots, curated context manifest and file list, stdout/stderr, process id, exit code, timestamps, retry/continue lineage, and stop state
 - restart-safe job recovery: interrupted commands are surfaced in the native workbench and can be retried or replayed with the original arguments; replay is explicitly labeled as replay rather than fake process-level resume
 - controlled `--run-command <command>` startup entry that invokes the same command mapping as the native command palette for deployment scripts and integration tests
 - `test-workbench-job-persistence.ps1` smoke test that launches the native console and verifies a real persisted `doctor` job, configuration snapshot, stdout and stderr evidence
@@ -111,6 +111,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\refresh-plc-libraries.ps1" -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" console -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" agent-chat -ProjectPath "D:\path\to\project" -PromptFile "D:\path\to\message.txt" -AgentId auto -Workflow plc-lad -RoutingMode auto -Platform auto -Sandbox workspace-write -Search
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" prepare-agent-context -ProjectPath "D:\path\to\project" -TaskText "Review the current LAD and DB contract" -OutputPath "D:\path\to\project\PLC_Code\agent-sessions\context-manifest.json"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" agent-plan -ProjectPath "D:\path\to\project" -TaskText "Generate an industrial PLC and WinCC upgrade plan" -Workflow agent-workbench
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" agent-queue -ProjectPath "D:\path\to\project" -TaskText "Generate auditable execution queue from the latest plan"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" queue-stage -ProjectPath "D:\path\to\project" -Action start-next
@@ -340,9 +341,9 @@ Use `agent-queue` after or alongside `agent-plan` when the workbench should turn
 
 Use `queue-stage` to move one queue stage at a time. `start-next` creates `current-stage.md/json` for the next pending stage, `record-current` records evidence without completing the stage, `complete-current` marks it done, and `fail-current` or `block-current` records a stop state for inspection.
 
-Use `queue-run-current` when the workbench should act like the main AI client. It runs the current stage through `invoke-ai-platform-agent.ps1`, honors the saved routing/platform/model/sandbox/search/timeout settings, writes logs under `PLC_Code\agent-queues\latest\logs`, writes evidence under `PLC_Code\agent-queues\latest\evidence`, and leaves the stage `IN_PROGRESS` by default for human review. Add `-CompleteOnSuccess` only for low-risk read-only or documentation stages where automatic completion is acceptable.
+Use `queue-run-current` when the workbench should act like the main AI client. It generates a stage-local `context-manifest.json`, runs the current stage through `invoke-ai-platform-agent.ps1`, honors the saved routing/platform/model/sandbox/search/timeout settings, writes logs under `PLC_Code\agent-queues\latest\logs`, writes evidence under `PLC_Code\agent-queues\latest\evidence`, and leaves the stage `IN_PROGRESS` by default for human review. Add `-CompleteOnSuccess` only for low-risk read-only or documentation stages where automatic completion is acceptable.
 
-Use `project-model` before broad edits or cross-platform Agent execution. It creates a lightweight project index from the latest read/export/package artifacts without scanning bulky release folders, and writes the engineer-readable context file that Agent stages should load first.
+Use `project-model` before broad edits or cross-platform Agent execution. It creates a lightweight project index from the latest read/export/package artifacts without scanning bulky release folders, and writes the engineer-readable context file that Agent stages should load first. Every native Agent turn then creates a smaller, auditable context manifest that references the relevant current artifacts rather than injecting the whole project.
 
 Use `knowledge-pack` before authoring or when the user asks for research-driven work. It prioritizes Siemens official docs and official GitHub examples, then current project artifacts, then reviewed community source. It writes `knowledge-brief.md`, `knowledge-pack.json`, and `agent-retrieval-prompt.md`; downloaded community binaries remain disabled until source, license, provenance and clone behavior are reviewed.
 
