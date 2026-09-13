@@ -79,7 +79,7 @@ Use the local visual console when the user wants a better interaction surface th
 - structural LAD diff review through `lad-diff`, producing UId-stable Markdown/JSON network changes before validation and clone compilation
 - PLC change packages through `plc-change-package`, creating a structured editing workspace for DB contracts, LAD JSON, SCL sources, import manifests, verification plans, and safety risk notes
 - engineering contract analysis through `engineering-contracts`, producing `engineering-contract-report.md/json`, `block-reference-index.csv`, `db-evidence-index.csv`, `db-member-index.csv`, `hmi-plc-reference-index.csv`, naming findings and safety findings
-- WinCC PLC binding assistance through `wincc-binding-assistant`, producing scored PLC candidates, an editable approval CSV, a review report, and derived HMI/alarm maps without guessing or writing production artifacts
+- WinCC PLC binding assistance through `wincc-binding-assistant`, producing scored PLC candidates with datatype/read-write compatibility checks, an editable approval CSV, a review report, and derived HMI/alarm maps without guessing or writing production artifacts
 - run and log preview panels for `PLC_Code\runs` and `PLC_Code\console-jobs`
 - executable command palette with persisted job manifests under `PLC_Code\console-jobs`, including original arguments, workflow-config snapshots, curated context manifest and file list, stdout/stderr, process id, exit code, timestamps, retry/continue lineage, and stop state
 - restart-safe job recovery: interrupted commands are surfaced in the native workbench and can be retried or replayed with the original arguments; replay is explicitly labeled as replay rather than fake process-level resume
