@@ -69,6 +69,7 @@ $instructionCookbook = Join-Path $workspaceRoot "plc\instruction-cookbook\latest
 $winccPackage = Join-Path $workspaceRoot "wincc\tasks\latest\README.md"
 $winccComponentBlueprints = Join-Path $workspaceRoot "wincc\component-blueprints\latest\component-blueprints.md"
 $winccEngineeringScaffold = Join-Path $workspaceRoot "wincc\engineering-scaffold\latest\wincc-engineering-scaffold.md"
+$winccBindingReview = Join-Path $workspaceRoot "wincc\binding-review\latest\binding-review.md"
 $winccOpennessImplementation = Join-Path $workspaceRoot "wincc\openness-implementation\latest\README.md"
 $simulationPackage = Join-Path $workspaceRoot "simulation\latest\simulation-package.md"
 $simulationReplay = Join-Path $workspaceRoot "simulation\replays\latest\replay-report.md"
@@ -79,6 +80,7 @@ $contextManifestScript = Join-Path $PSScriptRoot "prepare-agent-context-manifest
 $ladDiffScript = Join-Path $PSScriptRoot "lad-diff.ps1"
 $dashboard = Join-Path $workspaceRoot "workbench\latest\dashboard.md"
 $reviewPackage = Join-Path $workspaceRoot "review-packages\latest\review-summary.md"
+$engineeringContracts = Join-Path $workspaceRoot "engineering-contracts\latest\engineering-contract-report.json"
 $readCycleRun = Get-ChildItem -LiteralPath (Join-Path $workspaceRoot "runs") -Directory -ErrorAction SilentlyContinue |
     Where-Object { $_.Name -like "read-cycle*" } |
     Sort-Object LastWriteTime -Descending |
@@ -101,6 +103,8 @@ Add-Capability $items "project-open-read" "当前 TIA 工程识别与只读遍�
 Add-Capability $items "lad-read" "LAD/FBD XML 读取、摘要与模板库" (Test-PathState (Join-Path $workspaceRoot "lad-previews") "READY" "READY_NO_LATEST_PREVIEW") "项目树 / LAD预览 / 文件预览" "export-blocks, inspect-lad, summarize-lad, build-lad-catalog" "导出 XML、lad-previews、模板目录" "XML 结构检查和人可读网络摘要" "图形化梯形图编辑的视觉摆放仍以 TIA 为权威" "继续增加更多 box/network 形态的摘要与结构差异渲染。"
 Add-Capability $items "lad-write" "LAD 结构化写入与克隆编译" (Test-PathState (Join-Path $workspaceRoot "changes") "PARTIAL_READY" "PARTIAL") "PLC改动包 / write-cycle / 审查包" "scaffold-lad-change, write-lad-network, write-lad-batch, patch-lad-network, write-cycle" "LAD JSON、generated.xml、supporting-sources、release package" "validate-lad, clone import, compile, re-export/readback" "不直接编辑 TIA 二进制工程；复杂未知 LAD box 仍需 donor network" "继续扩展自由写入子集，优先覆盖 CALL、比较、定时、计数、运动、通信。"
 Add-Capability $items "lad-diff" "LAD 网络结构差异审查_LADStructuralDiff" (Test-PathState $ladDiffScript "READY" "PARTIAL") "LAD结构编辑 / 审查Diff / 文件预览" "lad-diff" "PLC_Code\\lad-diffs\\latest-lad-diff.md/json" "真实导出 XML 对比、变更分类、哈希绑定前置审查" "差异审查不等于 TIA 编译；图形摆放和运行时行为仍需 TIA/克隆验证" "将网络差异接入发布审批，并继续补充语义级连线/参数差异。"
+Add-Capability $items "engineering-contracts" "PLC-DB-WinCC 工程契约分析" (Test-PathState $engineeringContracts "READY" "PARTIAL") "工程契约 / 项目模型 / 验证面板 / 审查包" "engineering-contracts" "engineering-contract-report.md/json, block-reference-index.csv, db-member-index.csv, hmi-plc-reference-index.csv" "DB成员、LAD引用、实例DB、HMI标签/报警绑定、命名和写入安全策略检查" "未导出或受保护的 TIA 对象无法被离线索引；最终编译仍以 TIA 为准" "继续增加 UDT、硬件 I/O、数据类型兼容和未使用变量分析。"
+Add-Capability $items "wincc-binding-review" "WinCC PLC 绑定审核助手_WinccBindingReview" (Test-PathState $winccBindingReview "PARTIAL_READY" "PARTIAL") "工程契约 / WinCC绑定 / 验证面板 / 自动流水线" "wincc-binding-assistant" "binding-candidates.csv, binding-review.csv, binding-review.md, derived HMI/alarm maps" "基于已导出 DB/LAD 证据评分，人工批准后生成派生清单，避免 source 元数据误绑" "语义候选不能替代工程师确认；缺少 DB/HMI 回读证据时不得自动写入生产工程" "接入真实 WinCC tag/alarm 回读，增加数据类型、读写方向和 HMI 设备级校验。"
 Add-Capability $items "scl-db-authoring" "SCL、DB、UDT 源码式开发" "READY" "文件预览编辑 / PLC改动包 / Agent队列" "import-sources, plc-change-package, write-cycle support import" "sources、db-contract、import-manifest" "source import, clone compile, project-model readback" "块属性、部分 DB 设置和 know-how protected 内容仍需 TIA/Openness 支持" "加入更强的 DB 版本迁移和 tag contract diff。"
 Add-Capability $items "advanced-instructions" "高级指令、库块、通信、PID 与工艺对象路由" (Test-PathState $instructionRoute "READY" "PARTIAL") "指令方案 / 自动流水线 / 验证面板" "plc-instruction-plan" "instruction-route-table, technology-object-plan, safety-risk-assessment" "typed CALL route, clone compile, safety-risk review" "工艺对象创建、轴组态、硬件参数和安全功能仍需 TIA/API 能力确认" "增加 instruction cookbook 和项目接口自动抽取。"
 Add-Capability $items "instruction-cookbook" "PLC 指令模板库_InstructionCookbook" (Test-PathState $instructionCookbook "READY" "PARTIAL") "指令库 / 自动流水线 / 验证面板" "plc-instruction-cookbook" "instruction-cookbook.md/json, instruction-risk-checklist.md" "family route matrix plus existing LAD/SCL example anchors" "真实编译仍取决于项目 CPU、库版本、实例 DB 和 Openness 导入结果" "把编译成功的项目案例自动回灌为 validated pattern。"
@@ -146,6 +150,7 @@ $json = [pscustomobject]@{
         agentQueue = (Test-Path -LiteralPath $queueJson)
         dashboard = (Test-Path -LiteralPath $dashboard)
         reviewPackage = (Test-Path -LiteralPath $reviewPackage)
+        engineeringContracts = (Test-Path -LiteralPath $engineeringContracts)
         latestReadCycle = $latestReadCycle
         latestWriteCycle = $latestWriteCycle
     }

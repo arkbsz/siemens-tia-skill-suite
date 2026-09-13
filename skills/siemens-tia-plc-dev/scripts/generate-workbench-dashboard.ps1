@@ -139,6 +139,8 @@ $instructionCookbook = Join-Path $workspaceRoot "plc\instruction-cookbook\latest
 $safetyRisk = Join-Path $workspaceRoot "plc\instruction-plans\latest\safety-risk-assessment.md"
 $winccComponentBlueprints = Join-Path $workspaceRoot "wincc\component-blueprints\latest\component-blueprints.md"
 $winccEngineeringScaffold = Join-Path $workspaceRoot "wincc\engineering-scaffold\latest\wincc-engineering-scaffold.md"
+$winccBindingReview = Join-Path $workspaceRoot "wincc\binding-review\latest\binding-review.md"
+$winccBindingAssistant = Join-Path $workspaceRoot "wincc\binding-review\latest\binding-assistant.json"
 $winccOpennessImplementation = Join-Path $workspaceRoot "wincc\openness-implementation\latest\README.md"
 $winccReadback = Join-Path $workspaceRoot "wincc\readback\latest\wincc-readback.json"
 $winccImplementationRunsRoot = Join-Path $workspaceRoot "wincc\openness-implementation"
@@ -148,6 +150,7 @@ $pipelineSummary = Join-Path $workspaceRoot "workbench\pipelines\latest\pipeline
 $pipelineSummaryJson = Join-Path $workspaceRoot "workbench\pipelines\latest\pipeline-summary.json"
 $projectModel = Join-Path $workspaceRoot "workbench\context\latest\project-model.json"
 $agentContext = Join-Path $workspaceRoot "workbench\context\latest\agent-context.md"
+$engineeringContracts = Join-Path $workspaceRoot "engineering-contracts\latest\engineering-contract-report.json"
 $knowledgeBrief = Join-Path $workspaceRoot "knowledge\packs\latest\knowledge-brief.md"
 $knowledgePack = Join-Path $workspaceRoot "knowledge\packs\latest\knowledge-pack.json"
 $capabilityMap = Join-Path $workspaceRoot "workbench\capabilities\latest\capability-map.md"
@@ -189,6 +192,7 @@ $instructionCookbookText = Read-ShortText -Path $instructionCookbook -Max 5000
 $safetyRiskText = Read-ShortText -Path $safetyRisk -Max 5000
 $winccComponentBlueprintText = Read-ShortText -Path $winccComponentBlueprints -Max 5000
 $winccEngineeringScaffoldText = Read-ShortText -Path $winccEngineeringScaffold -Max 5000
+$winccBindingReviewText = Read-ShortText -Path $winccBindingReview -Max 5000
 $winccOpennessImplementationText = Read-ShortText -Path $winccOpennessImplementation -Max 5000
 $winccReadbackText = Read-ShortText -Path $winccReadback -Max 5000
 $winccImplementationRunPath = if ($latestWinccImplementationRun) { Join-Path $latestWinccImplementationRun.FullName "implementation-run.json" } else { "" }
@@ -199,6 +203,28 @@ $pipelineText = Read-ShortText -Path $pipelineSummary -Max 5000
 $agentContextText = Read-ShortText -Path $agentContext -Max 5000
 $knowledgeText = Read-ShortText -Path $knowledgeBrief -Max 5000
 $capabilityText = Read-ShortText -Path $capabilityMap -Max 5000
+$engineeringContractsText = Read-ShortText -Path $engineeringContracts -Max 5000
+$engineeringContractsObject = $null
+if (Test-Path -LiteralPath $engineeringContracts -PathType Leaf) {
+    try { $engineeringContractsObject = Get-Content -LiteralPath $engineeringContracts -Raw -Encoding UTF8 | ConvertFrom-Json }
+    catch { $engineeringContractsObject = $null }
+}
+$contractStatus = if ($engineeringContractsObject) { [string]$engineeringContractsObject.summary.status } else { "NOT_RUN" }
+$contractFailCount = if ($engineeringContractsObject) { [int]$engineeringContractsObject.summary.findings.fail } else { 0 }
+$contractWarnCount = if ($engineeringContractsObject) { [int]$engineeringContractsObject.summary.findings.warn } else { 0 }
+$contractUnverifiedCount = if ($engineeringContractsObject) { [int]$engineeringContractsObject.summary.findings.unverified } else { 0 }
+$contractDbEvidenceGapCount = if ($engineeringContractsObject) { [int]$engineeringContractsObject.summary.sources.dbEvidenceGaps } else { 0 }
+$contractDbCoverage = if ($engineeringContractsObject -and [int]$engineeringContractsObject.summary.sources.dbBlocks -gt 0) {
+    [math]::Round(100.0 * [int]$engineeringContractsObject.summary.sources.dbBlocksWithMemberEvidence / [int]$engineeringContractsObject.summary.sources.dbBlocks, 1)
+} else { 0 }
+$bindingReviewObject = $null
+if (Test-Path -LiteralPath $winccBindingAssistant -PathType Leaf) {
+    try { $bindingReviewObject = Get-Content -LiteralPath $winccBindingAssistant -Raw -Encoding UTF8 | ConvertFrom-Json }
+    catch { $bindingReviewObject = $null }
+}
+$bindingReviewStatus = if ($bindingReviewObject) { "READY_FOR_REVIEW" } else { "NOT_RUN" }
+$bindingReviewRows = if ($bindingReviewObject) { [int]$bindingReviewObject.reviewCount } else { 0 }
+$bindingCandidateCount = if ($bindingReviewObject) { [int]$bindingReviewObject.plcCandidateCount } else { 0 }
 $approvalText = Read-ShortText -Path $approvalPath -Max 5000
 $approvalObject = $null
 if (Test-Path -LiteralPath $approvalPath -PathType Leaf) {
@@ -222,6 +248,7 @@ $validationBuilder = New-Object System.Text.StringBuilder
 [void]$validationBuilder.AppendLine("- Native workbench jobs: ``$consoleJobsRoot``")
 [void]$validationBuilder.AppendLine("- Project model: ``$projectModel``")
 [void]$validationBuilder.AppendLine("- Agent context: ``$agentContext``")
+[void]$validationBuilder.AppendLine("- Engineering contracts: ``$engineeringContracts``")
 [void]$validationBuilder.AppendLine("- Knowledge brief: ``$knowledgeBrief``")
 [void]$validationBuilder.AppendLine("- Capability map: ``$capabilityMap``")
 [void]$validationBuilder.AppendLine("- PLC instruction cookbook: ``$instructionCookbook``")
@@ -269,6 +296,17 @@ $validationBuilder = New-Object System.Text.StringBuilder
 [void]$validationBuilder.AppendLine()
 [void]$validationBuilder.AppendLine('```text')
 [void]$validationBuilder.AppendLine($knowledgeText)
+[void]$validationBuilder.AppendLine('```')
+[void]$validationBuilder.AppendLine()
+[void]$validationBuilder.AppendLine("## PLC-DB-WinCC Engineering Contracts")
+[void]$validationBuilder.AppendLine()
+[void]$validationBuilder.AppendLine("- Status: ``$contractStatus``")
+[void]$validationBuilder.AppendLine("- FAIL: ``$contractFailCount``")
+[void]$validationBuilder.AppendLine("- WARN: ``$contractWarnCount``")
+[void]$validationBuilder.AppendLine("- Evidence gaps: ``$contractUnverifiedCount``")
+[void]$validationBuilder.AppendLine("- DB member evidence coverage: ``$contractDbCoverage%``")
+[void]$validationBuilder.AppendLine('```json')
+[void]$validationBuilder.AppendLine($engineeringContractsText)
 [void]$validationBuilder.AppendLine('```')
 [void]$validationBuilder.AppendLine()
 [void]$validationBuilder.AppendLine("## Editor-Replacement Capability Map")
@@ -328,6 +366,15 @@ $validationBuilder = New-Object System.Text.StringBuilder
 [void]$validationBuilder.AppendLine($winccEngineeringScaffoldText)
 [void]$validationBuilder.AppendLine('```')
 [void]$validationBuilder.AppendLine()
+[void]$validationBuilder.AppendLine("## WinCC PLC Binding Review")
+[void]$validationBuilder.AppendLine()
+[void]$validationBuilder.AppendLine("- Status: ``$bindingReviewStatus``")
+[void]$validationBuilder.AppendLine("- Review rows: ``$bindingReviewRows``")
+[void]$validationBuilder.AppendLine("- PLC candidates: ``$bindingCandidateCount``")
+[void]$validationBuilder.AppendLine('```markdown')
+[void]$validationBuilder.AppendLine($winccBindingReviewText)
+[void]$validationBuilder.AppendLine('```')
+[void]$validationBuilder.AppendLine()
 [void]$validationBuilder.AppendLine("## WinCC Openness Implementation Package")
 [void]$validationBuilder.AppendLine()
 [void]$validationBuilder.AppendLine('```text')
@@ -373,6 +420,7 @@ $cookbookDisplay = if (Test-Path -LiteralPath $instructionCookbook -PathType Lea
 $safetyDisplay = if (Test-Path -LiteralPath $safetyRisk -PathType Leaf) { $safetyRisk } else { "missing" }
 $blueprintDisplay = if (Test-Path -LiteralPath $winccComponentBlueprints -PathType Leaf) { $winccComponentBlueprints } else { "missing" }
 $engineeringDisplay = if (Test-Path -LiteralPath $winccEngineeringScaffold -PathType Leaf) { $winccEngineeringScaffold } else { "missing" }
+$bindingDisplay = if (Test-Path -LiteralPath $winccBindingReview -PathType Leaf) { $winccBindingReview } else { "missing" }
 $winccImplementationDisplay = if (Test-Path -LiteralPath $winccOpennessImplementation -PathType Leaf) { $winccOpennessImplementation } else { "missing" }
 $winccReadbackDisplay = if (Test-Path -LiteralPath $winccReadback -PathType Leaf) { $winccReadback } else { "missing" }
 $winccImplementationRunDisplay = if ($winccImplementationRunPath -and (Test-Path -LiteralPath $winccImplementationRunPath -PathType Leaf)) { $winccImplementationRunPath } else { "missing" }
@@ -383,6 +431,7 @@ $projectModelDisplay = if (Test-Path -LiteralPath $projectModel -PathType Leaf) 
 $agentContextDisplay = if (Test-Path -LiteralPath $agentContext -PathType Leaf) { $agentContext } else { "missing" }
 $knowledgeDisplay = if (Test-Path -LiteralPath $knowledgeBrief -PathType Leaf) { $knowledgeBrief } else { "missing" }
 $capabilityDisplay = if (Test-Path -LiteralPath $capabilityMap -PathType Leaf) { $capabilityMap } else { "missing" }
+$engineeringContractsDisplay = if (Test-Path -LiteralPath $engineeringContracts -PathType Leaf) { $engineeringContracts } else { "not run" }
 $reviewDisplay = if (Test-Path -LiteralPath $reviewSummary) { $reviewSummary } else { "missing" }
 $approvalDisplay = if (Test-Path -LiteralPath $approvalPath) { $approvalPath } else { "missing" }
 $pluginDisplay = if (Test-Path -LiteralPath $pluginRouting) { $pluginRouting } else { "missing" }
@@ -404,6 +453,7 @@ $dashboardBuilder = New-Object System.Text.StringBuilder
 [void]$dashboardBuilder.AppendLine("- Safety risk: ``$safetyDisplay``")
 [void]$dashboardBuilder.AppendLine("- WinCC component blueprints: ``$blueprintDisplay``")
 [void]$dashboardBuilder.AppendLine("- WinCC engineering scaffold: ``$engineeringDisplay``")
+[void]$dashboardBuilder.AppendLine("- WinCC PLC binding review: ``$bindingDisplay`` (status ``$bindingReviewStatus``, rows ``$bindingReviewRows``, candidates ``$bindingCandidateCount``)")
 [void]$dashboardBuilder.AppendLine("- WinCC Openness implementation package: ``$winccImplementationDisplay``")
 [void]$dashboardBuilder.AppendLine("- WinCC real readback: ``$winccReadbackDisplay``")
 [void]$dashboardBuilder.AppendLine("- WinCC clone implementation run: ``$winccImplementationRunDisplay``")
@@ -412,6 +462,7 @@ $dashboardBuilder = New-Object System.Text.StringBuilder
 [void]$dashboardBuilder.AppendLine("- Agent pipeline: ``$pipelineDisplay``")
 [void]$dashboardBuilder.AppendLine("- Project model: ``$projectModelDisplay``")
 [void]$dashboardBuilder.AppendLine("- Agent context: ``$agentContextDisplay``")
+[void]$dashboardBuilder.AppendLine("- Engineering contracts: ``$engineeringContractsDisplay`` (status ``$contractStatus``, FAIL ``$contractFailCount``, WARN ``$contractWarnCount``, evidence gaps ``$contractUnverifiedCount``, DB coverage ``$contractDbCoverage%``)")
 [void]$dashboardBuilder.AppendLine("- Knowledge pack: ``$knowledgeDisplay``")
 [void]$dashboardBuilder.AppendLine("- Capability map: ``$capabilityDisplay``")
 [void]$dashboardBuilder.AppendLine("- Review package: ``$reviewDisplay``")
@@ -474,6 +525,7 @@ $instructionCookbookValue = if (-not [string]::IsNullOrWhiteSpace($instructionCo
 $safetyRiskValue = if (-not [string]::IsNullOrWhiteSpace($safetyRisk) -and (Test-Path -LiteralPath $safetyRisk -PathType Leaf)) { $safetyRisk } else { "" }
 $winccComponentBlueprintValue = if (-not [string]::IsNullOrWhiteSpace($winccComponentBlueprints) -and (Test-Path -LiteralPath $winccComponentBlueprints -PathType Leaf)) { $winccComponentBlueprints } else { "" }
 $winccEngineeringScaffoldValue = if (-not [string]::IsNullOrWhiteSpace($winccEngineeringScaffold) -and (Test-Path -LiteralPath $winccEngineeringScaffold -PathType Leaf)) { $winccEngineeringScaffold } else { "" }
+$winccBindingReviewValue = if (-not [string]::IsNullOrWhiteSpace($winccBindingReview) -and (Test-Path -LiteralPath $winccBindingReview -PathType Leaf)) { $winccBindingReview } else { "" }
 $winccOpennessImplementationValue = if (-not [string]::IsNullOrWhiteSpace($winccOpennessImplementation) -and (Test-Path -LiteralPath $winccOpennessImplementation -PathType Leaf)) { $winccOpennessImplementation } else { "" }
 $winccReadbackValue = if (-not [string]::IsNullOrWhiteSpace($winccReadback) -and (Test-Path -LiteralPath $winccReadback -PathType Leaf)) { $winccReadback } else { "" }
 $winccImplementationRunValue = if (-not [string]::IsNullOrWhiteSpace($winccImplementationRunPath) -and (Test-Path -LiteralPath $winccImplementationRunPath -PathType Leaf)) { $winccImplementationRunPath } else { "" }
@@ -508,6 +560,7 @@ $json = [pscustomobject]@{
     safetyRisk = $safetyRiskValue
     winccComponentBlueprints = $winccComponentBlueprintValue
     winccEngineeringScaffold = $winccEngineeringScaffoldValue
+    winccBindingReview = $winccBindingReviewValue
     winccOpennessImplementation = $winccOpennessImplementationValue
     winccReadback = $winccReadbackValue
     winccImplementationRun = $winccImplementationRunValue
@@ -521,6 +574,16 @@ $json = [pscustomobject]@{
     knowledgePack = $knowledgePackValue
     capabilityMap = $capabilityMapValue
     capabilityJson = $capabilityJsonValue
+    engineeringContracts = if (Test-Path -LiteralPath $engineeringContracts -PathType Leaf) { $engineeringContracts } else { "" }
+    engineeringContractStatus = $contractStatus
+    engineeringContractFails = $contractFailCount
+    engineeringContractWarnings = $contractWarnCount
+    engineeringContractUnverified = $contractUnverifiedCount
+    engineeringContractDbEvidenceGaps = $contractDbEvidenceGapCount
+    engineeringContractDbMemberCoverage = $contractDbCoverage
+    winccBindingReviewStatus = $bindingReviewStatus
+    winccBindingReviewRows = $bindingReviewRows
+    winccBindingCandidates = $bindingCandidateCount
     queueSummary = $queueSummary
     consoleJobs = $consoleJobSummary
 }

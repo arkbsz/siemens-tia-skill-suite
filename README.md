@@ -1,6 +1,6 @@
 # 西门子 TIA 自动化开发技能套件
 
-版本：`1.0.7`
+版本：`1.1.0`
 发布日期：`2026-09-13`
 
 面向 Siemens TIA Portal 的多平台技能套件，支持 Codex、Claude Code、Trae Agent、Qoder、Cursor 等开发入口，兼容 TIA Portal `V16-V21`，主打 PLC-as-code 与 HMI/WinCC 自动化工作流。适合做项目备份、块导出、LAD/XML 编辑、WinCC 画面与标签自动化、源码导入、编译验证，以及本地 Openness / REST 桥接自动化。
@@ -62,6 +62,9 @@
 - 原生 WinCC 设计编辑：工作台的 `WinCC设计编辑` 页可维护画面、组件、HMI 标签和报警，右侧可自由编辑设计 JSON；保存前校验并自动备份，编译后生成带坐标和标签绑定的 screen/object 映射、工程脚手架和克隆实现包。
 - WinCC 几何校验：编译设计包时自动检查组件 `x/y/width/height`、画面越界、尺寸缺失和同画面矩形重叠；结果写入 `layout-validation.json/md`，发现遮挡会标记为 `REVIEW_REQUIRED`，不会静默进入后续实现包。
 - PLC 改动包：一键生成 `PLC_Code\changes\latest-plc-change-package`，包含块/DB契约、命名映射、LAD JSON 模板、SCL/DB 源码目录、导入清单、验证计划和安全风险评估。
+- PLC-DB-WinCC 工程契约分析：区分已验证成员、仅有 DB 块清单、导出证据缺口和明确缺失成员，输出 `db-evidence-index.csv`，避免把不完整导出误报成工程故障。
+- WinCC 显式绑定契约：HMI 标签/报警支持 `plcPath`、`plcTag`、`binding`、`plcVariable`、`address` 字段，也可在 `tag-contract.md` 使用 `PLC Binding` 列；`wincc-binding-assistant` 会从已导出的 DB/LAD 证据生成候选、评分和人工审核表，审核后生成派生导入清单。
+- 工程契约审查：`engineering-contracts` 将 PLC、DB、LAD、WinCC 标签/报警和命名关系汇总为可审计报告，区分已确认故障与导出证据缺口，避免不完整读取造成误报。
 - 针对性自动路由：LAD、WinCC、Openness、SCL、DB 契约、诊断和审查使用独立的 skill 组合、平台优先级与任务指令
 - 文件上传：图片、PDF、文档、源码、XML 和日志自动复制到项目工作区并随当前消息交给 Agent
 - 本地 Openness 自动化和 REST 桥接
@@ -121,6 +124,12 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build-protected-exe.ps
 ```
 
 该 EXE 内嵌加密后的 PLC/WinCC skill、Agent 配置、工作流和交互窗口，运行时使用当前用户受限的临时目录，窗口关闭后自动清理。详细保护范围、代码签名和安全边界见 `PROTECTED_RELEASE.md`。
+
+脚本或集成测试可使用受控命令模式，命令完成后自动退出并返回实际退出码：
+
+```powershell
+.\protected-release\SiemensTIAAgent.exe --project "D:\path\to\project" --run-command doctor
+```
 
 默认安装位置：
 
@@ -196,6 +205,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1 wincc-component-blueprints -ProjectPath "D:\path\to\project" -TaskText "生成WinCC可复用组件蓝图"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1 wincc-engineering-scaffold -ProjectPath "D:\path\to\project" -TaskText "生成WinCC工程脚手架"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1 wincc-openness-implementation -ProjectPath "D:\path\to\project" -ForCloneOnly
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1 wincc-binding-assistant -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1 simulation-package -ProjectPath "D:\path\to\project" -TaskText "生成仿真与运行验证包"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1 simulation-replay -ProjectPath "D:\path\to\project"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1 agent-pipeline -ProjectPath "D:\path\to\project" -TaskText "规划 LAD、DB、WinCC 画面和验证队列" -RefreshWinccCatalog

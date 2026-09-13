@@ -30,6 +30,8 @@ Commands:
   workbench-dashboard -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-OutputDirectory <dir>]
   capability-map -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-OutputDirectory <dir>]
   project-model -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-OutputDirectory <dir>]
+  engineering-contracts -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-ExportRoot <dir>] [-WinccPackagePath <dir>] [-OutputDirectory <dir>]
+  wincc-binding-assistant -ProjectPath <projectDir|ap16..ap21> [-ContractReportPath <json>] [-WinccPackagePath <dir>] [-OutputDirectory <dir>] [-ApplyReviewPath <csv>] [-ApplyToPackage]
   knowledge-pack -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-OutputDirectory <dir>] [-RefreshOnline]
   plc-instruction-cookbook -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-OutputDirectory <dir>]
   simulation-package -ProjectPath <projectDir|ap16..ap21> [-WorkflowConfigPath <json>] [-TaskText <text>] [-OutputDirectory <dir>]
@@ -237,6 +239,14 @@ switch ($Command.ToLowerInvariant()) {
     }
     "project-model" {
         Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "generate-project-object-model.ps1") -Arguments $CommandArgs
+        break
+    }
+    "engineering-contracts" {
+        Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "analyze-engineering-contracts.ps1") -Arguments $CommandArgs
+        break
+    }
+    "wincc-binding-assistant" {
+        Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "resolve-wincc-bindings.ps1") -Arguments $CommandArgs
         break
     }
     "knowledge-pack" {

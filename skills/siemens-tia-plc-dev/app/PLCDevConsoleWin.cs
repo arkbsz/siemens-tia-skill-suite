@@ -17,7 +17,7 @@ namespace SiemensTiaSkillSuite
     internal static class Program
     {
         [STAThread]
-        private static void Main(string[] args)
+        private static int Main(string[] args)
         {
             string projectPath = "";
             string invokeScript = "";
@@ -50,7 +50,9 @@ namespace SiemensTiaSkillSuite
             {
                 WriteCrashLog(eventArgs.ExceptionObject as Exception);
             };
-            Application.Run(new MainForm(projectPath, invokeScript, initialCommand));
+            MainForm form = new MainForm(projectPath, invokeScript, initialCommand);
+            Application.Run(form);
+            return form.InitialCommandExitCode;
         }
 
         private static void WriteCrashLog(Exception exception)
@@ -183,6 +185,7 @@ namespace SiemensTiaSkillSuite
         private readonly System.Windows.Forms.Timer tailTimer = new System.Windows.Forms.Timer();
         private readonly string invokeScript;
         private readonly string initialCommand;
+        private readonly bool closeAfterInitialCommand;
         private SplitContainer outerSplitter;
         private SplitContainer centerSplitter;
 
@@ -232,6 +235,7 @@ namespace SiemensTiaSkillSuite
         {
             this.invokeScript = ResolveInvokeScript(invokeScriptArg);
             this.initialCommand = initialCommandArg == null ? "" : initialCommandArg.Trim();
+            this.closeAfterInitialCommand = !string.IsNullOrWhiteSpace(this.initialCommand);
             Text = "Siemens TIA PLC Dev Console";
             Width = 1420;
             Height = 860;
@@ -267,6 +271,8 @@ namespace SiemensTiaSkillSuite
                 };
             }
         }
+
+        public int InitialCommandExitCode { get; private set; }
 
         protected override bool ProcessCmdKey(ref Message message, Keys keyData)
         {
@@ -512,6 +518,8 @@ namespace SiemensTiaSkillSuite
             commandBar.Controls.Add(CommandButton("列程序块", "list-blocks", Ink));
             commandBar.Controls.Add(CommandButton("LAD预览", "lad-preview", Teal));
             commandBar.Controls.Add(CommandButton("项目模型", "project-model", Teal));
+            commandBar.Controls.Add(CommandButton("工程契约", "engineering-contracts", Gold));
+            commandBar.Controls.Add(CommandButton("WinCC绑定", "wincc-binding-assistant", Gold));
             commandBar.Controls.Add(CommandButton("知识检索", "knowledge-pack", Teal));
             commandBar.Controls.Add(CommandButton("能力矩阵", "capability-map", Teal));
             commandBar.Controls.Add(CommandButton("指令库", "plc-instruction-cookbook", Teal));
@@ -923,6 +931,8 @@ namespace SiemensTiaSkillSuite
                 "read-cycle-full",
                 "list-blocks",
                 "project-model",
+                "engineering-contracts",
+                "wincc-binding-assistant",
                 "knowledge-pack",
                 "capability-map",
                 "plc-instruction-plan",
@@ -2923,6 +2933,8 @@ namespace SiemensTiaSkillSuite
             run.DropDownItems.Add(NewMenuItem("生成 LAD 可读预览", delegate { StartCommand("lad-preview"); }));
             run.DropDownItems.Add(NewMenuItem("审查 LAD 结构差异", delegate { StartCommand("lad-diff"); }));
             run.DropDownItems.Add(NewMenuItem("生成项目对象模型", delegate { StartCommand("project-model"); }));
+            run.DropDownItems.Add(NewMenuItem("分析 PLC-DB-WinCC 工程契约", delegate { StartCommand("engineering-contracts"); }));
+            run.DropDownItems.Add(NewMenuItem("生成 WinCC PLC 绑定审核包", delegate { StartCommand("wincc-binding-assistant"); }));
             run.DropDownItems.Add(NewMenuItem("生成任务知识检索包", delegate { StartCommand("knowledge-pack"); }));
             run.DropDownItems.Add(NewMenuItem("生成工作台能力矩阵", delegate { StartCommand("capability-map"); }));
             run.DropDownItems.Add(NewMenuItem("一键生成自动开发流水线", delegate { StartCommand("agent-pipeline"); }));
@@ -2969,6 +2981,14 @@ namespace SiemensTiaSkillSuite
             tools.DropDownItems.Add(NewMenuItem("保存当前预览文件", delegate { SaveCurrentPreviewFile(); }));
             tools.DropDownItems.Add(NewMenuItem("生成项目对象模型", delegate { StartCommand("project-model"); }));
             tools.DropDownItems.Add(NewMenuItem("查看项目对象模型", delegate { ShowProjectObjectModel(); }));
+            tools.DropDownItems.Add(NewMenuItem("分析 PLC-DB-WinCC 工程契约", delegate { StartCommand("engineering-contracts"); }));
+            tools.DropDownItems.Add(NewMenuItem("生成 WinCC PLC 绑定审核包", delegate { StartCommand("wincc-binding-assistant"); }));
+            tools.DropDownItems.Add(NewMenuItem("查看工程契约报告", delegate
+            {
+                string contractReport = Path.Combine(ResolveProjectRoot(projectPathBox.Text), "PLC_Code", "engineering-contracts", "latest", "engineering-contract-report.md");
+                if (File.Exists(contractReport)) { ShowFile(contractReport); }
+                else { MessageBox.Show("尚未生成工程契约报告，请先执行分析。", "工程契约", MessageBoxButtons.OK, MessageBoxIcon.Information); }
+            }));
             tools.DropDownItems.Add(NewMenuItem("生成任务知识检索包", delegate { StartCommand("knowledge-pack"); }));
             tools.DropDownItems.Add(NewMenuItem("查看任务知识检索包", delegate { ShowKnowledgePack(); }));
             tools.DropDownItems.Add(NewMenuItem("生成工作台能力矩阵", delegate { StartCommand("capability-map"); }));
@@ -6667,6 +6687,12 @@ namespace SiemensTiaSkillSuite
                     RefreshCurrentJobTail();
                     RefreshWorkbenchArtifactsAfterCommand();
                     HandleCommandCompletion(command, exitCode);
+                    if (closeAfterInitialCommand &&
+                        string.Equals(command, initialCommand, StringComparison.OrdinalIgnoreCase))
+                    {
+                        InitialCommandExitCode = exitCode;
+                        Close();
+                    }
                 });
             };
 
@@ -6703,6 +6729,24 @@ namespace SiemensTiaSkillSuite
                 if (command.StartsWith("queue-", StringComparison.OrdinalIgnoreCase)) { ShowCurrentQueueStage(); }
                 if (command == "agent-pipeline") { ShowWorkbenchDashboard(); }
                 if (command == "project-model") { ShowProjectObjectModel(); }
+                if (command == "engineering-contracts")
+                {
+                    string contractReport = Path.Combine(ResolveProjectRoot(projectPathBox.Text), "PLC_Code", "engineering-contracts", "latest", "engineering-contract-report.md");
+                    if (File.Exists(contractReport))
+                    {
+                        ShowFile(contractReport);
+                        statusLabel.Text = "已打开 PLC-DB-WinCC 工程契约报告：" + contractReport;
+                    }
+                }
+                if (command == "wincc-binding-assistant")
+                {
+                    string bindingReport = Path.Combine(ResolveProjectRoot(projectPathBox.Text), "PLC_Code", "wincc", "binding-review", "latest", "binding-review.md");
+                    if (File.Exists(bindingReport))
+                    {
+                        ShowFile(bindingReport);
+                        statusLabel.Text = "已打开 WinCC PLC 绑定审核包：" + bindingReport;
+                    }
+                }
                 if (command == "knowledge-pack") { ShowKnowledgePack(); }
                 if (command == "capability-map") { ShowWorkbenchCapabilityMap(); }
                 if (command == "review-package") { ShowReleaseReview(); }
@@ -6924,6 +6968,16 @@ namespace SiemensTiaSkillSuite
             else if (command == "project-model")
             {
                 args.AddRange(new string[] { "project-model", "-ProjectPath", root, "-TaskText", requestBox.Text.Trim() });
+                AddWorkflowConfigArg(args, configPath);
+            }
+            else if (command == "engineering-contracts")
+            {
+                args.AddRange(new string[] { "engineering-contracts", "-ProjectPath", root });
+                AddWorkflowConfigArg(args, configPath);
+            }
+            else if (command == "wincc-binding-assistant")
+            {
+                args.AddRange(new string[] { "wincc-binding-assistant", "-ProjectPath", root });
                 AddWorkflowConfigArg(args, configPath);
             }
             else if (command == "knowledge-pack")

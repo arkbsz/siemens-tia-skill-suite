@@ -64,7 +64,7 @@ Use the local visual console when the user wants a better interaction surface th
 - project object models through `project-model`, generating `PLC_Code\workbench\context\latest\project-model.json`, `agent-context.md`, and `file-index.csv` for fast cross-Agent understanding of TIA version, blocks, DBs, exported artifacts, WinCC packages, queues and safety gates
 - task knowledge packs through `knowledge-pack`, generating official-first source lists, community adapter notes, task-specific search queries, implementation patterns, and Agent retrieval prompts under `PLC_Code\knowledge\packs\latest`
 - editor-replacement capability maps through `capability-map`, generating a concrete matrix of native workbench coverage, backing commands, validation gates, TIA-native gaps, and next engineering steps under `PLC_Code\workbench\capabilities\latest`
-- one-click Agent development pipeline through `agent-pipeline`, which detects PLC/WinCC scope from the task, generates instruction routing, WinCC visual packages, Agent plans, execution queues and dashboard evidence in one auditable pass
+- one-click Agent development pipeline through `agent-pipeline`, which detects PLC/WinCC scope from the task, generates instruction routing, WinCC visual packages, binding review candidates, Agent plans, execution queues and dashboard evidence in one auditable pass
 - workbench review packages through `review-package`, collecting plans, queues, PLC/WinCC packages, artifact hashes, git diffs and import-readiness gates
 - visual release approval through `review-approval`, binding approvals to the project path, input XML SHA256, review fingerprint, clone compile evidence and expiry
 - workbench dashboard generation through `workbench-dashboard`, feeding the native validation and diff panels with queue health, latest run reports, import readiness, plugin routing and Git diff summaries
@@ -78,6 +78,8 @@ Use the local visual console when the user wants a better interaction surface th
 - editable file preview with backup-on-save to `PLC_Code\file-backups`, plus `lad-preview` for readable LAD XML summaries
 - structural LAD diff review through `lad-diff`, producing UId-stable Markdown/JSON network changes before validation and clone compilation
 - PLC change packages through `plc-change-package`, creating a structured editing workspace for DB contracts, LAD JSON, SCL sources, import manifests, verification plans, and safety risk notes
+- engineering contract analysis through `engineering-contracts`, producing `engineering-contract-report.md/json`, `block-reference-index.csv`, `db-evidence-index.csv`, `db-member-index.csv`, `hmi-plc-reference-index.csv`, naming findings and safety findings
+- WinCC PLC binding assistance through `wincc-binding-assistant`, producing scored PLC candidates, an editable approval CSV, a review report, and derived HMI/alarm maps without guessing or writing production artifacts
 - run and log preview panels for `PLC_Code\runs` and `PLC_Code\console-jobs`
 - executable command palette with persisted job manifests under `PLC_Code\console-jobs`, including original arguments, workflow-config snapshots, curated context manifest and file list, stdout/stderr, process id, exit code, timestamps, retry/continue lineage, and stop state
 - restart-safe job recovery: interrupted commands are surfaced in the native workbench and can be retried or replayed with the original arguments; replay is explicitly labeled as replay rather than fake process-level resume
@@ -377,6 +379,10 @@ Use `review-approval` as the executable release gate behind the native `发布�
 - `wincc-apply-clone` also requires an approved clone or production record; no approval means no clone is opened.
 
 Use `workbench-dashboard` to refresh the native validation and diff panels after any read, write, queue, WinCC or review action. It writes `PLC_Code\workbench\latest\dashboard.md`, `validation-summary.md`, `diff-summary.patch`, and `dashboard.json`.
+
+Engineering contract evidence is graded rather than guessed: a DB declared in the block list without exported members is `WARN/EVIDENCE_GAP`, while a member absent from an exported DB with member evidence is `FAIL/MISSING_DB_MEMBER`. WinCC display aliases should carry an explicit `plcPath`, `plcTag`, `binding`, `plcVariable`, or `address` column; a `tag-contract.md` table may provide the same value through a `PLC Binding` column.
+
+Use `wincc-binding-assistant` after `engineering-contracts` when a WinCC design contains aliases without concrete PLC paths. The assistant ranks candidates from verified DB-member and exported LAD-global-symbol evidence, records the score and reason, and leaves the decision as `pending`. Edit `binding-review.csv`, set `selectedBinding` and `decision=approve`, then rerun with `-ApplyReviewPath`; this creates derived maps under `applied`. Add `-ApplyToPackage` only when the selected WinCC package is inside the project workspace and a backup is acceptable. The assistant never treats a CSV `source` column as a PLC binding.
 
 The native command palette is an execution surface, not a decorative menu. Each selected command must call `invoke-siemens-plc-dev.ps1`, create a JSON job manifest before launching PowerShell, stream stdout/stderr into the manifest paths, update the manifest on exit, and refresh the project tree, Runs, task state and relevant preview panel. The task-state page must expose refresh, retry, replay/continue, output-log and error-log actions. A stopped or interrupted command remains inspectable and must never be silently discarded.
 

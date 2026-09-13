@@ -249,6 +249,8 @@ $tagRows = foreach ($tag in $tags) {
     [pscustomobject]@{
         objectName = CsvValue $tag "objectName"
         tag = CsvValue $tag "tag"
+        plcPath = CsvValue $tag "plcPath"
+        datatype = CsvValue $tag "datatype"
         layer = CsvValue $tag "layer"
         access = CsvValue $tag "access" "read"
         confirmation = CsvValue $tag "confirmation"
@@ -260,6 +262,8 @@ $alarmRows = foreach ($alarm in $alarms) {
         alarmName = CsvValue $alarm "alarmName"
         class = CsvValue $alarm "class" "Fault"
         triggerTag = CsvValue $alarm "triggerTag"
+        plcPath = CsvValue $alarm "plcPath"
+        datatype = CsvValue $alarm "datatype"
         ack = CsvValue $alarm "ack" "required"
         reset = CsvValue $alarm "reset" "separate-reset-command"
     }

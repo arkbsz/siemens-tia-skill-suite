@@ -1,8 +1,8 @@
 {
-  "packageName": "siemens-tia-skill-suite_v1.0.0_20260810",
-  "version": "1.0.7",
+  "packageName": "siemens-tia-skill-suite_v1.1.0_20260913",
+  "version": "1.1.0",
   "releaseDate": "2026-09-13",
-  "builtAt": "2026-09-13T17:00:29+08:00",
+  "builtAt": "2026-09-13T18:59:20+08:00",
   "installTarget": "%USERPROFILE%\\.codex\\skills",
   "packagedSkills": [
     {
@@ -66,9 +66,9 @@
     "payloadIntegrity": "HMAC-SHA256",
     "temporaryRuntime": "%USERPROFILE%\\.codex\\siemens-tia-agent-runtime\\sessions",
     "sourceFilesDistributedBesideExe": false,
-    "lastBuiltAt": "2026-09-13T17:00:29+08:00",
-    "lastBuildSha256": "E3DD3C1A03EEBF7CA6FCC0537518432DA3E1BDC17AB0D3E0A2815925AF8D61D9",
-    "lastBuildPayloadFiles": 233,
+    "lastBuiltAt": "2026-09-13T18:59:20+08:00",
+    "lastBuildSha256": "031A5364632DBB42B8A93182481733E0C9D907BCD751B5FDDBCAC221404A155D",
+    "lastBuildPayloadFiles": 239,
     "lastBuildSelfTest": "Passed"
   },
   "excludedDirectories": [
@@ -160,25 +160,59 @@
     {
       "Workflow": "workbench-dashboard",
       "Status": "passed",
-      "ValidatedAt": "2026-09-09T17:00:06+08:00",
+      "ValidatedAt": "2026-09-13T18:52:47+08:00",
       "ProjectPath": "D:\\plc\\手动程序",
       "Command": "workbench-dashboard -ProjectPath \"D:\\plc\\手动程序\"",
       "OutputRoot": "D:\\plc\\手动程序\\PLC_Code\\workbench\\latest",
       "IncludesWinccEngineeringScaffold": true,
-      "IncludesSimulationPackage": true
+      "IncludesSimulationPackage": true,
+      "IncludesEngineeringContracts": true,
+      "IncludesWinccBindingReview": true,
+      "ApprovalStatus": "PENDING",
+      "ReleaseAllowed": false
+    },
+    {
+      "Workflow": "engineering-contracts",
+      "Status": "passed",
+      "ValidatedAt": "2026-09-13T18:52:11+08:00",
+      "ProjectPath": "D:\\plc\\手动程序",
+      "Command": "engineering-contracts -ProjectPath \"D:\\plc\\手动程序\"",
+      "OutputRoot": "D:\\plc\\手动程序\\PLC_Code\\engineering-contracts\\latest",
+      "StatusReport": "FAIL",
+      "FailCount": 9,
+      "WarningCount": 158,
+      "EvidenceGapCount": 39,
+      "DbMemberEvidenceCoverage": 66.7,
+      "ReleaseAllowed": false
+    },
+    {
+      "Workflow": "wincc-binding-assistant",
+      "Status": "passed",
+      "ValidatedAt": "2026-09-13T18:52:22+08:00",
+      "ProjectPath": "D:\\plc\\手动程序",
+      "Command": "wincc-binding-assistant -ProjectPath \"D:\\plc\\手动程序\"",
+      "OutputRoot": "D:\\plc\\手动程序\\PLC_Code\\wincc\\binding-review\\latest",
+      "HmiTagCount": 5,
+      "AlarmCount": 3,
+      "ReviewCount": 8,
+      "PlcCandidateCount": 139,
+      "Mode": "review-only",
+      "ReleaseAllowed": false
     },
     {
       "Workflow": "agent-pipeline",
       "Status": "passed",
-      "ValidatedAt": "2026-09-10T11:26:34+08:00",
+      "ValidatedAt": "2026-09-13T18:52:27+08:00",
       "ProjectPath": "D:\\plc\\手动程序",
       "Command": "agent-pipeline -ProjectPath \"D:\\plc\\手动程序\"",
       "OutputRoot": "D:\\plc\\手动程序\\PLC_Code\\workbench\\pipelines\\latest",
-      "StepCount": 15,
+      "StepCount": 17,
       "IncludesWinccEngineeringScaffold": true,
       "IncludesSimulationPackage": true,
       "IncludesWinccOpennessImplementation": true,
       "IncludesSimulationReplay": true,
+      "IncludesEngineeringContracts": true,
+      "IncludesWinccBindingReview": true,
       "ReleaseAllowed": false
     }
   ],
@@ -213,11 +247,16 @@
     "Automatic mode selects the first installed platform preferred by the active PLC/WinCC workflow; manual mode never silently falls back.",
     "setup-siemens-tia-suite.ps1 installs skills with backup, detects all supported Agent CLIs, records runtime dependencies, builds the EXE, and optionally launches the project console.",
     "build-protected-exe.ps1 produces a self-contained single-file Windows application with an encrypted, authenticated runtime payload and no adjacent source tree.",
+    "Protected --run-command launches the same controlled command mapping, exits after completion and returns the command exit code; normal interactive startup remains open.",
     "The native workbench command channel decodes Windows PowerShell 5.1 Chinese output with GB18030 while keeping Agent JSONL output on UTF-8.",
     "The browser-based console remains available only as the explicit console-web fallback.",
     "The protected EXE runtime is placed under the user's .codex directory so built-in Agent child processes can consume bundled skills without falling back to an external source tree.",
     "The native WinCC design editor now validates and backs up JSON, compiles user-defined screen/component/tag/alarm structures, preserves component geometry, and feeds the clone-only implementation manifest.",
     "Agent retry and continue now create isolated input-evidence copies; retry clears stale sessions, continue restores only platform-compatible sessions, and task-level stop/timeout flags prevent late process events from corrupting job status.",
-    "Agent turns now create a path-bounded context-manifest.json that records the curated project evidence supplied to each platform."
+    "Agent turns now create a path-bounded context-manifest.json that records the curated project evidence supplied to each platform.",
+    "engineering-contracts grades DB/LAD evidence gaps separately from confirmed missing members and writes db-evidence-index.csv.",
+    "WinCC tag and alarm contracts support explicit plcPath/plcTag/binding/plcVariable/address fields and the PLC Binding column in tag-contract.md.",
+    "Project model, dashboard and review readiness now expose evidence-gap counts and DB member evidence coverage.",
+    "wincc-binding-assistant ranks PLC binding candidates from exported evidence, preserves an approval CSV, creates derived HMI/alarm maps, ignores source metadata as an address, and never writes production TIA binaries."
   ]
 }

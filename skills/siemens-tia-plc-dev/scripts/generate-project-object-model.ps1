@@ -137,8 +137,10 @@ $latestCapabilityMap = Join-Path $workspaceRoot "workbench\capabilities\latest\c
 $latestInstructionCookbook = Join-Path $workspaceRoot "plc\instruction-cookbook\latest\instruction-cookbook.md"
 $latestWinccComponentBlueprints = Join-Path $workspaceRoot "wincc\component-blueprints\latest\component-blueprints.md"
 $latestWinccEngineeringScaffold = Join-Path $workspaceRoot "wincc\engineering-scaffold\latest\wincc-engineering-scaffold.md"
+$latestWinccBindingReview = Join-Path $workspaceRoot "wincc\binding-review\latest\binding-assistant.json"
 $latestSimulationPackage = Join-Path $workspaceRoot "simulation\latest\simulation-package.md"
 $latestReview = Join-Path $workspaceRoot "review-packages\latest\review-summary.md"
+$latestEngineeringContracts = Join-Path $workspaceRoot "engineering-contracts\latest\engineering-contract-report.json"
 
 $fileItems = @()
 if (Test-Path -LiteralPath $workspaceRoot -PathType Container) {
@@ -156,7 +158,9 @@ if (Test-Path -LiteralPath $workspaceRoot -PathType Container) {
         (Join-Path $workspaceRoot "plc\instruction-cookbook\latest"),
         (Join-Path $workspaceRoot "wincc\component-blueprints\latest"),
         (Join-Path $workspaceRoot "wincc\engineering-scaffold\latest"),
+        (Join-Path $workspaceRoot "wincc\binding-review\latest"),
         (Join-Path $workspaceRoot "simulation\latest"),
+        (Join-Path $workspaceRoot "engineering-contracts\latest"),
         (Join-Path $workspaceRoot "changes\latest-plc-change-package"),
         (Join-Path $workspaceRoot "review-packages\latest"),
         (Join-Path $workspaceRoot "config"),
@@ -196,8 +200,10 @@ $latestCapabilityMapValue = ""
 $latestInstructionCookbookValue = ""
 $latestWinccComponentBlueprintsValue = ""
 $latestWinccEngineeringScaffoldValue = ""
+$latestWinccBindingReviewValue = ""
 $latestSimulationPackageValue = ""
 $latestReviewValue = ""
+$latestEngineeringContractsValue = ""
 if (Test-Path -LiteralPath $latestWinccTask -PathType Container) { $latestWinccTaskValue = $latestWinccTask }
 if (Test-Path -LiteralPath $latestInstructionPlan -PathType Container) { $latestInstructionPlanValue = $latestInstructionPlan }
 if (Test-Path -LiteralPath $latestQueue -PathType Leaf) { $latestQueueValue = $latestQueue }
@@ -208,8 +214,25 @@ if (Test-Path -LiteralPath $latestCapabilityMap -PathType Leaf) { $latestCapabil
 if (Test-Path -LiteralPath $latestInstructionCookbook -PathType Leaf) { $latestInstructionCookbookValue = $latestInstructionCookbook }
 if (Test-Path -LiteralPath $latestWinccComponentBlueprints -PathType Leaf) { $latestWinccComponentBlueprintsValue = $latestWinccComponentBlueprints }
 if (Test-Path -LiteralPath $latestWinccEngineeringScaffold -PathType Leaf) { $latestWinccEngineeringScaffoldValue = $latestWinccEngineeringScaffold }
+if (Test-Path -LiteralPath $latestWinccBindingReview -PathType Leaf) { $latestWinccBindingReviewValue = $latestWinccBindingReview }
 if (Test-Path -LiteralPath $latestSimulationPackage -PathType Leaf) { $latestSimulationPackageValue = $latestSimulationPackage }
 if (Test-Path -LiteralPath $latestReview -PathType Leaf) { $latestReviewValue = $latestReview }
+if (Test-Path -LiteralPath $latestEngineeringContracts -PathType Leaf) { $latestEngineeringContractsValue = $latestEngineeringContracts }
+
+$engineeringContractSummary = $null
+if (Test-Path -LiteralPath $latestEngineeringContracts -PathType Leaf) {
+    try {
+        $engineeringContractSummary = (Get-Content -LiteralPath $latestEngineeringContracts -Raw -Encoding UTF8 | ConvertFrom-Json).summary
+    }
+    catch {
+        $engineeringContractSummary = $null
+    }
+}
+$bindingReviewSummary = $null
+if (Test-Path -LiteralPath $latestWinccBindingReview -PathType Leaf) {
+    try { $bindingReviewSummary = Get-Content -LiteralPath $latestWinccBindingReview -Raw -Encoding UTF8 | ConvertFrom-Json }
+    catch { $bindingReviewSummary = $null }
+}
 
 $model = [pscustomobject]@{
     schemaVersion = 1
@@ -227,6 +250,16 @@ $model = [pscustomobject]@{
         ladBlocks = @($blocks | Where-Object { $_.language -eq "LAD" }).Count
         dbBlocks = @($blocks | Where-Object { $_.type -eq "GlobalDB" }).Count
         workspaceFilesIndexed = @($fileItems).Count
+        engineeringContractStatus = if ($engineeringContractSummary) { [string]$engineeringContractSummary.status } else { "" }
+        engineeringContractFails = if ($engineeringContractSummary) { [int]$engineeringContractSummary.findings.fail } else { 0 }
+        engineeringContractWarnings = if ($engineeringContractSummary) { [int]$engineeringContractSummary.findings.warn } else { 0 }
+        engineeringContractUnverified = if ($engineeringContractSummary) { [int]$engineeringContractSummary.findings.unverified } else { 0 }
+        engineeringContractDbEvidenceGaps = if ($engineeringContractSummary) { [int]$engineeringContractSummary.sources.dbEvidenceGaps } else { 0 }
+        engineeringContractDbMemberCoverage = if ($engineeringContractSummary -and [int]$engineeringContractSummary.sources.dbBlocks -gt 0) {
+            [math]::Round(100.0 * [int]$engineeringContractSummary.sources.dbBlocksWithMemberEvidence / [int]$engineeringContractSummary.sources.dbBlocks, 1)
+        } else { 0 }
+        winccBindingReviewRows = if ($bindingReviewSummary) { [int]$bindingReviewSummary.reviewCount } else { 0 }
+        winccBindingCandidates = if ($bindingReviewSummary) { [int]$bindingReviewSummary.plcCandidateCount } else { 0 }
     }
     latestArtifacts = [pscustomobject]@{
         blockList = $blockListPath
@@ -241,8 +274,10 @@ $model = [pscustomobject]@{
         latestInstructionCookbook = $latestInstructionCookbookValue
         latestWinccComponentBlueprints = $latestWinccComponentBlueprintsValue
         latestWinccEngineeringScaffold = $latestWinccEngineeringScaffoldValue
+        latestWinccBindingReview = $latestWinccBindingReviewValue
         latestSimulationPackage = $latestSimulationPackageValue
         latestReview = $latestReviewValue
+        engineeringContracts = $latestEngineeringContractsValue
     }
     workspaceFiles = @($fileItems)
     sourceAnchors = @(
@@ -275,6 +310,9 @@ $md = New-Object System.Text.StringBuilder
 [void]$md.AppendLine("- Naming rule: ``中文_English``")
 [void]$md.AppendLine("- Authoring route: $routePreference")
 [void]$md.AppendLine("- Generated: ``$(Get-Date -Format o)``")
+[void]$md.AppendLine("- Engineering contracts: ``$latestEngineeringContractsValue``")
+[void]$md.AppendLine("- Contract status: ``$(if ($engineeringContractSummary) { [string]$engineeringContractSummary.status } else { "NOT_RUN" })``")
+[void]$md.AppendLine("- Contract evidence gaps: ``$(if ($engineeringContractSummary) { [int]$engineeringContractSummary.findings.unverified } else { 0 })``")
 [void]$md.AppendLine()
 [void]$md.AppendLine("## Latest Artifacts")
 [void]$md.AppendLine()

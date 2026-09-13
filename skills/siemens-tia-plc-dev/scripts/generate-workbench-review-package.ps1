@@ -72,10 +72,14 @@ $latestQueue = Join-Path $workspaceRoot "agent-queues\latest\queue.md"
 $latestPlcPackage = Join-Path $workspaceRoot "changes\latest-plc-change-package"
 $latestWinccPackage = Join-Path $workspaceRoot "wincc\tasks\latest"
 $latestPluginRoute = Join-Path $workspaceRoot "wincc\plugin-routing.json"
+$latestEngineeringContracts = Join-Path $workspaceRoot "engineering-contracts\latest"
+$latestWinccBindingReview = Join-Path $workspaceRoot "wincc\binding-review\latest"
 
 $artifacts = New-Object System.Collections.Generic.List[object]
 Add-ArtifactRows -Rows $artifacts -Root $latestPlcPackage -Area "PLC_CHANGE_PACKAGE"
 Add-ArtifactRows -Rows $artifacts -Root $latestWinccPackage -Area "WINCC_VISUAL_PACKAGE"
+Add-ArtifactRows -Rows $artifacts -Root $latestEngineeringContracts -Area "ENGINEERING_CONTRACTS"
+Add-ArtifactRows -Rows $artifacts -Root $latestWinccBindingReview -Area "WINCC_BINDING_REVIEW"
 $singleFiles = @(
     @{ area = "AGENT_PLAN"; path = $latestPlan },
     @{ area = "AGENT_QUEUE"; path = $latestQueue },
@@ -141,6 +145,9 @@ $summary = New-Object System.Text.StringBuilder
 [void]$summary.AppendLine("- PLC change package: ``$latestPlcPackage``")
 [void]$summary.AppendLine("- WinCC visual package: ``$latestWinccPackage``")
 [void]$summary.AppendLine("- Plugin route: ``$latestPluginRoute``")
+[void]$summary.AppendLine("- PLC-DB-WinCC engineering contracts: ``$latestEngineeringContracts``")
+[void]$summary.AppendLine("- WinCC PLC binding review: ``$latestWinccBindingReview``")
+[void]$summary.AppendLine("- Engineering contract evidence is graded separately from confirmed FAIL items.")
 [void]$summary.AppendLine()
 [void]$summary.AppendLine("## Current Queue Excerpt")
 [void]$summary.AppendLine()
@@ -157,6 +164,7 @@ $summary = New-Object System.Text.StringBuilder
 [void]$summary.AppendLine("## Review Gates")
 [void]$summary.AppendLine()
 [void]$summary.AppendLine("- Confirm affected PLC blocks, DB/UDT contracts, HMI tags and screen objects.")
+[void]$summary.AppendLine("- Confirm engineering-contract-report.json has no unresolved FAIL items before release.")
 [void]$summary.AppendLine("- Confirm commands, feedback, status, interlocks, alarms, parameters and diagnostics are not mixed.")
 [void]$summary.AppendLine("- Confirm LAD/XML/SCL/DB sources are generated from exported or documented surfaces, not from TIA binary storage.")
 [void]$summary.AppendLine("- Confirm clone compile or equivalent offline validation before release.")
@@ -198,6 +206,25 @@ if (Test-Path -LiteralPath $layoutPath -PathType Leaf) {
         $layoutStatus = "UNREADABLE"
     }
 }
+$contractPath = Join-Path $latestEngineeringContracts "engineering-contract-report.json"
+$contractStatus = "NOT_RUN"
+$contractFailCount = $null
+$contractWarnCount = $null
+$contractUnverifiedCount = $null
+$contractDbEvidenceGapCount = $null
+if (Test-Path -LiteralPath $contractPath -PathType Leaf) {
+    try {
+        $contractObject = Get-Content -LiteralPath $contractPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        $contractStatus = [string]$contractObject.summary.status
+        $contractFailCount = [int]$contractObject.summary.findings.fail
+        $contractWarnCount = [int]$contractObject.summary.findings.warn
+        $contractUnverifiedCount = [int]$contractObject.summary.findings.unverified
+        $contractDbEvidenceGapCount = [int]$contractObject.summary.sources.dbEvidenceGaps
+    }
+    catch {
+        $contractStatus = "UNREADABLE"
+    }
+}
 $fingerprintRows = @($artifacts | Sort-Object path | ForEach-Object { "{0}|{1}" -f $_.sha256, $_.path })
 $fingerprintText = $fingerprintRows -join "`n"
 $fingerprintSha = [System.Security.Cryptography.SHA256]::Create()
@@ -223,6 +250,13 @@ $readiness = New-Object System.Text.StringBuilder
 [void]$readiness.AppendLine('  "latestWriteReport": ' + (ConvertTo-JsonString ([string]$latestWriteReport)) + ',')
 [void]$readiness.AppendLine('  "winccLayoutStatus": ' + (ConvertTo-JsonString $layoutStatus) + ',')
 [void]$readiness.AppendLine('  "winccLayoutReport": ' + (ConvertTo-JsonString $layoutPath) + ',')
+[void]$readiness.AppendLine('  "engineeringContractStatus": ' + (ConvertTo-JsonString $contractStatus) + ',')
+[void]$readiness.AppendLine('  "engineeringContractFails": ' + $(if ($null -eq $contractFailCount) { "null" } else { [string]$contractFailCount }) + ',')
+[void]$readiness.AppendLine('  "engineeringContractWarnings": ' + $(if ($null -eq $contractWarnCount) { "null" } else { [string]$contractWarnCount }) + ',')
+[void]$readiness.AppendLine('  "engineeringContractUnverified": ' + $(if ($null -eq $contractUnverifiedCount) { "null" } else { [string]$contractUnverifiedCount }) + ',')
+[void]$readiness.AppendLine('  "engineeringContractDbEvidenceGaps": ' + $(if ($null -eq $contractDbEvidenceGapCount) { "null" } else { [string]$contractDbEvidenceGapCount }) + ',')
+[void]$readiness.AppendLine('  "engineeringContractReport": ' + (ConvertTo-JsonString $contractPath) + ',')
+[void]$readiness.AppendLine('  "hasWinccBindingReview": ' + ((Test-Path -LiteralPath $latestWinccBindingReview).ToString().ToLowerInvariant()) + ',')
 [void]$readiness.AppendLine('  "productionWriteAllowed": false,')
 [void]$readiness.AppendLine('  "plcDownloadAllowed": false,')
 [void]$readiness.AppendLine('  "releaseAllowed": false')

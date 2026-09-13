@@ -1,5 +1,32 @@
 # Changelog
 
+## 2026-09-13 - 工程契约与 WinCC 绑定审核增强，发行版 1.1.0
+
+- 将 `engineering-contracts` 接入命令路由、自动开发流水线、项目对象模型、能力矩阵、工作台 Dashboard 和审查包。
+- 新增 PLC-DB-WinCC 关联审查，区分已验证成员、仅块清单、缺少导出成员证据和明确缺失成员。
+- 新增 `wincc-binding-assistant`，基于已导出的 DB 成员和 LAD 全局符号生成候选与评分，并通过人工批准 CSV 生成派生 HMI/报警导入清单。
+- 原生工作台新增“工程契约”和“WinCC 绑定”入口，执行后自动打开对应审查报告。
+- 保护版重新打包最新工作台逻辑；构建哈希、载荷数量和自检结果以实际构建结果为准。
+- 修复保护版 `--run-command` 执行完成后不退出的问题；命令模式现在返回实际退出码，交互启动模式保持不变。
+
+## 2026-09-13 - WinCC 绑定审核闭环与发行版 1.0.9
+
+- 新增 `wincc-binding-assistant`，从已导出的 DB 成员和 LAD 全局符号生成带评分、数据类型、可写性、证据来源和候选理由的 WinCC PLC 绑定表。
+- 新增 `binding-review.csv` 人工审核流程；批准后生成派生 HMI/报警清单，支持可选备份后写回工程内 WinCC 包，不触碰 TIA 内部二进制或生产 PLC。
+- 修复 `source` CSV 元数据被误识别为 PLC 绑定的问题。
+- 新增 Windows PowerShell 5.1 UTF-8 BOM 兼容夹具，覆盖候选生成、审核回放、派生清单和绑定误判防护。
+- 本地工作台新增 WinCC 绑定审核入口，生成完成后自动打开审核报告。
+
+## 2026-09-13 - 工程契约证据分级与发行版 1.0.8
+
+- 新增 `engineering-contracts` 的 DB 证据模型和 `db-evidence-index.csv`，区分已验证 DB 成员、仅有块清单、无成员 XML 和明确缺失成员。
+- LAD 中引用仅在成员 XML 已提供且路径不存在时生成 `FAIL/MISSING_DB_MEMBER`；块存在但成员未导出时生成 `WARN/EVIDENCE_GAP/UNVERIFIED_DB_MEMBER`。
+- 运动、通信、IEC 定时器/计数器等未出现在当前 block-list 的实例 DB 改为证据缺口 WARN，并记录系统/库实例类别，避免把导出不完整误判为实例已缺失。
+- WinCC 标签和报警支持 `plcPath`、`plcTag`、`binding`、`plcVariable`、`address` 字段，以及 `tag-contract.md` 中的 `PLC Binding` 列；输出绑定来源、数据类型和解析状态。
+- 项目模型、工作台仪表盘和审查包新增证据缺口、DB 成员证据覆盖率等指标。
+- 新增夹具覆盖完整证据、仅块清单和明确缺失成员三种场景；通过工程契约、LAD 差异、Agent 路由和工作台 job 持久化回归测试。
+- 保护版升级为 `1.0.8`，载荷 236 个文件，SHA256 为 `D6FA4FD15C962EECB8EBCD054927DC04316E5F9C56E14528358C89A4AE1FF894`，自检通过。
+
 ## 2026-09-13 - LAD 结构差异审查
 
 - 新增通用 `lad-diff` 命令，按网络比较导出块的标题、注释、编程语言、指令、符号、部件、连线和去 `UId` 结构签名。

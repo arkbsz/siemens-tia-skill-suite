@@ -17,11 +17,11 @@ protected-release\SiemensTIAAgent.exe
 最近验证构建：
 
 ```text
-时间：2026-09-13 17:00 +08:00
-版本：1.0.7
+时间：2026-09-13 18:59 +08:00
+版本：1.1.0
 文件：protected-release\SiemensTIAAgent.exe
-SHA256：E3DD3C1A03EEBF7CA6FCC0537518432DA3E1BDC17AB0D3E0A2815925AF8D61D9
-载荷文件数：233
+SHA256：031A5364632DBB42B8A93182481733E0C9D907BCD751B5FDDBCAC221404A155D
+载荷文件数：239
 自检：Passed
 
 本轮还通过了原生工作台 `doctor` 任务持久化烟囱测试，以及不依赖联网和真实 AI 账号的 Agent 新建/继续/重试路由回归测试。
@@ -55,7 +55,9 @@ SHA256：E3DD3C1A03EEBF7CA6FCC0537518432DA3E1BDC17AB0D3E0A2815925AF8D61D9
 - 工作台内置发布审批门禁：审查包携带 artifact fingerprint，生产应用绑定输入 XML SHA256、克隆编译证据、WinCC 布局状态和审批有效期；生产应用始终执行备份，不能使用 `-SkipBackup`。
 - 工作台命令面板会在启动 PowerShell 前写入 `PLC_Code\console-jobs\*.json`，保存原始参数、配置快照、stdout/stderr、进程号、退出码和重试/继续关系；任务状态页支持重试、重放和打开日志。
 - 工作台内置 Agent 对话同样写入 `*-agent-chat-*.json` 任务清单，并保存平台、模型、Agent、会话、提示词、附件与超时状态；任务页支持 Agent 回合的可审计重试和兼容会话继续。
+- 工程契约分析会把 DB/LAD 证据缺口标成 `WARN/EVIDENCE_GAP`，只有在已有成员证据时才能把缺失成员标成 `FAIL/MISSING_DB_MEMBER`。
 - 保护版会把 `--run-command <command>` 转发给内置原生工作台；它仍使用同一套受控命令映射和安全门禁，可用于部署脚本和自动化验收。
+- 使用 `--run-command` 启动时，命令完成后工作台自动退出并返回实际退出码；直接双击或不带该参数启动时仍保持正常交互窗口。
 
 ## 保护边界
 

@@ -155,6 +155,20 @@ if ($winccNeeded) {
     Invoke-Step -Steps $steps -Name "wincc-openness-implementation" -Command $invokeScript -Arguments $implementationArgs -ExpectedOutput "PLC_Code\wincc\openness-implementation\latest"
 }
 
+$contractArgs = @("engineering-contracts", "-ProjectPath", $root, "-WorkflowConfigPath", $WorkflowConfigPath)
+Invoke-Step -Steps $steps -Name "engineering-contracts" -Command $invokeScript -Arguments $contractArgs -ExpectedOutput "PLC_Code\engineering-contracts\latest"
+
+if ($winccNeeded) {
+    $bindingArgs = @("wincc-binding-assistant", "-ProjectPath", $root, "-WorkflowConfigPath", $WorkflowConfigPath)
+    Invoke-Step -Steps $steps -Name "wincc-binding-assistant" -Command $invokeScript -Arguments $bindingArgs -ExpectedOutput "PLC_Code\wincc\binding-review\latest"
+}
+
+$modelRefreshArgs = @("project-model", "-ProjectPath", $root, "-WorkflowConfigPath", $WorkflowConfigPath, "-TaskText", $task)
+Invoke-Step -Steps $steps -Name "project-model-after-contracts" -Command $invokeScript -Arguments $modelRefreshArgs -ExpectedOutput "PLC_Code\workbench\context\latest"
+
+$capabilityRefreshArgs = @("capability-map", "-ProjectPath", $root, "-WorkflowConfigPath", $WorkflowConfigPath, "-TaskText", $task)
+Invoke-Step -Steps $steps -Name "capability-map-after-contracts" -Command $invokeScript -Arguments $capabilityRefreshArgs -ExpectedOutput "PLC_Code\workbench\capabilities\latest"
+
 $simulationArgs = @("simulation-package", "-ProjectPath", $root, "-WorkflowConfigPath", $WorkflowConfigPath, "-TaskText", $task)
 Invoke-Step -Steps $steps -Name "simulation-package" -Command $invokeScript -Arguments $simulationArgs -ExpectedOutput "PLC_Code\simulation\latest"
 
@@ -189,6 +203,7 @@ $summary = [pscustomobject]@{
     advancedPlcNeeded = $advancedPlcNeeded
     outputDirectory = $OutputDirectory
     latestDirectory = $latestDir
+    engineeringContracts = Join-Path $workspaceRoot "engineering-contracts\latest"
     steps = @($steps.ToArray())
     releaseAllowed = $false
 }
@@ -223,6 +238,8 @@ foreach ($step in $steps) {
 [void]$md.AppendLine("- PLC_Code\knowledge\packs\latest\knowledge-brief.md")
 [void]$md.AppendLine("- PLC_Code\workbench\capabilities\latest\capability-map.md")
 [void]$md.AppendLine("- PLC_Code\workbench\latest\dashboard.md")
+[void]$md.AppendLine("- PLC_Code\engineering-contracts\latest\engineering-contract-report.md")
+[void]$md.AppendLine("- PLC_Code\wincc\binding-review\latest\binding-review.md")
 [void]$md.AppendLine("- PLC_Code\plc\instruction-cookbook\latest\instruction-cookbook.md")
 [void]$md.AppendLine("- PLC_Code\plc\instruction-plans\latest\instruction-route-table.md")
 [void]$md.AppendLine("- PLC_Code\wincc\tasks\latest\implementation-plan.md")
