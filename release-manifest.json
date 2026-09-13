@@ -1,8 +1,8 @@
 {
-  "packageName": "siemens-tia-skill-suite_v1.1.0_20260913",
-  "version": "1.1.0",
+  "packageName": "siemens-tia-skill-suite_v1.1.1_20260913",
+  "version": "1.1.1",
   "releaseDate": "2026-09-13",
-  "builtAt": "2026-09-13T18:59:20+08:00",
+  "builtAt": "2026-09-13T19:23:14+08:00",
   "installTarget": "%USERPROFILE%\\.codex\\skills",
   "packagedSkills": [
     {
@@ -66,8 +66,8 @@
     "payloadIntegrity": "HMAC-SHA256",
     "temporaryRuntime": "%USERPROFILE%\\.codex\\siemens-tia-agent-runtime\\sessions",
     "sourceFilesDistributedBesideExe": false,
-    "lastBuiltAt": "2026-09-13T18:59:20+08:00",
-    "lastBuildSha256": "031A5364632DBB42B8A93182481733E0C9D907BCD751B5FDDBCAC221404A155D",
+    "lastBuiltAt": "2026-09-13T19:23:14+08:00",
+    "lastBuildSha256": "86E38CC978D708038F0F5293519719B86F42E94D400D4E3FB1B50655EC3ACDD5",
     "lastBuildPayloadFiles": 239,
     "lastBuildSelfTest": "Passed"
   },
@@ -257,6 +257,6 @@
     "engineering-contracts grades DB/LAD evidence gaps separately from confirmed missing members and writes db-evidence-index.csv.",
     "WinCC tag and alarm contracts support explicit plcPath/plcTag/binding/plcVariable/address fields and the PLC Binding column in tag-contract.md.",
     "Project model, dashboard and review readiness now expose evidence-gap counts and DB member evidence coverage.",
-    "wincc-binding-assistant ranks PLC binding candidates from exported evidence, preserves an approval CSV, creates derived HMI/alarm maps, ignores source metadata as an address, and never writes production TIA binaries."
+    "wincc-binding-assistant ranks PLC binding candidates from exported evidence, checks datatype and read/write compatibility, preserves an approval CSV, creates derived HMI/alarm maps, ignores source metadata as an address, and never writes production TIA binaries."
   ]
 }

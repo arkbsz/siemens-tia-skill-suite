@@ -1,6 +1,6 @@
 # 西门子 TIA 自动化开发技能套件
 
-版本：`1.1.0`
+版本：`1.1.1`
 发布日期：`2026-09-13`
 
 面向 Siemens TIA Portal 的多平台技能套件，支持 Codex、Claude Code、Trae Agent、Qoder、Cursor 等开发入口，兼容 TIA Portal `V16-V21`，主打 PLC-as-code 与 HMI/WinCC 自动化工作流。适合做项目备份、块导出、LAD/XML 编辑、WinCC 画面与标签自动化、源码导入、编译验证，以及本地 Openness / REST 桥接自动化。
@@ -63,7 +63,7 @@
 - WinCC 几何校验：编译设计包时自动检查组件 `x/y/width/height`、画面越界、尺寸缺失和同画面矩形重叠；结果写入 `layout-validation.json/md`，发现遮挡会标记为 `REVIEW_REQUIRED`，不会静默进入后续实现包。
 - PLC 改动包：一键生成 `PLC_Code\changes\latest-plc-change-package`，包含块/DB契约、命名映射、LAD JSON 模板、SCL/DB 源码目录、导入清单、验证计划和安全风险评估。
 - PLC-DB-WinCC 工程契约分析：区分已验证成员、仅有 DB 块清单、导出证据缺口和明确缺失成员，输出 `db-evidence-index.csv`，避免把不完整导出误报成工程故障。
-- WinCC 显式绑定契约：HMI 标签/报警支持 `plcPath`、`plcTag`、`binding`、`plcVariable`、`address` 字段，也可在 `tag-contract.md` 使用 `PLC Binding` 列；`wincc-binding-assistant` 会从已导出的 DB/LAD 证据生成候选、评分和人工审核表，审核后生成派生导入清单。
+- WinCC 显式绑定契约：HMI 标签/报警支持 `plcPath`、`plcTag`、`binding`、`plcVariable`、`address` 字段，也可在 `tag-contract.md` 使用 `PLC Binding` 列；`wincc-binding-assistant` 会从已导出的 DB/LAD 证据生成候选、评分和人工审核表，并检查数据类型、读写权限和证据状态，审核后生成派生导入清单。
 - 工程契约审查：`engineering-contracts` 将 PLC、DB、LAD、WinCC 标签/报警和命名关系汇总为可审计报告，区分已确认故障与导出证据缺口，避免不完整读取造成误报。
 - 针对性自动路由：LAD、WinCC、Openness、SCL、DB 契约、诊断和审查使用独立的 skill 组合、平台优先级与任务指令
 - 文件上传：图片、PDF、文档、源码、XML 和日志自动复制到项目工作区并随当前消息交给 Agent
