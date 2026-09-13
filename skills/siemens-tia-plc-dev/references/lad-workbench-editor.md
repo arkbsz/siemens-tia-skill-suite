@@ -12,7 +12,8 @@ The Windows Forms workbench exposes a real LAD authoring loop under `LAD结构�
 6. Save the JSON. The workbench writes to `PLC_Code\lad-editor\latest-network.json` and preserves an earlier copy under the editor backup folder.
 7. Click `生成XML`. The workbench calls `write-lad-network` with the selected exported block as the target and writes `PLC_Code\lad-editor\latest.generated.xml`.
 8. Click `校验XML` and inspect the command log. A successful validator result is necessary but not sufficient for TIA compile acceptance.
-9. Click `克隆验证`. The generated XML is sent through `write-cycle`, which keeps production writes behind backup, clone import, compile, re-export and evidence gates.
+9. Click `LAD差异` to compare the selected source XML with `latest.generated.xml`. The workbench writes `PLC_Code\lad-diffs\latest-lad-diff.md/json`; network signatures ignore volatile `UId` values while retaining instructions, symbols, wires, titles and comments.
+10. Click `克隆验证`. The generated XML is sent through `write-cycle`, which keeps production writes behind backup, clone import, compile, re-export and evidence gates.
 
 ## Structured Fields
 
@@ -31,6 +32,7 @@ The list editor intentionally covers the common maintenance-facing path. It does
 ## Safety And Evidence
 
 - The target XML is an exported text artifact, not a production project binary.
+- `lad-diff` is a structural review aid, not a compile result; a clean diff does not replace TIA clone compilation.
 - Overwriting the editor JSON or generated XML creates a timestamped backup first.
 - `write-lad-network` does not import into TIA by itself.
 - `write-cycle` is the default gate for clone import and compile; it does not download to a PLC.

@@ -223,6 +223,7 @@ namespace SiemensTiaSkillSuite
         private string workflowConfigPath = "";
         private string currentLadSpecPath = "";
         private string currentLadGeneratedXmlPath = "";
+        private string currentLadDiffPath = "";
         private string currentWinccDesignSpecPath = "";
         private string currentJobManifestPath = "";
         private string currentCommandName = "";
@@ -942,6 +943,7 @@ namespace SiemensTiaSkillSuite
                 "simulation-package",
                 "simulation-replay",
                 "lad-preview",
+                "lad-diff",
                 "lad-validate",
                 "write-cycle"
             };
@@ -1130,6 +1132,12 @@ namespace SiemensTiaSkillSuite
             ladGenerateButton.Margin = new Padding(3, 1, 3, 1);
             ladGenerateButton.Click += delegate { GenerateLadXml(); };
             toolbar.Controls.Add(ladGenerateButton);
+            Button ladDiffButton = NewButton("LAD差异", Ink);
+            ladDiffButton.Width = 78;
+            ladDiffButton.Height = 30;
+            ladDiffButton.Margin = new Padding(3, 1, 3, 1);
+            ladDiffButton.Click += delegate { StartCommand("lad-diff"); };
+            toolbar.Controls.Add(ladDiffButton);
             Button ladValidateButton = NewButton("校验XML", Ink);
             ladValidateButton.Width = 78;
             ladValidateButton.Height = 30;
@@ -2893,6 +2901,7 @@ namespace SiemensTiaSkillSuite
             code.DropDownItems.Add(NewMenuItem("打开 LAD 结构编辑器", delegate { SelectMainTab(11); }));
             code.DropDownItems.Add(NewMenuItem("载入 LAD JSON 模板", delegate { StartCommand("lad-scaffold"); }));
             code.DropDownItems.Add(NewMenuItem("生成 LAD XML", delegate { GenerateLadXml(); }));
+            code.DropDownItems.Add(NewMenuItem("审查 LAD 结构差异", delegate { StartCommand("lad-diff"); }));
             code.DropDownItems.Add(NewMenuItem("克隆验证当前 LAD", delegate { VerifyLadEditorOutput(); }));
             code.DropDownItems.Add(NewMenuItem("生成当前 LAD 预览", delegate { StartCommand("lad-preview"); }));
             code.DropDownItems.Add(NewMenuItem("PLC 高级指令与工艺对象", delegate { SelectCombo(workflowSelectBox, "PLC高级指令与工艺对象"); ApplyWorkflowDefaults(false); }));
@@ -2912,6 +2921,7 @@ namespace SiemensTiaSkillSuite
             run.DropDownItems.Add(NewMenuItem("完整导出", delegate { StartCommand("read-cycle-full"); }));
             run.DropDownItems.Add(NewMenuItem("列程序块", delegate { StartCommand("list-blocks"); }));
             run.DropDownItems.Add(NewMenuItem("生成 LAD 可读预览", delegate { StartCommand("lad-preview"); }));
+            run.DropDownItems.Add(NewMenuItem("审查 LAD 结构差异", delegate { StartCommand("lad-diff"); }));
             run.DropDownItems.Add(NewMenuItem("生成项目对象模型", delegate { StartCommand("project-model"); }));
             run.DropDownItems.Add(NewMenuItem("生成任务知识检索包", delegate { StartCommand("knowledge-pack"); }));
             run.DropDownItems.Add(NewMenuItem("生成工作台能力矩阵", delegate { StartCommand("capability-map"); }));
@@ -6700,6 +6710,11 @@ namespace SiemensTiaSkillSuite
                 if (command == "wincc-visual-package") { ShowWinccVisualPackage(); }
                 if (command == "wincc-design-workflow") { ShowWinccDesignWorkflow(); }
                 if (command == "lad-preview") { ShowLadPreview(); }
+                if (command == "lad-diff" && File.Exists(currentLadDiffPath))
+                {
+                    ShowFile(currentLadDiffPath);
+                    statusLabel.Text = "已打开LAD结构差异审查：" + currentLadDiffPath;
+                }
                 if (command == "lad-scaffold")
                 {
                     LoadLadEditorFromSpec();
@@ -6809,6 +6824,28 @@ namespace SiemensTiaSkillSuite
                 Directory.CreateDirectory(previewDir);
                 string latest = Path.Combine(previewDir, "latest-lad-preview.md");
                 args.AddRange(new string[] { "summarize-lad", "-Path", inputXmlBox.Text, "-OutputPath", latest });
+            }
+            else if (command == "lad-diff")
+            {
+                if (string.IsNullOrWhiteSpace(inputXmlBox.Text) || !File.Exists(inputXmlBox.Text))
+                {
+                    throw new FileNotFoundException("请先选择基准 LAD XML。", inputXmlBox.Text);
+                }
+                string candidate = currentLadGeneratedXmlPath;
+                if (string.IsNullOrWhiteSpace(candidate) || !File.Exists(candidate))
+                {
+                    throw new FileNotFoundException("请先生成候选 LAD XML，再审查结构差异。", candidate);
+                }
+                string diffDirectory = Path.Combine(root, "PLC_Code", "lad-diffs");
+                Directory.CreateDirectory(diffDirectory);
+                currentLadDiffPath = Path.Combine(diffDirectory, "latest-lad-diff.md");
+                args.AddRange(new string[] {
+                    "lad-diff",
+                    "-BaseXml", inputXmlBox.Text.Trim(),
+                    "-CandidateXml", candidate,
+                    "-OutputPath", currentLadDiffPath,
+                    "-JsonOutputPath", Path.Combine(diffDirectory, "latest-lad-diff.json")
+                });
             }
             else if (command == "lad-scaffold")
             {

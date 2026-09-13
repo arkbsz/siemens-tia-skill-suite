@@ -17,11 +17,11 @@ protected-release\SiemensTIAAgent.exe
 最近验证构建：
 
 ```text
-时间：2026-09-13 16:28 +08:00
+时间：2026-09-13 17:00 +08:00
 版本：1.0.7
 文件：protected-release\SiemensTIAAgent.exe
-SHA256：FB1D31622979FFE58C17E486B7FA1E83DA76CC789473D0908C9B9F9CD73FC4A0
-载荷文件数：231
+SHA256：E3DD3C1A03EEBF7CA6FCC0537518432DA3E1BDC17AB0D3E0A2815925AF8D61D9
+载荷文件数：233
 自检：Passed
 
 本轮还通过了原生工作台 `doctor` 任务持久化烟囱测试，以及不依赖联网和真实 AI 账号的 Agent 新建/继续/重试路由回归测试。

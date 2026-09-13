@@ -81,6 +81,7 @@ LAD helper commands:
   inspect-lad -Path <xml>
   validate-lad -Path <xml>
   summarize-lad -Path <xml> -OutputPath <md>
+  lad-diff -BaseXml <xml> -CandidateXml <xml> -OutputPath <md> [-JsonOutputPath <json>]
   scaffold-lad-network-json -OutputPath <json> [-Title <text>] [-Comment <text>]
   write-lad-network -TargetXml <xml> -SpecPath <json> -OutputXml <xml> -NetworkIndex <n>
   write-lad-batch -TargetXml <xml> -ManifestPath <json> -OutputXml <xml>
@@ -392,6 +393,10 @@ switch ($Command.ToLowerInvariant()) {
     }
     "summarize-lad" {
         Invoke-PowerShellFile -Path $summarizeLadScript -Arguments $CommandArgs
+        break
+    }
+    "lad-diff" {
+        Invoke-PowerShellFile -Path (Join-Path $PSScriptRoot "lad-diff.ps1") -Arguments $CommandArgs
         break
     }
     "scaffold-lad-network-json" {

@@ -306,6 +306,16 @@ Important timer note:
 
 For naming and comments, prefer the same readable style used in `references/naming-and-comments.md`.
 
+## Structural LAD diff
+
+Compare an exported block before and after an AI or manual edit:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" lad-diff -BaseXml "D:\path\to\source.xml" -CandidateXml "D:\path\to\generated.xml" -OutputPath "D:\path\to\lad-diff.md"
+```
+
+The command writes Markdown and JSON evidence. It compares networks by position, reports added/removed/modified networks, and removes volatile `UId` attributes from the structural signature so normal export numbering changes do not appear as false logic changes. Always follow it with XML validation and clone compilation.
+
 ## Batch free-write ladder path
 
 When a block needs several network edits in one pass, chain multiple JSON specs through a batch manifest:

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-13 - LAD 结构差异审查
+
+- 新增通用 `lad-diff` 命令，按网络比较导出块的标题、注释、编程语言、指令、符号、部件、连线和去 `UId` 结构签名。
+- 工作台 `LAD结构编辑` 页新增 `LAD差异` 按钮，并接入代码菜单、运行菜单和命令面板。
+- 差异结果同时写入 `PLC_Code\lad-diffs\latest-lad-diff.md/json`，可作为 AI 审查和发布审批前置证据，但不替代 TIA 克隆编译。
+- 新增 `test-lad-diff.ps1` 离线回归测试，覆盖无变化和单网络修改两种场景，并修复 Windows PowerShell 5.1 中文脚本 UTF-8 BOM 兼容性。
+
 ## 2026-09-13 - Agent 工程上下文注入
 
 - 工作台每个 Agent 回合自动生成受控 `context-manifest.json`，绑定工程总览、项目模型、计划、队列、知识包、能力矩阵、PLC 指令路由、WinCC 证据和仿真证据。

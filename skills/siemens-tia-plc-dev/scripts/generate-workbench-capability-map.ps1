@@ -76,6 +76,7 @@ $pluginRouting = Join-Path $workspaceRoot "wincc\plugin-routing.json"
 $queueJson = Join-Path $workspaceRoot "agent-queues\latest\queue.json"
 $consoleJobsRoot = Join-Path $workspaceRoot "console-jobs"
 $contextManifestScript = Join-Path $PSScriptRoot "prepare-agent-context-manifest.ps1"
+$ladDiffScript = Join-Path $PSScriptRoot "lad-diff.ps1"
 $dashboard = Join-Path $workspaceRoot "workbench\latest\dashboard.md"
 $reviewPackage = Join-Path $workspaceRoot "review-packages\latest\review-summary.md"
 $readCycleRun = Get-ChildItem -LiteralPath (Join-Path $workspaceRoot "runs") -Directory -ErrorAction SilentlyContinue |
@@ -97,8 +98,9 @@ if ($agentChatJob -and $agentParityStatus -eq "PARTIAL_READY") {
 }
 
 Add-Capability $items "project-open-read" "当前 TIA 工程识别与只读遍历" (Test-PathState $projectModel "READY" "PARTIAL") "读取当前TIA / 浏览打开 / 项目树 / 项目模型 Tab" "doctor, read-cycle, list-plcs, list-blocks, project-model" "PLC_Code\runs, PLC_Code\workbench\context\latest" "Openness readiness, block list, project-model JSON" "首次信任握手、在线状态切换、复杂硬件组态仍可能需要 TIA UI" "把硬件、网络、HMI 设备树加入 object-model。"
-Add-Capability $items "lad-read" "LAD/FBD XML 读取、摘要与模板库" (Test-PathState (Join-Path $workspaceRoot "lad-previews") "READY" "READY_NO_LATEST_PREVIEW") "项目树 / LAD预览 / 文件预览" "export-blocks, inspect-lad, summarize-lad, build-lad-catalog" "导出 XML、lad-previews、模板目录" "XML 结构检查和人可读网络摘要" "图形化梯形图编辑的视觉摆放仍以 TIA 为权威" "增加更多 box/network 形态的摘要和差异渲染。"
+Add-Capability $items "lad-read" "LAD/FBD XML 读取、摘要与模板库" (Test-PathState (Join-Path $workspaceRoot "lad-previews") "READY" "READY_NO_LATEST_PREVIEW") "项目树 / LAD预览 / 文件预览" "export-blocks, inspect-lad, summarize-lad, build-lad-catalog" "导出 XML、lad-previews、模板目录" "XML 结构检查和人可读网络摘要" "图形化梯形图编辑的视觉摆放仍以 TIA 为权威" "继续增加更多 box/network 形态的摘要与结构差异渲染。"
 Add-Capability $items "lad-write" "LAD 结构化写入与克隆编译" (Test-PathState (Join-Path $workspaceRoot "changes") "PARTIAL_READY" "PARTIAL") "PLC改动包 / write-cycle / 审查包" "scaffold-lad-change, write-lad-network, write-lad-batch, patch-lad-network, write-cycle" "LAD JSON、generated.xml、supporting-sources、release package" "validate-lad, clone import, compile, re-export/readback" "不直接编辑 TIA 二进制工程；复杂未知 LAD box 仍需 donor network" "继续扩展自由写入子集，优先覆盖 CALL、比较、定时、计数、运动、通信。"
+Add-Capability $items "lad-diff" "LAD 网络结构差异审查_LADStructuralDiff" (Test-PathState $ladDiffScript "READY" "PARTIAL") "LAD结构编辑 / 审查Diff / 文件预览" "lad-diff" "PLC_Code\\lad-diffs\\latest-lad-diff.md/json" "真实导出 XML 对比、变更分类、哈希绑定前置审查" "差异审查不等于 TIA 编译；图形摆放和运行时行为仍需 TIA/克隆验证" "将网络差异接入发布审批，并继续补充语义级连线/参数差异。"
 Add-Capability $items "scl-db-authoring" "SCL、DB、UDT 源码式开发" "READY" "文件预览编辑 / PLC改动包 / Agent队列" "import-sources, plc-change-package, write-cycle support import" "sources、db-contract、import-manifest" "source import, clone compile, project-model readback" "块属性、部分 DB 设置和 know-how protected 内容仍需 TIA/Openness 支持" "加入更强的 DB 版本迁移和 tag contract diff。"
 Add-Capability $items "advanced-instructions" "高级指令、库块、通信、PID 与工艺对象路由" (Test-PathState $instructionRoute "READY" "PARTIAL") "指令方案 / 自动流水线 / 验证面板" "plc-instruction-plan" "instruction-route-table, technology-object-plan, safety-risk-assessment" "typed CALL route, clone compile, safety-risk review" "工艺对象创建、轴组态、硬件参数和安全功能仍需 TIA/API 能力确认" "增加 instruction cookbook 和项目接口自动抽取。"
 Add-Capability $items "instruction-cookbook" "PLC 指令模板库_InstructionCookbook" (Test-PathState $instructionCookbook "READY" "PARTIAL") "指令库 / 自动流水线 / 验证面板" "plc-instruction-cookbook" "instruction-cookbook.md/json, instruction-risk-checklist.md" "family route matrix plus existing LAD/SCL example anchors" "真实编译仍取决于项目 CPU、库版本、实例 DB 和 Openness 导入结果" "把编译成功的项目案例自动回灌为 validated pattern。"
