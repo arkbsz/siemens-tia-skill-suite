@@ -1,7 +1,7 @@
 # 西门子 TIA 自动化开发技能套件
 
-版本：`1.0.0`  
-发布日期：`2026-08-10`
+版本：`1.0.6`
+发布日期：`2026-09-13`
 
 面向 Siemens TIA Portal 的多平台技能套件，支持 Codex、Claude Code、Trae Agent、Qoder、Cursor 等开发入口，兼容 TIA Portal `V16-V21`，主打 PLC-as-code 与 HMI/WinCC 自动化工作流。适合做项目备份、块导出、LAD/XML 编辑、WinCC 画面与标签自动化、源码导入、编译验证，以及本地 Openness / REST 桥接自动化。
 
@@ -38,6 +38,9 @@
 - 内置多平台 Agent 对话：在窗口中直接选择自动/手动路由、Codex/Claude Code/Trae/Qoder、PLC LAD/SCL/DB/WinCC/Openness/诊断/审查 Agent、工作流和自定义模型，无需另开 AI 窗口
 - 本地工作台任务编排：一键生成 `PLC_Code\agent-plans\latest-plan.md/json`，把任务拆成读取、知识检索、DB/块契约、LAD/SCL/高级指令、WinCC 组件拆分、验证、安全评估和发布包阶段
 - 本地工作台执行队列：一键生成 `PLC_Code\agent-queues\latest\queue.md/json` 和阶段 prompt，把计划拆成可逐项执行、记录日志和保存验证证据的 Agent 队列
+- 本地工作台命令面板：直接选择并执行真实的 `invoke-siemens-plc-dev.ps1` 命令，不是模拟按钮
+- 可恢复任务状态：每条命令和每个 Agent 回合都在 `PLC_Code\console-jobs` 保存参数、配置快照、stdout/stderr、进程号、退出码和重试/继续关系；Agent 任务同时记录平台、模型、Agent、会话、提示词和附件，重启后可查看、重试或按原参数重放
+- 工作台可执行入口：支持 `--run-command <command>` 触发与界面按钮相同的受控命令链，便于部署脚本、集成测试和无鼠标操作
 - 项目对象模型：一键生成 `PLC_Code\workbench\context\latest\project-model.json`、`agent-context.md` 和 `file-index.csv`，把 TIA 版本、程序块、DB、导出文件、WinCC 包、队列和风险整理成 Agent 可读上下文
 - 任务知识检索包：一键生成 `PLC_Code\knowledge\packs\latest\knowledge-brief.md/json`，优先绑定 Siemens 官方文档、官方 GitHub 示例、当前项目证据和需审查社区路线
 - 工作台能力矩阵：一键生成 `PLC_Code\workbench\capabilities\latest\capability-map.md/json`，明确本地窗口对项目读取、LAD 读写、SCL/DB、WinCC、Agent 队列、仿真验证和发布审查的覆盖度与缺口
@@ -138,7 +141,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex
 - 中间主界面：通过 Tab 切换 AI 对话、日志输出、文件预览和 runs 列表，并可上下拉伸工作区。
 - 设置下拉面板：在 `工具 > AI平台 / Agent / 工作流 / WinCC 设置` 中配置自动/手动路由、平台、四个平台命令覆盖、模型、工作流、API、图像模型、组件策略、字体和字号；面板支持滚动。
 - 底部 AI 交互区：使用两行响应式快速配置和独立附件栏，可选择路由模式、平台、内置 Agent、自定义模型和工作流；发送、停止、新会话和任务草稿采用紧凑操作区，避免控件遮挡并为任务输入保留更多空间。
-- Agent 会话：每次请求、附件清单、JSONL 事件和错误日志保存在 `PLC_Code\agent-sessions`，附件副本保存在 `PLC_Code\agent-attachments`。
+- Agent 会话：每次请求、附件清单、JSONL 事件和错误日志保存在 `PLC_Code\agent-sessions`，附件副本保存在 `PLC_Code\agent-attachments`；对应的 `agent-chat` 任务清单位于 `PLC_Code\console-jobs`，支持统一查看、停止、重试和继续。
 - WinCC 视觉页：上传参考图后在中心 `参考图` Tab 中预览，任务草稿会自动写入文生图/图生图提示词、组件匹配计划和 WinCC 原生实现步骤。
 - Agent 编排页：中心新增 `任务编排` Tab，可直接预览由工作台生成的阶段计划、工具选择、产物路径、验证门槛和安全边界。
 - 项目模型页：中心新增 `项目模型` Tab，可查看最新 Agent 上下文包和机器可读项目索引，让后续 Agent 不必从零理解工程。
@@ -156,8 +159,17 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex
 - WinCC设计编辑：打开 `WinCC设计编辑` 页后，可在四个结构列表中增删画面、组件、HMI 标签和报警，也可直接编辑完整 JSON；`保存规格` 会验证并备份，`编译设计包` 会依次生成视觉包、组件蓝图、工程脚手架和克隆专用 Openness 实现包，完成后自动回显报告和对象映射。
 - PLC 改动包：`PLC改动包` 按钮为当前任务创建结构化编辑工作区，让 LAD、SCL、DB、导入和验证资料集中管理。
 - 视觉设置：使用柔和工业渐变、卡片式区域、圆角按钮，并读取 Windows 本机字体库供界面文字配置。
+- 任务状态页：显示命令清单、运行状态、日志证据和配置快照；“继续”明确表示可审计重放，不伪装成子进程断点恢复。
+- 可测试启动：原生工作台支持 `--run-command doctor`，发行包内置烟囱测试会验证窗口启动、命令执行、任务清单、配置快照和 stdout/stderr 证据。
 
 `console` 和 `console-exe` 默认启动窗口版。旧的浏览器控制台保留为备用入口 `console-web`。窗口通过本机已安装并授权的 Codex、Claude Code、Trae Agent 或 Qoder 调用 Agent，不在项目配置中保存 API 密钥；生产工程写入仍必须经过备份、克隆验证和明确确认。
+
+自动化验收或部署脚本可使用：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc-dev\scripts\test-workbench-job-persistence.ps1 -ProjectPath "D:\path\to\project"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\skills\siemens-tia-plc-dev\scripts\test-agent-routing-and-replay.ps1
+```
 
 工作台的“发布审批”页提供刷新审查、生成待审批、批准克隆、批准生产、拒绝发布、生成清单和应用主工程按钮。批准生产不会立即写入，最终应用仍会再次校验项目路径、XML 哈希、审查指纹、审批过期时间，并拒绝跳过备份。
 

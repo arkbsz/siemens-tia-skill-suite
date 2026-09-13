@@ -38,8 +38,10 @@ Agent 配置保存在 `agents/siemens-agent-profiles.json`：
 
 - 上传文件先复制到 `PLC_Code\agent-attachments`，再通过本次请求的附件清单传给 Agent。
 - 每次请求、附件清单、统一 JSONL、stderr 和会话信息保存在 `PLC_Code\agent-sessions`。
+- 每次请求同时在 `PLC_Code\console-jobs` 创建 `Command=agent-chat` 任务记录。任务页可查看实际平台、模型、Agent、会话、附件和配置快照，并打开 stdout/stderr 或执行重试/继续；原始会话目录仍保留平台事件明细，不会被任务索引替代。重试会复制 prompt 和附件清单并清除旧会话，继续会复制同样的输入证据并仅在平台匹配时恢复兼容会话。
 - Codex 可把图片作为原生 `-i` 附件；其他平台至少能读取项目内附件路径。是否支持原生多模态由对应 CLI 与模型决定。
 - Trae trajectory 保存在 `PLC_Code\agent-sessions\trae-trajectories`。
+- Agent 回合使用工作台配置中的超时限制；超时会终止子进程树并写入失败证据，工作台关闭或进程消失后下一次刷新会将任务标记为 `INTERRUPTED`。
 
 ## 安全边界
 

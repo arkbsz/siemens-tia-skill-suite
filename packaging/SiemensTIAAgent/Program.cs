@@ -181,6 +181,7 @@ internal static class Program
         string consolePath = GetConsolePath(runtimeDirectory);
         string invokePath = GetInvokePath(runtimeDirectory);
         string? projectPath = GetOptionValue(args, "--project");
+        string? initialCommand = GetOptionValue(args, "--run-command");
 
         var startInfo = new ProcessStartInfo
         {
@@ -194,6 +195,11 @@ internal static class Program
         {
             startInfo.ArgumentList.Add("--project");
             startInfo.ArgumentList.Add(projectPath);
+        }
+        if (!string.IsNullOrWhiteSpace(initialCommand))
+        {
+            startInfo.ArgumentList.Add("--run-command");
+            startInfo.ArgumentList.Add(initialCommand);
         }
         startInfo.Environment["SIEMENS_TIA_PROTECTED_RUNTIME"] = "1";
         startInfo.Environment["SIEMENS_TIA_RUNTIME_ROOT"] = runtimeDirectory;

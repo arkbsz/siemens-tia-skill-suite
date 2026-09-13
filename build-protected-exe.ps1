@@ -1,7 +1,7 @@
 param(
     [string]$OutputDirectory = "",
 
-    [string]$Version = "1.0.0",
+    [string]$Version = "1.0.6",
 
     [string]$CertificateThumbprint = ""
 )

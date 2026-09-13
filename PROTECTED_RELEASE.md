@@ -17,12 +17,14 @@ protected-release\SiemensTIAAgent.exe
 最近验证构建：
 
 ```text
-时间：2026-09-10 16:00 +08:00
-版本：1.0.4
+时间：2026-09-13 15:44 +08:00
+版本：1.0.6
 文件：protected-release\SiemensTIAAgent.exe
-SHA256：8D349F2AE8222D543F86463009262D535B68AE6258B5E41377FB73D9552FA2EA
-载荷文件数：227
+SHA256：6644F74D2B851284C3637C9DE7B59B72988ADC1600994096DA44C738735E464D
+载荷文件数：230
 自检：Passed
+
+本轮还通过了原生工作台 `doctor` 任务持久化烟囱测试，以及不依赖联网和真实 AI 账号的 Agent 新建/继续/重试路由回归测试。
 ```
 
 打开指定项目：
@@ -51,6 +53,9 @@ SHA256：8D349F2AE8222D543F86463009262D535B68AE6258B5E41377FB73D9552FA2EA
 - 本次构建包含真实 WinCC 读取、克隆应用预检、中文路径日志解码和 C# runner 适配器修复。
 - 可向构建脚本传入 `-CertificateThumbprint`，使用当前用户证书进行 Authenticode 签名。
 - 工作台内置发布审批门禁：审查包携带 artifact fingerprint，生产应用绑定输入 XML SHA256、克隆编译证据、WinCC 布局状态和审批有效期；生产应用始终执行备份，不能使用 `-SkipBackup`。
+- 工作台命令面板会在启动 PowerShell 前写入 `PLC_Code\console-jobs\*.json`，保存原始参数、配置快照、stdout/stderr、进程号、退出码和重试/继续关系；任务状态页支持重试、重放和打开日志。
+- 工作台内置 Agent 对话同样写入 `*-agent-chat-*.json` 任务清单，并保存平台、模型、Agent、会话、提示词、附件与超时状态；任务页支持 Agent 回合的可审计重试和兼容会话继续。
+- 保护版会把 `--run-command <command>` 转发给内置原生工作台；它仍使用同一套受控命令映射和安全门禁，可用于部署脚本和自动化验收。
 
 ## 保护边界
 

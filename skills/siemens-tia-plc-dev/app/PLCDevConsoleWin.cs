@@ -21,6 +21,7 @@ namespace SiemensTiaSkillSuite
         {
             string projectPath = "";
             string invokeScript = "";
+            string initialCommand = "";
 
             for (int i = 0; i < args.Length; i++)
             {
@@ -31,6 +32,10 @@ namespace SiemensTiaSkillSuite
                 else if (args[i] == "--invoke" && i + 1 < args.Length)
                 {
                     invokeScript = args[++i];
+                }
+                else if (args[i] == "--run-command" && i + 1 < args.Length)
+                {
+                    initialCommand = args[++i];
                 }
             }
 
@@ -45,7 +50,7 @@ namespace SiemensTiaSkillSuite
             {
                 WriteCrashLog(eventArgs.ExceptionObject as Exception);
             };
-            Application.Run(new MainForm(projectPath, invokeScript));
+            Application.Run(new MainForm(projectPath, invokeScript, initialCommand));
         }
 
         private static void WriteCrashLog(Exception exception)
@@ -164,6 +169,12 @@ namespace SiemensTiaSkillSuite
         private readonly Label platformStatusLabel = new Label();
         private readonly Button sendAgentButton = new Button();
         private readonly Button stopAgentButton = new Button();
+        private readonly ComboBox commandPaletteBox = new ComboBox();
+        private readonly Button executeCommandButton = new Button();
+        private readonly Button stopCommandButton = new Button();
+        private readonly ListBox consoleJobList = new ListBox();
+        private readonly RichTextBox consoleJobDetailBox = new RichTextBox();
+        private readonly Label consoleJobStatusLabel = new Label();
         private readonly CheckBox editPreviewBox = new CheckBox();
         private readonly PictureBox referencePreviewBox = new PictureBox();
         private readonly TabControl mainTabs = new TabControl();
@@ -171,6 +182,7 @@ namespace SiemensTiaSkillSuite
         private readonly Panel scrollContent = new Panel();
         private readonly System.Windows.Forms.Timer tailTimer = new System.Windows.Forms.Timer();
         private readonly string invokeScript;
+        private readonly string initialCommand;
         private SplitContainer outerSplitter;
         private SplitContainer centerSplitter;
 
@@ -191,6 +203,7 @@ namespace SiemensTiaSkillSuite
         private string currentStderrPath = "";
         private string currentPreviewPath = "";
         private Process currentProcess;
+        private ConsoleJobInfo currentCommandJob;
         private Process agentProcess;
         private string agentThreadId = "";
         private string agentSessionPlatform = "";
@@ -199,6 +212,10 @@ namespace SiemensTiaSkillSuite
         private string agentStdoutPath = "";
         private string agentStderrPath = "";
         private readonly List<string> agentAttachments = new List<string>();
+        private ConsoleJobInfo currentAgentJob;
+        private string currentAgentJobManifestPath = "";
+        private DateTime agentStartedAt;
+        private int agentTimeoutSeconds;
         private bool applyingWorkflowDefaults;
         private bool synchronizingSettings;
         private bool loadingWorkflowConfig;
@@ -207,10 +224,13 @@ namespace SiemensTiaSkillSuite
         private string currentLadSpecPath = "";
         private string currentLadGeneratedXmlPath = "";
         private string currentWinccDesignSpecPath = "";
+        private string currentJobManifestPath = "";
+        private string currentCommandName = "";
 
-        public MainForm(string projectPath, string invokeScriptArg)
+        public MainForm(string projectPath, string invokeScriptArg, string initialCommandArg)
         {
             this.invokeScript = ResolveInvokeScript(invokeScriptArg);
+            this.initialCommand = initialCommandArg == null ? "" : initialCommandArg.Trim();
             Text = "Siemens TIA PLC Dev Console";
             Width = 1420;
             Height = 860;
@@ -218,6 +238,7 @@ namespace SiemensTiaSkillSuite
             Font = new Font("Microsoft YaHei UI", 9F);
             StartPosition = FormStartPosition.CenterScreen;
             AutoScaleMode = AutoScaleMode.Dpi;
+            KeyPreview = true;
             DoubleBuffered = true;
 
             BuildUi();
@@ -236,6 +257,55 @@ namespace SiemensTiaSkillSuite
                 // Wait until the form handle exists before probing the current TIA session.
                 Shown += delegate { AutoLoadCurrentTiaProject(false); };
             }
+
+            if (!string.IsNullOrWhiteSpace(this.initialCommand))
+            {
+                Shown += delegate
+                {
+                    StartCommand(this.initialCommand);
+                };
+            }
+        }
+
+        protected override bool ProcessCmdKey(ref Message message, Keys keyData)
+        {
+            if (keyData == (Keys.Control | Keys.Shift | Keys.P))
+            {
+                commandPaletteBox.Focus();
+                commandPaletteBox.DroppedDown = true;
+                return true;
+            }
+
+            if (keyData == Keys.F5)
+            {
+                RefreshConsoleJobs();
+                RefreshWorkbenchArtifactsAfterCommand();
+                statusLabel.Text = "已刷新工作台任务和项目证据";
+                return true;
+            }
+
+            if (keyData == Keys.Escape &&
+                ((currentProcess != null && !currentProcess.HasExited) ||
+                 (agentProcess != null && !agentProcess.HasExited)))
+            {
+                if (agentProcess != null && !agentProcess.HasExited)
+                {
+                    StopAgent();
+                }
+                else
+                {
+                    StopCurrentCommand();
+                }
+                return true;
+            }
+
+            if (keyData == (Keys.Control | Keys.Enter) && requestBox.Focused)
+            {
+                SendAgentMessage();
+                return true;
+            }
+
+            return base.ProcessCmdKey(ref message, keyData);
         }
 
         private static string ResolveInvokeScript(string explicitPath)
@@ -475,6 +545,51 @@ namespace SiemensTiaSkillSuite
             savePreview.Margin = new Padding(6, 2, 6, 2);
             savePreview.Click += delegate { SaveCurrentPreviewFile(); };
             commandBar.Controls.Add(savePreview);
+
+            Label commandLabel = new Label();
+            commandLabel.Text = "命令面板";
+            commandLabel.AutoSize = false;
+            commandLabel.Width = 72;
+            commandLabel.Height = 30;
+            commandLabel.Margin = new Padding(12, 5, 2, 2);
+            commandLabel.TextAlign = ContentAlignment.MiddleRight;
+            commandLabel.ForeColor = MutedInk;
+            commandBar.Controls.Add(commandLabel);
+
+            commandPaletteBox.DropDownStyle = ComboBoxStyle.DropDownList;
+            commandPaletteBox.Width = 178;
+            commandPaletteBox.Height = 30;
+            commandPaletteBox.Margin = new Padding(4, 2, 4, 2);
+            commandPaletteBox.BackColor = Color.FromArgb(255, 254, 248);
+            commandPaletteBox.ForeColor = Ink;
+            commandPaletteBox.AccessibleRole = AccessibleRole.ComboBox;
+            commandPaletteBox.AccessibleName = "命令面板";
+            commandPaletteBox.AccessibleDescription = "选择并执行真实的 PLC/WinCC 工作流命令";
+            commandPaletteBox.Items.AddRange(CommandPaletteItems());
+            commandPaletteBox.SelectedIndex = 0;
+            commandBar.Controls.Add(commandPaletteBox);
+
+            executeCommandButton.Text = "执行";
+            StyleToolbarButton(executeCommandButton, Teal, 68);
+            executeCommandButton.Click += delegate { ExecuteSelectedCommand(); };
+            commandBar.Controls.Add(executeCommandButton);
+
+            stopCommandButton.Text = "停止命令";
+            StyleToolbarButton(stopCommandButton, Orange, 82);
+            stopCommandButton.Enabled = false;
+            stopCommandButton.Click += delegate { StopCurrentCommand(); };
+            commandBar.Controls.Add(stopCommandButton);
+
+            Button showJobsButton = NewButton("任务状态", Ink);
+            showJobsButton.Width = 82;
+            showJobsButton.Height = 30;
+            showJobsButton.Margin = new Padding(4, 2, 6, 2);
+            showJobsButton.Click += delegate
+            {
+                RefreshConsoleJobs();
+                SelectMainTab(14);
+            };
+            commandBar.Controls.Add(showJobsButton);
             mainLayout.Controls.Add(commandBar, 0, 0);
 
             TableLayoutPanel writePanel = new TableLayoutPanel();
@@ -615,6 +730,7 @@ namespace SiemensTiaSkillSuite
             mainTabs.Controls.Add(NewTab("LAD结构编辑", BuildLadEditorPage()));
             mainTabs.Controls.Add(NewTab("WinCC设计编辑", BuildWinccEditorPage()));
             mainTabs.Controls.Add(NewTab("发布审批", BuildReleaseReviewPage()));
+            mainTabs.Controls.Add(NewTab("任务状态", BuildJobQueuePage()));
             mainLayout.Controls.Add(mainTabs, 0, 2);
 
             GroupBox aiInputBox = NewGroup("AI交互与工作流");
@@ -795,6 +911,152 @@ namespace SiemensTiaSkillSuite
                 SafeConfigureSplitter(outer, 240, 560, 360);
                 SafeConfigureSplitter(center, 300, 240, Math.Max(340, center.Height - 310));
             };
+        }
+
+        private static string[] CommandPaletteItems()
+        {
+            return new string[]
+            {
+                "doctor",
+                "read-cycle-skip",
+                "read-cycle-full",
+                "list-blocks",
+                "project-model",
+                "knowledge-pack",
+                "capability-map",
+                "plc-instruction-plan",
+                "plc-instruction-cookbook",
+                "agent-pipeline",
+                "agent-plan",
+                "agent-queue",
+                "queue-start-next",
+                "queue-run-current",
+                "review-package",
+                "workbench-dashboard",
+                "wincc-plugins",
+                "wincc-visual-package",
+                "wincc-component-blueprints",
+                "wincc-engineering-scaffold",
+                "wincc-openness-implementation",
+                "wincc-read-cycle",
+                "simulation-package",
+                "simulation-replay",
+                "lad-preview",
+                "lad-validate",
+                "write-cycle"
+            };
+        }
+
+        private static void StyleToolbarButton(Button button, Color color, int width)
+        {
+            ConfigureButtonAccessibility(button);
+            button.Width = width;
+            button.Height = 30;
+            button.Margin = new Padding(3, 2, 3, 2);
+            button.FlatStyle = FlatStyle.Flat;
+            button.FlatAppearance.BorderSize = 0;
+            button.BackColor = color;
+            button.ForeColor = Color.White;
+            button.Cursor = Cursors.Hand;
+            button.Font = new Font("Microsoft YaHei UI", 8.5F, FontStyle.Bold);
+        }
+
+        private void ExecuteSelectedCommand()
+        {
+            string command = Convert.ToString(commandPaletteBox.SelectedItem).Trim();
+            if (string.IsNullOrWhiteSpace(command))
+            {
+                MessageBox.Show("请先选择要执行的命令。", "命令面板", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            StartCommand(command);
+        }
+
+        private Control BuildJobQueuePage()
+        {
+            TableLayoutPanel page = new TableLayoutPanel();
+            page.Dock = DockStyle.Fill;
+            page.BackColor = Canvas;
+            page.Padding = new Padding(8);
+            page.ColumnCount = 1;
+            page.RowCount = 2;
+            page.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+            page.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+            FlowLayoutPanel toolbar = new FlowLayoutPanel();
+            toolbar.Dock = DockStyle.Fill;
+            toolbar.WrapContents = false;
+            toolbar.AutoScroll = true;
+            toolbar.BackColor = CardSoft;
+            toolbar.Padding = new Padding(6, 6, 6, 4);
+
+            Button refreshButton = NewButton("刷新任务", Teal);
+            StyleToolbarButton(refreshButton, Teal, 82);
+            refreshButton.Click += delegate { RefreshConsoleJobs(); };
+            toolbar.Controls.Add(refreshButton);
+
+            Button retryButton = NewButton("重试选中", Orange);
+            StyleToolbarButton(retryButton, Orange, 88);
+            retryButton.Click += delegate { RetrySelectedJob(); };
+            toolbar.Controls.Add(retryButton);
+
+            Button continueButton = NewButton("继续选中", Gold);
+            continueButton.ForeColor = Ink;
+            StyleToolbarButton(continueButton, Gold, 88);
+            continueButton.Click += delegate { ContinueSelectedJob(); };
+            toolbar.Controls.Add(continueButton);
+
+            Button openOutputButton = NewButton("打开输出", Ink);
+            StyleToolbarButton(openOutputButton, Ink, 82);
+            openOutputButton.Click += delegate { OpenSelectedConsoleJobOutput(false); };
+            toolbar.Controls.Add(openOutputButton);
+
+            Button openErrorButton = NewButton("打开错误", Ink);
+            StyleToolbarButton(openErrorButton, Ink, 82);
+            openErrorButton.Click += delegate { OpenSelectedConsoleJobOutput(true); };
+            toolbar.Controls.Add(openErrorButton);
+
+            consoleJobStatusLabel.AutoSize = false;
+            consoleJobStatusLabel.Width = 560;
+            consoleJobStatusLabel.Height = 28;
+            consoleJobStatusLabel.Margin = new Padding(12, 2, 4, 2);
+            consoleJobStatusLabel.TextAlign = ContentAlignment.MiddleLeft;
+            consoleJobStatusLabel.ForeColor = MutedInk;
+            consoleJobStatusLabel.Text = "任务持久化：等待加载项目";
+            toolbar.Controls.Add(consoleJobStatusLabel);
+            page.Controls.Add(toolbar, 0, 0);
+
+            SplitContainer jobSplitter = new SplitContainer();
+            jobSplitter.Dock = DockStyle.Fill;
+            jobSplitter.Orientation = Orientation.Vertical;
+            jobSplitter.SplitterWidth = 7;
+            jobSplitter.Panel1MinSize = 1;
+            jobSplitter.Panel2MinSize = 1;
+            jobSplitter.BackColor = Canvas;
+            page.Controls.Add(jobSplitter, 0, 1);
+
+            GroupBox listGroup = NewGroup("可恢复任务 / Jobs");
+            listGroup.Dock = DockStyle.Fill;
+            consoleJobList.Dock = DockStyle.Fill;
+            consoleJobList.BorderStyle = BorderStyle.None;
+            consoleJobList.BackColor = CardSoft;
+            consoleJobList.ForeColor = Ink;
+            consoleJobList.Font = new Font("Cascadia Mono", 8.8F);
+            consoleJobList.HorizontalScrollbar = true;
+            listGroup.Controls.Add(consoleJobList);
+            jobSplitter.Panel1.Controls.Add(listGroup);
+
+            GroupBox detailGroup = NewGroup("任务详情 / Evidence");
+            detailGroup.Dock = DockStyle.Fill;
+            consoleJobDetailBox.Dock = DockStyle.Fill;
+            consoleJobDetailBox.ReadOnly = true;
+            consoleJobDetailBox.BorderStyle = BorderStyle.None;
+            consoleJobDetailBox.BackColor = CodeBack;
+            consoleJobDetailBox.ForeColor = CodeFore;
+            consoleJobDetailBox.Font = new Font("Cascadia Code", 8.8F);
+            detailGroup.Controls.Add(consoleJobDetailBox);
+            jobSplitter.Panel2.Controls.Add(detailGroup);
+            return page;
         }
 
         private Control BuildLadEditorPage()
@@ -2326,6 +2588,8 @@ namespace SiemensTiaSkillSuite
                     }
                 }
             };
+            consoleJobList.SelectedIndexChanged += delegate { ShowSelectedConsoleJob(); };
+            consoleJobList.DoubleClick += delegate { OpenSelectedConsoleJobOutput(false); };
 
             fontSizeBox.SelectedIndexChanged += delegate { ApplySelectedFont(); SaveWorkflowConfig(false); };
             fontBox.SelectedIndexChanged += delegate { ApplySelectedFont(); SaveWorkflowConfig(false); };
@@ -2428,6 +2692,10 @@ namespace SiemensTiaSkillSuite
             FormClosing += delegate
             {
                 SaveWorkflowConfig(false);
+                if (currentProcess != null && !currentProcess.HasExited)
+                {
+                    StopCurrentCommand();
+                }
                 if (agentProcess != null && !agentProcess.HasExited)
                 {
                     StopAgent();
@@ -2891,6 +3159,7 @@ namespace SiemensTiaSkillSuite
         {
             Button button = new Button();
             button.Text = text;
+            ConfigureButtonAccessibility(button);
             button.Height = 28;
             button.FlatStyle = FlatStyle.Flat;
             button.FlatAppearance.BorderColor = Color.FromArgb(84, 117, 113);
@@ -2990,6 +3259,7 @@ namespace SiemensTiaSkillSuite
         {
             Button button = new AccentButton();
             button.Text = text;
+            ConfigureButtonAccessibility(button);
             button.Height = 38;
             button.FlatStyle = FlatStyle.Flat;
             button.FlatAppearance.BorderSize = 0;
@@ -3003,6 +3273,7 @@ namespace SiemensTiaSkillSuite
 
         private static void StyleActionButton(Button button, Color color)
         {
+            ConfigureButtonAccessibility(button);
             button.Dock = DockStyle.Fill;
             button.Margin = new Padding(4);
             button.FlatStyle = FlatStyle.Flat;
@@ -3015,10 +3286,24 @@ namespace SiemensTiaSkillSuite
 
         private static void StyleCompactButton(Button button)
         {
+            ConfigureButtonAccessibility(button);
             button.Dock = DockStyle.Fill;
             button.Height = 30;
             button.Margin = new Padding(3, 2, 3, 2);
             button.Font = new Font("Microsoft YaHei UI", 8.5F, FontStyle.Bold);
+        }
+
+        private static void ConfigureButtonAccessibility(Button button)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            button.AccessibleRole = AccessibleRole.PushButton;
+            button.AccessibleName = button.Text;
+            button.AccessibleDescription = "执行：" + button.Text;
+            button.TabStop = true;
         }
 
         private static void StyleInput(TextBox box)
@@ -3079,6 +3364,9 @@ namespace SiemensTiaSkillSuite
             combo.DropDownStyle = ComboBoxStyle.DropDownList;
             combo.Width = width;
             combo.Height = 28;
+            combo.AccessibleRole = AccessibleRole.ComboBox;
+            combo.AccessibleName = string.IsNullOrWhiteSpace(combo.Name) ? "配置下拉框" : combo.Name;
+            combo.AccessibleDescription = "选择配置项";
             combo.FlatStyle = FlatStyle.Flat;
             combo.BackColor = Color.FromArgb(255, 254, 248);
             combo.ForeColor = Ink;
@@ -4696,6 +4984,7 @@ namespace SiemensTiaSkillSuite
                 statusLabel.Text = "已加载";
                 BuildProjectTree();
                 RefreshRuns();
+                RefreshConsoleJobs();
                 previewBox.Text = "项目已加载：" + resolved + Environment.NewLine + "双击 runs 可查看报告；点击 XML 文件可填入 write-cycle 输入。";
             }
             catch (Exception ex)
@@ -5140,6 +5429,454 @@ namespace SiemensTiaSkillSuite
             }
         }
 
+        private string ConsoleJobsRoot()
+        {
+            return Path.Combine(projectRoot, "PLC_Code", "console-jobs");
+        }
+
+        private static bool IsProcessAlive(int processId)
+        {
+            if (processId <= 0)
+            {
+                return false;
+            }
+
+            try
+            {
+                using (Process process = Process.GetProcessById(processId))
+                {
+                    return !process.HasExited;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void SaveConsoleJob(ConsoleJobInfo job)
+        {
+            if (job == null || string.IsNullOrWhiteSpace(job.ManifestPath))
+            {
+                return;
+            }
+
+            try
+            {
+                string directory = Path.GetDirectoryName(job.ManifestPath);
+                if (!string.IsNullOrWhiteSpace(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+                JavaScriptSerializer serializer = new JavaScriptSerializer();
+                string temporaryPath = job.ManifestPath + ".tmp";
+                File.WriteAllText(temporaryPath, serializer.Serialize(job), Encoding.UTF8);
+                File.Copy(temporaryPath, job.ManifestPath, true);
+                File.Delete(temporaryPath);
+            }
+            catch (Exception ex)
+            {
+                statusLabel.Text = "任务状态保存失败：" + ex.Message;
+            }
+        }
+
+        private static ConsoleJobInfo ReadConsoleJob(string path)
+        {
+            try
+            {
+                JavaScriptSerializer serializer = new JavaScriptSerializer();
+                ConsoleJobInfo job = serializer.Deserialize<ConsoleJobInfo>(ReadText(path));
+                if (job != null)
+                {
+                    job.ManifestPath = path;
+                    if (job.Arguments == null) { job.Arguments = new List<string>(); }
+                    if (job.Attachments == null) { job.Attachments = new List<string>(); }
+                    return job;
+                }
+            }
+            catch
+            {
+            }
+            return null;
+        }
+
+        private void RefreshConsoleJobs()
+        {
+            consoleJobList.Items.Clear();
+            if (string.IsNullOrWhiteSpace(projectRoot))
+            {
+                consoleJobStatusLabel.Text = "任务持久化：尚未加载项目";
+                return;
+            }
+
+            string jobsRoot = ConsoleJobsRoot();
+            if (!Directory.Exists(jobsRoot))
+            {
+                consoleJobStatusLabel.Text = "任务持久化：暂无任务";
+                consoleJobDetailBox.Text = "还没有工作台命令任务。\r\n\r\n从顶部“命令面板”选择命令并执行后，参数、日志和状态会保存到：\r\n" + jobsRoot;
+                return;
+            }
+
+            List<ConsoleJobInfo> jobs = new List<ConsoleJobInfo>();
+            foreach (string path in Directory.GetFiles(jobsRoot, "*.json", SearchOption.TopDirectoryOnly))
+            {
+                ConsoleJobInfo job = ReadConsoleJob(path);
+                if (job == null || string.IsNullOrWhiteSpace(job.Command))
+                {
+                    continue;
+                }
+
+                if (string.Equals(job.Status, "RUNNING", StringComparison.OrdinalIgnoreCase) &&
+                    !IsProcessAlive(job.ProcessId) &&
+                    !(string.Equals(path, currentJobManifestPath, StringComparison.OrdinalIgnoreCase) &&
+                      currentProcess != null && !currentProcess.HasExited) &&
+                    !(string.Equals(path, currentAgentJobManifestPath, StringComparison.OrdinalIgnoreCase) &&
+                      agentProcess != null && !agentProcess.HasExited))
+                {
+                    job.Status = "INTERRUPTED";
+                    job.FinishedAt = DateTime.Now.ToString("o");
+                    job.Message = "工作台重新加载时未发现原命令进程；“继续”会按原参数重新执行，而不是伪装成进程级断点恢复。";
+                    SaveConsoleJob(job);
+                }
+                jobs.Add(job);
+            }
+
+            jobs.Sort(delegate (ConsoleJobInfo left, ConsoleJobInfo right)
+            {
+                return string.Compare(right.StartedAt, left.StartedAt, StringComparison.OrdinalIgnoreCase);
+            });
+
+            foreach (ConsoleJobInfo job in jobs)
+            {
+                consoleJobList.Items.Add(job);
+            }
+
+            consoleJobStatusLabel.Text = "任务持久化：已加载 " + jobs.Count.ToString() + " 个任务；日志和证据位于 PLC_Code\\console-jobs";
+            if (consoleJobList.Items.Count > 0 && consoleJobList.SelectedIndex < 0)
+            {
+                consoleJobList.SelectedIndex = 0;
+            }
+            else
+            {
+                ShowSelectedConsoleJob();
+            }
+        }
+
+        private ConsoleJobInfo SelectedConsoleJob()
+        {
+            return consoleJobList.SelectedItem as ConsoleJobInfo;
+        }
+
+        private void ShowSelectedConsoleJob()
+        {
+            ConsoleJobInfo job = SelectedConsoleJob();
+            if (job == null)
+            {
+                return;
+            }
+
+            StringBuilder builder = new StringBuilder();
+            builder.AppendLine("任务：" + job.JobId);
+            builder.AppendLine("状态：" + job.Status);
+            builder.AppendLine("命令：" + job.Command);
+            if (string.Equals(job.Command, "agent-chat", StringComparison.OrdinalIgnoreCase))
+            {
+                builder.AppendLine("Agent：" + (string.IsNullOrWhiteSpace(job.RoutedAgent) ? job.AgentId : job.RoutedAgent));
+                builder.AppendLine("工作流：" + job.AgentWorkflow);
+                builder.AppendLine("请求平台：" + job.RequestedPlatform);
+                builder.AppendLine("实际平台：" + (string.IsNullOrWhiteSpace(job.SelectedPlatform) ? "尚未报告" : job.SelectedPlatformName + " (" + job.SelectedPlatform + ")"));
+                builder.AppendLine("模型：" + (string.IsNullOrWhiteSpace(job.SelectedModel) ? job.RequestedModel : job.SelectedModel));
+                builder.AppendLine("会话：" + (string.IsNullOrWhiteSpace(job.AgentSessionId) ? "尚未建立" : job.AgentSessionId));
+                builder.AppendLine("提示词：" + job.PromptPath);
+                builder.AppendLine("附件清单：" + job.AttachmentManifestPath);
+            }
+            builder.AppendLine("父任务：" + (string.IsNullOrWhiteSpace(job.ParentJobId) ? "无" : job.ParentJobId));
+            builder.AppendLine("执行方式：" + (string.IsNullOrWhiteSpace(job.ResumeMode) ? "新建" : job.ResumeMode));
+            builder.AppendLine("项目：" + job.ProjectRoot);
+            builder.AppendLine("开始：" + job.StartedAt);
+            builder.AppendLine("结束：" + (string.IsNullOrWhiteSpace(job.FinishedAt) ? "运行中" : job.FinishedAt));
+            builder.AppendLine("进程号：" + job.ProcessId.ToString());
+            builder.AppendLine("退出码：" + (job.HasExitCode ? job.ExitCode.ToString() : "尚未结束"));
+            builder.AppendLine("停止请求：" + (job.StopRequested ? "是" : "否"));
+            builder.AppendLine("超时终止：" + (job.TimedOut ? "是" : "否"));
+            builder.AppendLine("配置：" + job.ConfigPath);
+            builder.AppendLine("配置快照：" + job.ConfigSnapshotPath);
+            builder.AppendLine("标准输出：" + job.StdoutPath);
+            builder.AppendLine("错误输出：" + job.StderrPath);
+            builder.AppendLine("清单：" + job.ManifestPath);
+            builder.AppendLine();
+            builder.AppendLine("参数：");
+            builder.AppendLine(JoinArgs(job.Arguments));
+            if (!string.IsNullOrWhiteSpace(job.Message))
+            {
+                builder.AppendLine();
+                builder.AppendLine("说明：");
+                builder.AppendLine(job.Message);
+            }
+            builder.AppendLine();
+            builder.AppendLine("最近输出：");
+            if (File.Exists(job.StdoutPath))
+            {
+                builder.AppendLine(Tail(ReadText(job.StdoutPath), 12000));
+            }
+            if (File.Exists(job.StderrPath))
+            {
+                string error = Tail(ReadText(job.StderrPath), 5000);
+                if (!string.IsNullOrWhiteSpace(error))
+                {
+                    builder.AppendLine();
+                    builder.AppendLine("[stderr]");
+                    builder.AppendLine(error);
+                }
+            }
+
+            consoleJobDetailBox.Text = builder.ToString();
+            consoleJobDetailBox.SelectionStart = consoleJobDetailBox.TextLength;
+            consoleJobDetailBox.ScrollToCaret();
+        }
+
+        private void OpenSelectedConsoleJobOutput(bool errorOutput)
+        {
+            ConsoleJobInfo job = SelectedConsoleJob();
+            if (job == null)
+            {
+                MessageBox.Show("请先选择一个任务。", "任务状态", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            string path = errorOutput ? job.StderrPath : job.StdoutPath;
+            if (!File.Exists(path))
+            {
+                MessageBox.Show("该任务还没有对应的日志文件。", "任务状态", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            ShowFile(path);
+            statusLabel.Text = (errorOutput ? "已打开任务错误日志：" : "已打开任务输出日志：") + path;
+        }
+
+        private void RetrySelectedJob()
+        {
+            ConsoleJobInfo job = SelectedConsoleJob();
+            if (job == null && !string.IsNullOrWhiteSpace(projectRoot))
+            {
+                RefreshConsoleJobs();
+                job = SelectedConsoleJob();
+            }
+            if (job == null && consoleJobList.Items.Count > 0)
+            {
+                consoleJobList.SelectedIndex = 0;
+                job = SelectedConsoleJob();
+            }
+            if (job == null)
+            {
+                MessageBox.Show("请先选择要重试的任务。", "任务重试", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            StartSavedJob(job, "RETRY");
+        }
+
+        private void ContinueSelectedJob()
+        {
+            ConsoleJobInfo job = SelectedConsoleJob();
+            if (job == null && !string.IsNullOrWhiteSpace(projectRoot))
+            {
+                RefreshConsoleJobs();
+                job = SelectedConsoleJob();
+            }
+            if (job == null && consoleJobList.Items.Count > 0)
+            {
+                consoleJobList.SelectedIndex = 0;
+                job = SelectedConsoleJob();
+            }
+            if (job == null)
+            {
+                MessageBox.Show("请先选择要继续的任务。", "任务继续", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            StartSavedJob(job, "CONTINUE");
+        }
+
+        private void StartSavedJob(ConsoleJobInfo job, string resumeMode)
+        {
+            if ((currentProcess != null && !currentProcess.HasExited) ||
+                (agentProcess != null && !agentProcess.HasExited))
+            {
+                MessageBox.Show("已有命令正在运行，请先等待结束或停止当前命令。", "任务执行", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            if (job.Arguments == null || job.Arguments.Count == 0)
+            {
+                MessageBox.Show("该任务没有可重放的命令参数。", "任务执行", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            string currentRoot;
+            try
+            {
+                currentRoot = ResolveProjectRoot(projectPathBox.Text);
+            }
+            catch
+            {
+                currentRoot = "";
+            }
+            if (string.IsNullOrWhiteSpace(currentRoot) || string.IsNullOrWhiteSpace(job.ProjectRoot))
+            {
+                MessageBox.Show("当前项目路径或任务原项目路径无效，无法重放任务。", "项目不匹配", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            if (!string.Equals(Path.GetFullPath(currentRoot), Path.GetFullPath(job.ProjectRoot), StringComparison.OrdinalIgnoreCase))
+            {
+                MessageBox.Show("当前加载项目与任务原项目不同。\r\n\r\n任务项目：" + job.ProjectRoot + "\r\n当前项目：" + currentRoot + "\r\n\r\n请先加载任务对应的项目，再执行继续/重试。", "项目不匹配", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (string.Equals(job.Command, "agent-chat", StringComparison.OrdinalIgnoreCase))
+            {
+                StartSavedAgentJob(job, resumeMode);
+                return;
+            }
+
+            StartCommandProcess(job.Command, new List<string>(job.Arguments), job.ProjectRoot, job.ConfigPath, resumeMode, job.JobId);
+        }
+
+        private void StartSavedAgentJob(ConsoleJobInfo source, string resumeMode)
+        {
+            List<string> args = new List<string>(source.Arguments);
+            bool continueSession = string.Equals(resumeMode, "CONTINUE", StringComparison.OrdinalIgnoreCase) &&
+                                   !string.IsNullOrWhiteSpace(source.AgentSessionId) &&
+                                   !string.IsNullOrWhiteSpace(source.AgentSessionPlatform);
+            if (continueSession)
+            {
+                ReplaceAgentSessionArguments(args, source.AgentSessionId, source.AgentSessionPlatform);
+            }
+            else
+            {
+                // Retry starts a clean Agent turn. Never accidentally replay a
+                // stale session from an earlier Continue run.
+                ReplaceAgentSessionArguments(args, "", "");
+            }
+
+            string jobsRoot = Path.Combine(source.ProjectRoot, "PLC_Code", "console-jobs");
+            string stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss-fff");
+            ConsoleJobInfo replay = new ConsoleJobInfo();
+            replay.SchemaVersion = 2;
+            replay.JobId = stamp + "-agent-chat-" + Guid.NewGuid().ToString("N").Substring(0, 8);
+            replay.Status = "RUNNING";
+            replay.Command = "agent-chat";
+            replay.ProjectRoot = source.ProjectRoot;
+            replay.ConfigPath = source.ConfigPath;
+            replay.ConfigSnapshotPath = Path.Combine(jobsRoot, replay.JobId + ".config.json");
+            string replaySessionRoot = Path.Combine(source.ProjectRoot, "PLC_Code", "agent-sessions", DateTime.Now.ToString("yyyyMMdd-HHmmss-fff"));
+            replay.StdoutPath = Path.Combine(replaySessionRoot, "agent.jsonl");
+            replay.StderrPath = Path.Combine(replaySessionRoot, "agent.stderr.log");
+            replay.ManifestPath = Path.Combine(jobsRoot, replay.JobId + ".json");
+            replay.StartedAt = DateTime.Now.ToString("o");
+            replay.ResumeMode = resumeMode;
+            replay.ParentJobId = source.JobId;
+            Directory.CreateDirectory(replaySessionRoot);
+            replay.PromptPath = CopyReplayPrompt(source.PromptPath, replaySessionRoot);
+            replay.AttachmentManifestPath = CopyReplayAttachmentManifest(source, replaySessionRoot);
+            ReplaceAgentArgumentValue(args, "-PromptFile", replay.PromptPath);
+            ReplaceAgentArgumentValue(args, "-AttachmentManifest", replay.AttachmentManifestPath);
+            replay.Arguments = args;
+            replay.Attachments = new List<string>(source.Attachments ?? new List<string>());
+            replay.AgentId = source.AgentId;
+            replay.AgentWorkflow = source.AgentWorkflow;
+            replay.RequestedPlatform = source.RequestedPlatform;
+            replay.RequestedModel = source.RequestedModel;
+            replay.AgentSessionId = continueSession ? source.AgentSessionId : "";
+            replay.AgentSessionPlatform = continueSession ? source.AgentSessionPlatform : "";
+            replay.Message = continueSession
+                ? "这是对 Agent 会话的可审计继续：优先恢复已记录的兼容会话；不是伪装成进程级断点恢复。"
+                : "这是对 Agent 回合的可审计重试。";
+            Directory.CreateDirectory(jobsRoot);
+            File.WriteAllText(replay.StdoutPath, "", Encoding.UTF8);
+            File.WriteAllText(replay.StderrPath, "", Encoding.UTF8);
+            if (File.Exists(source.ConfigPath))
+            {
+                File.Copy(source.ConfigPath, replay.ConfigSnapshotPath, true);
+            }
+            SaveConsoleJob(replay);
+            StartAgentProcess(replay, args, replay.ProjectRoot, replay.ConfigPath);
+        }
+
+        private static string CopyReplayPrompt(string sourcePath, string targetDirectory)
+        {
+            if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
+            {
+                throw new FileNotFoundException("原 Agent 提示词文件不存在，无法重放任务。", sourcePath);
+            }
+
+            string targetPath = Path.Combine(targetDirectory, "user-message.txt");
+            File.Copy(sourcePath, targetPath, true);
+            return targetPath;
+        }
+
+        private static string CopyReplayAttachmentManifest(ConsoleJobInfo source, string targetDirectory)
+        {
+            string targetPath = Path.Combine(targetDirectory, "attachments.txt");
+            List<string> attachments = new List<string>(source.Attachments ?? new List<string>());
+            File.WriteAllLines(targetPath, attachments.ToArray(), Encoding.UTF8);
+            return targetPath;
+        }
+
+        private static void ReplaceAgentArgumentValue(List<string> args, string option, string value)
+        {
+            for (int index = 0; index < args.Count; index++)
+            {
+                if (!string.Equals(args[index], option, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (index + 1 < args.Count)
+                {
+                    args[index + 1] = value;
+                }
+                else
+                {
+                    args.Add(value);
+                }
+                return;
+            }
+
+            args.Add(option);
+            args.Add(value);
+        }
+
+        private static void ReplaceAgentSessionArguments(List<string> args, string sessionId, string sessionPlatform)
+        {
+            for (int index = args.Count - 1; index >= 0; index--)
+            {
+                if (string.Equals(args[index], "-SessionId", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(args[index], "-SessionPlatform", StringComparison.OrdinalIgnoreCase))
+                {
+                    args.RemoveAt(index);
+                    if (index < args.Count && !args[index].StartsWith("-", StringComparison.Ordinal))
+                    {
+                        args.RemoveAt(index);
+                    }
+                }
+            }
+            if (!string.IsNullOrWhiteSpace(sessionId))
+            {
+                args.Add("-SessionId");
+                args.Add(sessionId);
+            }
+            if (!string.IsNullOrWhiteSpace(sessionPlatform))
+            {
+                args.Add("-SessionPlatform");
+                args.Add(sessionPlatform);
+            }
+        }
+
+        private void RefreshWorkbenchArtifactsAfterCommand()
+        {
+            BuildProjectTree();
+            RefreshRuns();
+            RefreshConsoleJobs();
+        }
+
         private void ShowFile(string path)
         {
             try
@@ -5235,6 +5972,11 @@ namespace SiemensTiaSkillSuite
 
         private void SendAgentMessage()
         {
+            if (currentProcess != null && !currentProcess.HasExited)
+            {
+                MessageBox.Show("已有 TIA 工作流命令正在运行，请先等待结束或停止当前命令。", "防止TIA并发冲突", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
             if (agentProcess != null && !agentProcess.HasExited)
             {
                 MessageBox.Show("当前 Agent 仍在处理上一条消息。", "Agent 正在运行", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -5248,6 +5990,7 @@ namespace SiemensTiaSkillSuite
                 return;
             }
 
+            ConsoleJobInfo createdJob = null;
             try
             {
                 string root = ResolveProjectRoot(projectPathBox.Text);
@@ -5308,6 +6051,41 @@ namespace SiemensTiaSkillSuite
                     }
                 }
 
+                string jobsRoot = Path.Combine(root, "PLC_Code", "console-jobs");
+                Directory.CreateDirectory(jobsRoot);
+                string stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss-fff");
+                ConsoleJobInfo job = new ConsoleJobInfo();
+                createdJob = job;
+                job.SchemaVersion = 2;
+                job.JobId = stamp + "-agent-chat-" + Guid.NewGuid().ToString("N").Substring(0, 8);
+                job.Status = "RUNNING";
+                job.Command = "agent-chat";
+                job.ProjectRoot = root;
+                job.ConfigPath = configPath;
+                job.ConfigSnapshotPath = Path.Combine(jobsRoot, job.JobId + ".config.json");
+                job.StdoutPath = agentStdoutPath;
+                job.StderrPath = agentStderrPath;
+                job.ManifestPath = Path.Combine(jobsRoot, job.JobId + ".json");
+                job.StartedAt = DateTime.Now.ToString("o");
+                job.ResumeMode = "NEW";
+                job.ParentJobId = "";
+                job.Arguments = new List<string>(args);
+                job.PromptPath = promptPath;
+                job.AttachmentManifestPath = manifestPath;
+                job.Attachments = new List<string>(agentAttachments);
+                job.AgentId = SelectedAgentId();
+                job.AgentWorkflow = WorkflowId(SelectedText(workflowSelectBox, "读取项目并总结"));
+                job.RequestedPlatform = SelectedPlatformId();
+                job.RequestedModel = SelectedAgentModel();
+                job.AgentSessionId = agentThreadId;
+                job.AgentSessionPlatform = agentSessionPlatform;
+                job.Message = "Agent 对话已纳入工作台任务审计；平台、模型、会话、附件和输出日志均保存在项目 PLC_Code 中。";
+                if (File.Exists(configPath))
+                {
+                    File.Copy(configPath, job.ConfigSnapshotPath, true);
+                }
+                SaveConsoleJob(job);
+
                 chatBox.AppendText(Environment.NewLine + "你 · " + SelectedText(agentBox, "自动路由 Agent") + " · " + SelectedText(platformBox, "自动选择") + Environment.NewLine + userMessage + Environment.NewLine);
                 if (agentAttachments.Count > 0)
                 {
@@ -5316,55 +6094,94 @@ namespace SiemensTiaSkillSuite
                 chatBox.AppendText(Environment.NewLine + "Agent 正在处理..." + Environment.NewLine);
                 mainTabs.SelectedIndex = 0;
 
-                ProcessStartInfo start = new ProcessStartInfo();
-                start.FileName = "powershell.exe";
-                start.Arguments = JoinArgs(args);
-                start.WorkingDirectory = root;
-                start.UseShellExecute = false;
-                start.CreateNoWindow = true;
-                start.RedirectStandardOutput = true;
-                start.RedirectStandardError = true;
-                start.StandardOutputEncoding = Encoding.UTF8;
-                start.StandardErrorEncoding = Encoding.UTF8;
-
-                Process process = new Process();
-                process.StartInfo = start;
-                process.EnableRaisingEvents = true;
-                process.OutputDataReceived += delegate (object sender, DataReceivedEventArgs eventArgs)
-                {
-                    if (eventArgs.Data == null) { return; }
-                    AppendOutput(agentStdoutPath, eventArgs.Data);
-                    HandleAgentJsonLine(eventArgs.Data);
-                };
-                process.ErrorDataReceived += delegate (object sender, DataReceivedEventArgs eventArgs)
-                {
-                    if (eventArgs.Data == null) { return; }
-                    AppendOutput(agentStderrPath, eventArgs.Data);
-                    AppendAgentLog("[stderr] " + eventArgs.Data);
-                };
-                process.Exited += delegate { AgentProcessExited(process); };
-                agentProcess = process;
-                sendAgentButton.Enabled = false;
-                stopAgentButton.Enabled = true;
-                statusLabel.Text = "Agent 路由与执行中";
-                platformStatusLabel.Text = "平台：正在选择...";
-                jobBox.Text = "Agent 会话目录：" + runRoot + Environment.NewLine + "路由模式：" + SelectedText(routingModeBox, "自动路由") + Environment.NewLine + "请求平台：" + SelectedText(platformBox, "自动选择") + Environment.NewLine + "Agent：" + SelectedText(agentBox, "自动路由 Agent") + Environment.NewLine + "模型：" + SelectedAgentModel() + Environment.NewLine + "工作流：" + WorkflowId(SelectedText(workflowSelectBox, "读取项目并总结")) + Environment.NewLine;
-                process.Start();
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
+                StartAgentProcess(job, args, root, configPath);
                 requestBox.Clear();
                 agentAttachments.Clear();
                 UpdateAgentAttachmentLabel();
             }
             catch (Exception ex)
             {
+                if (createdJob != null)
+                {
+                    createdJob.Status = "FAILED";
+                    createdJob.HasExitCode = true;
+                    createdJob.ExitCode = -1;
+                    createdJob.FinishedAt = DateTime.Now.ToString("o");
+                    createdJob.Message = "Agent 进程启动失败：" + ex.Message;
+                    SaveConsoleJob(createdJob);
+                }
                 sendAgentButton.Enabled = true;
                 stopAgentButton.Enabled = false;
                 MessageBox.Show(ex.Message, "Agent 启动失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void HandleAgentJsonLine(string line)
+        private void StartAgentProcess(ConsoleJobInfo job, List<string> args, string root, string configPath)
+        {
+            ProcessStartInfo start = new ProcessStartInfo();
+            start.FileName = "powershell.exe";
+            start.Arguments = JoinArgs(args);
+            start.WorkingDirectory = root;
+            start.UseShellExecute = false;
+            start.CreateNoWindow = true;
+            start.RedirectStandardOutput = true;
+            start.RedirectStandardError = true;
+            start.StandardOutputEncoding = Encoding.UTF8;
+            start.StandardErrorEncoding = Encoding.UTF8;
+
+            Process process = new Process();
+            process.StartInfo = start;
+            process.EnableRaisingEvents = true;
+            process.OutputDataReceived += delegate (object sender, DataReceivedEventArgs eventArgs)
+            {
+                if (eventArgs.Data == null) { return; }
+                AppendOutput(job.StdoutPath, eventArgs.Data);
+                HandleAgentJsonLine(eventArgs.Data, job);
+            };
+            process.ErrorDataReceived += delegate (object sender, DataReceivedEventArgs eventArgs)
+            {
+                if (eventArgs.Data == null) { return; }
+                AppendOutput(job.StderrPath, eventArgs.Data);
+                AppendAgentLog("[stderr] " + eventArgs.Data);
+            };
+            process.Exited += delegate { AgentProcessExited(process, job); };
+            currentAgentJob = job;
+            currentAgentJobManifestPath = job.ManifestPath;
+            job.StopRequested = false;
+            job.TimedOut = false;
+            agentStartedAt = DateTime.Now;
+            agentTimeoutSeconds = WorkflowTimeoutSeconds();
+            agentProcess = process;
+            agentStdoutPath = job.StdoutPath;
+            agentStderrPath = job.StderrPath;
+            currentStdoutPath = job.StdoutPath;
+            currentStderrPath = job.StderrPath;
+            sendAgentButton.Enabled = false;
+            stopAgentButton.Enabled = true;
+            statusLabel.Text = "Agent 路由与执行中";
+            platformStatusLabel.Text = "平台：正在选择...";
+            jobBox.Text = "任务：" + job.JobId + Environment.NewLine +
+                          "Agent：" + (string.IsNullOrWhiteSpace(job.AgentId) ? "auto" : job.AgentId) + Environment.NewLine +
+                          "工作流：" + job.AgentWorkflow + Environment.NewLine +
+                          "请求平台：" + job.RequestedPlatform + Environment.NewLine +
+                          "模型：" + job.RequestedModel + Environment.NewLine +
+                          "任务清单：" + job.ManifestPath + Environment.NewLine +
+                          "标准输出：" + job.StdoutPath + Environment.NewLine +
+                          "错误输出：" + job.StderrPath + Environment.NewLine;
+            if (agentTimeoutSeconds > 0)
+            {
+                jobBox.AppendText("超时限制：" + agentTimeoutSeconds.ToString() + " 秒" + Environment.NewLine);
+            }
+            process.Start();
+            job.ProcessId = process.Id;
+            SaveConsoleJob(job);
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+            tailTimer.Start();
+            RefreshConsoleJobs();
+        }
+
+        private void HandleAgentJsonLine(string line, ConsoleJobInfo job)
         {
             if (Regex.IsMatch(line, "\\\"type\\\"\\s*:\\s*\\\"platform\\.selected\\\"", RegexOptions.IgnoreCase))
             {
@@ -5379,10 +6196,16 @@ namespace SiemensTiaSkillSuite
                 agentSessionPlatform = platformId;
                 activePlatformName = platformName;
                 activePlatformModel = platformModel;
+                job.RequestedPlatform = platformId;
+                job.SelectedPlatform = platformId;
+                job.SelectedPlatformName = platformName;
+                job.SelectedModel = platformModel;
+                job.RoutedAgent = routedAgent;
                 BeginInvoke((Action)delegate
                 {
                     platformStatusLabel.Text = "平台：" + platformName + " · 模型：" + platformModel + " · Agent：" + routedAgent;
                     statusLabel.Text = "已路由到 " + platformName;
+                    SaveConsoleJob(job);
                     SaveWorkflowConfig(false);
                 });
             }
@@ -5391,7 +6214,13 @@ namespace SiemensTiaSkillSuite
             if (threadMatch.Success)
             {
                 agentThreadId = threadMatch.Groups["id"].Value;
-                BeginInvoke((Action)delegate { SaveWorkflowConfig(false); });
+                job.AgentSessionId = agentThreadId;
+                job.AgentSessionPlatform = agentSessionPlatform;
+                BeginInvoke((Action)delegate
+                {
+                    SaveConsoleJob(job);
+                    SaveWorkflowConfig(false);
+                });
             }
 
             Match messageMatch = Regex.Match(line, "\\\"type\\\"\\s*:\\s*\\\"item\\.completed\\\".*?\\\"type\\\"\\s*:\\s*\\\"agent_message\\\".*?\\\"text\\\"\\s*:\\s*\\\"(?<text>(?:\\\\.|[^\\\"])*)\\\"", RegexOptions.Singleline);
@@ -5426,21 +6255,38 @@ namespace SiemensTiaSkillSuite
             }
         }
 
-        private void AgentProcessExited(Process process)
+        private void AgentProcessExited(Process process, ConsoleJobInfo job)
         {
             try
             {
                 int exitCode = process.ExitCode;
+                job.ExitCode = exitCode;
+                job.HasExitCode = true;
+                job.FinishedAt = DateTime.Now.ToString("o");
+                job.Status = job.TimedOut ? "FAILED" : (job.StopRequested ? "CANCELLED" : (exitCode == 0 ? "SUCCEEDED" : "FAILED"));
+                job.Message = job.TimedOut
+                    ? "Agent 回合超过工作流超时限制，已自动停止；请检查日志后重试或调低任务范围。"
+                    : (job.StopRequested
+                        ? "用户停止了 Agent 回合；可在“任务状态”页继续或重试。"
+                        : (exitCode == 0 ? "Agent 回合已完成，平台事件和输出证据已保存。" : "Agent 回合失败，请检查 Agent 标准错误日志后重试。"));
+                SaveConsoleJob(job);
                 BeginInvoke((Action)delegate
                 {
                     if (agentProcess == process) { agentProcess = null; }
+                    if (currentAgentJob == job) { currentAgentJob = null; }
+                    if (string.Equals(currentAgentJobManifestPath, job.ManifestPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        currentAgentJobManifestPath = "";
+                    }
                     sendAgentButton.Enabled = true;
                     stopAgentButton.Enabled = false;
-                    statusLabel.Text = exitCode == 0 ? "Agent 回合完成" : "Agent 失败，ExitCode=" + exitCode.ToString();
+                    statusLabel.Text = job.Status == "SUCCEEDED" ? "Agent 回合完成" : (job.Status == "CANCELLED" ? "Agent 回合已停止" : (job.TimedOut ? "Agent 回合超时已停止" : "Agent 失败，ExitCode=" + exitCode.ToString()));
                     if (exitCode != 0 && File.Exists(agentStderrPath))
                     {
                         chatBox.AppendText(Environment.NewLine + "[Agent 错误]" + Environment.NewLine + Tail(ReadText(agentStderrPath), 3000) + Environment.NewLine);
                     }
+                    RefreshConsoleJobs();
+                    RefreshWorkbenchArtifactsAfterCommand();
                     SaveWorkflowConfig(false);
                 });
             }
@@ -5454,6 +6300,12 @@ namespace SiemensTiaSkillSuite
             if (agentProcess == null || agentProcess.HasExited) { return; }
             try
             {
+                if (currentAgentJob != null)
+                {
+                    currentAgentJob.StopRequested = true;
+                    currentAgentJob.Message = "用户请求停止 Agent，正在终止子进程树。";
+                    SaveConsoleJob(currentAgentJob);
+                }
                 ProcessStartInfo stop = new ProcessStartInfo();
                 stop.FileName = "taskkill.exe";
                 stop.Arguments = "/PID " + agentProcess.Id.ToString() + " /T /F";
@@ -5513,6 +6365,11 @@ namespace SiemensTiaSkillSuite
                 MessageBox.Show("已有命令正在运行，请等待结束后再启动下一条。", "防止TIA并发冲突", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
+            if (agentProcess != null && !agentProcess.HasExited)
+            {
+                MessageBox.Show("Agent 正在运行，请先等待回合结束或点击停止。", "防止TIA并发冲突", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
 
             try
             {
@@ -5521,182 +6378,217 @@ namespace SiemensTiaSkillSuite
                 Directory.CreateDirectory(Path.Combine(root, "PLC_Code", "console-jobs"));
                 string configPath = SaveWorkflowConfig(false);
                 List<string> args = BuildCommandArgs(command, root, configPath);
-                string stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
-                currentStdoutPath = Path.Combine(root, "PLC_Code", "console-jobs", stamp + "-" + command + ".log");
-                currentStderrPath = Path.Combine(root, "PLC_Code", "console-jobs", stamp + "-" + command + ".err.log");
-                File.WriteAllText(currentStdoutPath, "", Encoding.UTF8);
-                File.WriteAllText(currentStderrPath, "", Encoding.UTF8);
-
-                ProcessStartInfo start = new ProcessStartInfo();
-                start.FileName = "powershell.exe";
-                start.Arguments = "-NoProfile -ExecutionPolicy Bypass -File " + Quote(invokeScript) + " " + JoinArgs(args);
-                start.WorkingDirectory = root;
-                start.UseShellExecute = false;
-                start.CreateNoWindow = true;
-                start.RedirectStandardOutput = true;
-                start.RedirectStandardError = true;
-                // Windows PowerShell 5.1 writes redirected command output using the
-                // active Chinese console code page; decode it explicitly so project
-                // paths and diagnostics remain readable in the workbench.
-                start.StandardOutputEncoding = Encoding.GetEncoding(936);
-                start.StandardErrorEncoding = Encoding.GetEncoding(936);
-
-                currentProcess = new Process();
-                currentProcess.StartInfo = start;
-                currentProcess.OutputDataReceived += delegate (object sender, DataReceivedEventArgs e) { AppendOutput(currentStdoutPath, e.Data); };
-                currentProcess.ErrorDataReceived += delegate (object sender, DataReceivedEventArgs e) { AppendOutput(currentStderrPath, e.Data); };
-                currentProcess.EnableRaisingEvents = true;
-                currentProcess.Exited += delegate
-                {
-                    BeginInvoke((Action)delegate
-                    {
-                        int exitCode = currentProcess.ExitCode;
-                        statusLabel.Text = (exitCode == 0 ? "完成" : "未完成/已阻断") + "，ExitCode=" + exitCode;
-                        RefreshCurrentJobTail();
-                        RefreshRuns();
-                        if (command == "wincc-plugins" && currentProcess.ExitCode == 0)
-                        {
-                            ShowWinccPluginRouting();
-                        }
-                        if (command == "agent-plan" && currentProcess.ExitCode == 0)
-                        {
-                            ShowAgentTaskPlan();
-                        }
-                        if (command == "agent-queue" && currentProcess.ExitCode == 0)
-                        {
-                            ShowAgentExecutionQueue();
-                        }
-                        if (command.StartsWith("queue-", StringComparison.OrdinalIgnoreCase) && currentProcess.ExitCode == 0)
-                        {
-                            ShowCurrentQueueStage();
-                        }
-                        if (command == "queue-run-current" && currentProcess.ExitCode == 0)
-                        {
-                            StartCommand("workbench-dashboard");
-                        }
-                        if (command == "agent-pipeline" && currentProcess.ExitCode == 0)
-                        {
-                            ShowWorkbenchDashboard();
-                        }
-                        if (command == "project-model" && currentProcess.ExitCode == 0)
-                        {
-                            ShowProjectObjectModel();
-                        }
-                        if (command == "knowledge-pack" && currentProcess.ExitCode == 0)
-                        {
-                            ShowKnowledgePack();
-                        }
-                        if (command == "capability-map" && currentProcess.ExitCode == 0)
-                        {
-                            ShowWorkbenchCapabilityMap();
-                        }
-                        if (command == "review-package" && currentProcess.ExitCode == 0)
-                        {
-                            ShowReleaseReview();
-                        }
-                        if (command.StartsWith("review-approval-", StringComparison.OrdinalIgnoreCase))
-                        {
-                            ShowReleaseReview();
-                        }
-                        if (command == "apply-release")
-                        {
-                            ShowReleaseReview();
-                        }
-                        if (command == "workbench-dashboard" && currentProcess.ExitCode == 0)
-                        {
-                            ShowWorkbenchDashboard();
-                        }
-                        if (command == "wincc-visual-package" && currentProcess.ExitCode == 0)
-                        {
-                            ShowWinccVisualPackage();
-                        }
-                        if (command == "wincc-design-workflow" && currentProcess.ExitCode == 0)
-                        {
-                            ShowWinccDesignWorkflow();
-                        }
-                        if (command == "lad-preview" && currentProcess.ExitCode == 0)
-                        {
-                            ShowLadPreview();
-                        }
-                        if (command == "lad-scaffold" && currentProcess.ExitCode == 0)
-                        {
-                            LoadLadEditorFromSpec();
-                            SelectMainTab(11);
-                            ladEditorStatusLabel.Text = "已载入 LAD JSON 模板：" + currentLadSpecPath;
-                        }
-                        if (command == "write-lad-network" && currentProcess.ExitCode == 0)
-                        {
-                            inputXmlBox.Text = currentLadGeneratedXmlPath;
-                            ShowFile(currentLadGeneratedXmlPath);
-                            SelectMainTab(11);
-                            ladEditorStatusLabel.Text = "LAD XML 已生成，可点击“校验XML”或“克隆验证”。";
-                            BuildProjectTree();
-                        }
-                        if (command == "lad-validate" && currentProcess.ExitCode == 0)
-                        {
-                            ladEditorStatusLabel.Text = "LAD XML 校验通过。";
-                        }
-                        if (command == "plc-change-package" && currentProcess.ExitCode == 0)
-                        {
-                            ShowPlcChangePackage();
-                        }
-                        if (command == "plc-instruction-cookbook" && currentProcess.ExitCode == 0)
-                        {
-                            ShowPlcInstructionCookbook();
-                        }
-                        if (command == "plc-instruction-plan" && currentProcess.ExitCode == 0)
-                        {
-                            ShowPlcInstructionPlan();
-                        }
-                        if (command == "wincc-component-blueprints" && currentProcess.ExitCode == 0)
-                        {
-                            ShowWinccComponentBlueprints();
-                        }
-                        if (command == "wincc-engineering-scaffold" && currentProcess.ExitCode == 0)
-                        {
-                            ShowWinccEngineeringScaffold();
-                        }
-                        if (command == "wincc-openness-implementation" && currentProcess.ExitCode == 0)
-                        {
-                            ShowWinccOpennessImplementation();
-                        }
-                        if (command == "wincc-read-cycle")
-                        {
-                            ShowWinccReadback();
-                        }
-                        if (command == "wincc-apply-clone")
-                        {
-                            ShowWinccImplementationRun();
-                        }
-                        if (command == "simulation-package" && currentProcess.ExitCode == 0)
-                        {
-                            ShowSimulationPackage();
-                        }
-                        if (command == "simulation-replay" && currentProcess.ExitCode == 0)
-                        {
-                            ShowSimulationReplay();
-                        }
-                        if (command == "probe-ai-platforms" && currentProcess.ExitCode == 0)
-                        {
-                            UpdatePlatformProbeStatus(currentStdoutPath);
-                        }
-                    });
-                };
-
-                jobBox.Text = "启动命令：" + command + Environment.NewLine + start.Arguments + Environment.NewLine + "工作流配置：" + configPath + Environment.NewLine + "日志：" + currentStdoutPath + Environment.NewLine;
-                if (mainTabs.TabPages.Count >= 2)
-                {
-                    mainTabs.SelectedIndex = 2;
-                }
-                statusLabel.Text = "运行中：" + command;
-                currentProcess.Start();
-                currentProcess.BeginOutputReadLine();
-                currentProcess.BeginErrorReadLine();
-                tailTimer.Start();
+                StartCommandProcess(command, args, root, configPath, "NEW", "");
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, "命令启动失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void StartCommandProcess(string command, List<string> args, string root, string configPath, string resumeMode, string parentJobId)
+        {
+            string stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss-fff");
+            string jobId = stamp + "-" + command + "-" + Guid.NewGuid().ToString("N").Substring(0, 8);
+            string jobsRoot = Path.Combine(root, "PLC_Code", "console-jobs");
+            Directory.CreateDirectory(jobsRoot);
+
+            ConsoleJobInfo job = new ConsoleJobInfo();
+            job.JobId = jobId;
+            job.Status = "RUNNING";
+            job.Command = command;
+            job.ProjectRoot = root;
+            job.ConfigPath = configPath;
+            job.ConfigSnapshotPath = Path.Combine(jobsRoot, jobId + ".config.json");
+            job.StdoutPath = Path.Combine(jobsRoot, jobId + ".log");
+            job.StderrPath = Path.Combine(jobsRoot, jobId + ".err.log");
+            job.ManifestPath = Path.Combine(jobsRoot, jobId + ".json");
+            job.StartedAt = DateTime.Now.ToString("o");
+            job.ResumeMode = resumeMode;
+            job.ParentJobId = parentJobId;
+            job.Arguments = new List<string>(args);
+            job.Message = resumeMode == "CONTINUE"
+                ? "这是对原任务的可审计重放：工作台按原参数重新执行，不表示子进程级断点恢复。"
+                : (resumeMode == "RETRY" ? "这是对原任务的可审计重试。" : "任务由本地工作台命令面板启动。");
+
+            currentJobManifestPath = job.ManifestPath;
+            currentCommandName = command;
+            currentCommandJob = job;
+            currentStdoutPath = job.StdoutPath;
+            currentStderrPath = job.StderrPath;
+            File.WriteAllText(currentStdoutPath, "", Encoding.UTF8);
+            File.WriteAllText(currentStderrPath, "", Encoding.UTF8);
+            if (File.Exists(configPath))
+            {
+                File.Copy(configPath, job.ConfigSnapshotPath, true);
+            }
+            SaveConsoleJob(job);
+
+            ProcessStartInfo start = new ProcessStartInfo();
+            start.FileName = "powershell.exe";
+            start.Arguments = "-NoProfile -ExecutionPolicy Bypass -File " + Quote(invokeScript) + " " + JoinArgs(args);
+            start.WorkingDirectory = root;
+            start.UseShellExecute = false;
+            start.CreateNoWindow = true;
+            start.RedirectStandardOutput = true;
+            start.RedirectStandardError = true;
+            // Windows PowerShell 5.1 uses the active Chinese code page for redirected
+            // output; decode it explicitly so paths and diagnostics remain readable.
+            start.StandardOutputEncoding = Encoding.GetEncoding(936);
+            start.StandardErrorEncoding = Encoding.GetEncoding(936);
+
+            Process process = new Process();
+            process.StartInfo = start;
+            process.OutputDataReceived += delegate (object sender, DataReceivedEventArgs e) { AppendOutput(job.StdoutPath, e.Data); };
+            process.ErrorDataReceived += delegate (object sender, DataReceivedEventArgs e) { AppendOutput(job.StderrPath, e.Data); };
+            process.EnableRaisingEvents = true;
+            process.Exited += delegate
+            {
+                try
+                {
+                    process.WaitForExit();
+                }
+                catch
+                {
+                }
+                int exitCode = process.ExitCode;
+                job.ExitCode = exitCode;
+                job.HasExitCode = true;
+                job.FinishedAt = DateTime.Now.ToString("o");
+                job.Status = job.StopRequested ? "CANCELLED" : (exitCode == 0 ? "SUCCEEDED" : "FAILED");
+                job.Message = job.StopRequested
+                    ? "用户停止了命令。可以在“任务状态”页按原参数继续或重试。"
+                    : (exitCode == 0 ? "命令已完成，工作台已刷新项目树、Runs 和任务证据。" : "命令未成功完成，请检查输出/错误日志后再重试。");
+                SaveConsoleJob(job);
+
+                if (IsDisposed || !IsHandleCreated)
+                {
+                    return;
+                }
+                BeginInvoke((Action)delegate
+                {
+                    if (currentProcess == process)
+                    {
+                        currentProcess = null;
+                    }
+                    if (currentCommandJob == job)
+                    {
+                        currentCommandJob = null;
+                    }
+                    executeCommandButton.Enabled = true;
+                    stopCommandButton.Enabled = false;
+                    statusLabel.Text = (job.Status == "SUCCEEDED" ? "完成" : "未完成/已阻断") + "，ExitCode=" + exitCode.ToString();
+                    RefreshCurrentJobTail();
+                    RefreshWorkbenchArtifactsAfterCommand();
+                    HandleCommandCompletion(command, exitCode);
+                });
+            };
+
+            currentProcess = process;
+            executeCommandButton.Enabled = false;
+            stopCommandButton.Enabled = true;
+            jobBox.Text = "任务：" + job.JobId + Environment.NewLine +
+                          "启动命令：" + command + Environment.NewLine +
+                          "参数：" + JoinArgs(args) + Environment.NewLine +
+                          "工作流配置：" + configPath + Environment.NewLine +
+                          "输出：" + job.StdoutPath + Environment.NewLine +
+                          "错误：" + job.StderrPath + Environment.NewLine;
+            if (mainTabs.TabPages.Count >= 3)
+            {
+                mainTabs.SelectedIndex = 2;
+            }
+            statusLabel.Text = "运行中：" + command;
+            process.Start();
+            job.ProcessId = process.Id;
+            SaveConsoleJob(job);
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+            RefreshConsoleJobs();
+            tailTimer.Start();
+        }
+
+        private void HandleCommandCompletion(string command, int exitCode)
+        {
+            if (exitCode == 0)
+            {
+                if (command == "wincc-plugins") { ShowWinccPluginRouting(); }
+                if (command == "agent-plan") { ShowAgentTaskPlan(); }
+                if (command == "agent-queue") { ShowAgentExecutionQueue(); }
+                if (command.StartsWith("queue-", StringComparison.OrdinalIgnoreCase)) { ShowCurrentQueueStage(); }
+                if (command == "agent-pipeline") { ShowWorkbenchDashboard(); }
+                if (command == "project-model") { ShowProjectObjectModel(); }
+                if (command == "knowledge-pack") { ShowKnowledgePack(); }
+                if (command == "capability-map") { ShowWorkbenchCapabilityMap(); }
+                if (command == "review-package") { ShowReleaseReview(); }
+                if (command == "workbench-dashboard") { ShowWorkbenchDashboard(); }
+                if (command == "wincc-visual-package") { ShowWinccVisualPackage(); }
+                if (command == "wincc-design-workflow") { ShowWinccDesignWorkflow(); }
+                if (command == "lad-preview") { ShowLadPreview(); }
+                if (command == "lad-scaffold")
+                {
+                    LoadLadEditorFromSpec();
+                    SelectMainTab(11);
+                    ladEditorStatusLabel.Text = "已载入 LAD JSON 模板：" + currentLadSpecPath;
+                }
+                if (command == "write-lad-network")
+                {
+                    inputXmlBox.Text = currentLadGeneratedXmlPath;
+                    ShowFile(currentLadGeneratedXmlPath);
+                    SelectMainTab(11);
+                    ladEditorStatusLabel.Text = "LAD XML 已生成，可点击“校验XML”或“克隆验证”。";
+                }
+                if (command == "lad-validate") { ladEditorStatusLabel.Text = "LAD XML 校验通过。"; }
+                if (command == "plc-change-package") { ShowPlcChangePackage(); }
+                if (command == "plc-instruction-cookbook") { ShowPlcInstructionCookbook(); }
+                if (command == "plc-instruction-plan") { ShowPlcInstructionPlan(); }
+                if (command == "wincc-component-blueprints") { ShowWinccComponentBlueprints(); }
+                if (command == "wincc-engineering-scaffold") { ShowWinccEngineeringScaffold(); }
+                if (command == "wincc-openness-implementation") { ShowWinccOpennessImplementation(); }
+                if (command == "simulation-package") { ShowSimulationPackage(); }
+                if (command == "simulation-replay") { ShowSimulationReplay(); }
+                if (command == "probe-ai-platforms") { UpdatePlatformProbeStatus(currentStdoutPath); }
+            }
+            if (command == "wincc-read-cycle") { ShowWinccReadback(); }
+            if (command == "wincc-apply-clone") { ShowWinccImplementationRun(); }
+            if (command.StartsWith("review-approval-", StringComparison.OrdinalIgnoreCase) || command == "apply-release")
+            {
+                ShowReleaseReview();
+            }
+            if (command == "queue-run-current")
+            {
+                // The queue command already writes its own evidence. Refresh locally
+                // instead of launching a second PowerShell process recursively.
+                RefreshWorkbenchArtifactsAfterCommand();
+                if (exitCode == 0) { ShowWorkbenchDashboard(); }
+            }
+        }
+
+        private void StopCurrentCommand()
+        {
+            if (currentProcess == null || currentProcess.HasExited)
+            {
+                return;
+            }
+
+            if (currentCommandJob != null)
+            {
+                currentCommandJob.StopRequested = true;
+                currentCommandJob.Message = "用户请求停止命令，正在终止子进程树。";
+                SaveConsoleJob(currentCommandJob);
+            }
+            try
+            {
+                ProcessStartInfo stop = new ProcessStartInfo();
+                stop.FileName = "taskkill.exe";
+                stop.Arguments = "/PID " + currentProcess.Id.ToString() + " /T /F";
+                stop.UseShellExecute = false;
+                stop.CreateNoWindow = true;
+                Process.Start(stop);
+                statusLabel.Text = "正在停止命令：" + currentCommandName;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "停止命令失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 
@@ -6154,7 +7046,22 @@ namespace SiemensTiaSkillSuite
                 jobBox.Text = builder.ToString();
                 jobBox.SelectionStart = jobBox.TextLength;
                 jobBox.ScrollToCaret();
-                if (currentProcess == null || currentProcess.HasExited)
+                if (agentProcess != null && !agentProcess.HasExited &&
+                    agentTimeoutSeconds > 0 &&
+                    agentStartedAt != DateTime.MinValue &&
+                    (DateTime.Now - agentStartedAt).TotalSeconds > agentTimeoutSeconds)
+                {
+                    if (currentAgentJob != null)
+                    {
+                        currentAgentJob.TimedOut = true;
+                        currentAgentJob.Message = "Agent 已超过 " + agentTimeoutSeconds.ToString() + " 秒工作流超时限制，正在自动停止。";
+                        SaveConsoleJob(currentAgentJob);
+                    }
+                    StopAgent();
+                }
+                bool commandFinished = currentProcess == null || currentProcess.HasExited;
+                bool agentFinished = agentProcess == null || agentProcess.HasExited;
+                if (commandFinished && agentFinished)
                 {
                     tailTimer.Stop();
                 }
@@ -6456,6 +7363,58 @@ namespace SiemensTiaSkillSuite
             public override string ToString()
             {
                 return Modified.ToString("MM-dd HH:mm:ss") + "  " + Name;
+            }
+        }
+
+        private sealed class ConsoleJobInfo
+        {
+            public int SchemaVersion = 2;
+            public string JobId = "";
+            public string Status = "";
+            public string Command = "";
+            public string ProjectRoot = "";
+            public string ConfigPath = "";
+            public string ConfigSnapshotPath = "";
+            public string StdoutPath = "";
+            public string StderrPath = "";
+            public string ManifestPath = "";
+            public string StartedAt = "";
+            public string FinishedAt = "";
+            public string Message = "";
+            public string ResumeMode = "";
+            public string ParentJobId = "";
+            public int ProcessId;
+            public int ExitCode;
+            public bool HasExitCode;
+            public bool StopRequested;
+            public bool TimedOut;
+            public List<string> Arguments = new List<string>();
+            public string PromptPath = "";
+            public string AttachmentManifestPath = "";
+            public List<string> Attachments = new List<string>();
+            public string AgentId = "";
+            public string AgentWorkflow = "";
+            public string RequestedPlatform = "";
+            public string RequestedModel = "";
+            public string SelectedPlatform = "";
+            public string SelectedPlatformName = "";
+            public string SelectedModel = "";
+            public string RoutedAgent = "";
+            public string AgentSessionId = "";
+            public string AgentSessionPlatform = "";
+
+            public override string ToString()
+            {
+                string time = string.IsNullOrWhiteSpace(StartedAt) ? "" : StartedAt.Replace("T", " ");
+                if (time.Length > 19) { time = time.Substring(0, 19); }
+                string label = string.Equals(Command, "agent-chat", StringComparison.OrdinalIgnoreCase)
+                    ? "Agent对话"
+                    : Command;
+                if (!string.IsNullOrWhiteSpace(SelectedPlatformName))
+                {
+                    label += " · " + SelectedPlatformName;
+                }
+                return time + "  [" + Status + "]  " + label + "  " + JobId;
             }
         }
 

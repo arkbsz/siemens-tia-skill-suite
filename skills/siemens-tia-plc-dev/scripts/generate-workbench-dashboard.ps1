@@ -64,6 +64,58 @@ function Get-QueueSummary {
     }
 }
 
+function Get-ConsoleJobSummary {
+    param([string]$JobsRoot)
+    $empty = [pscustomobject]@{
+        exists = $false
+        total = 0
+        running = 0
+        succeeded = 0
+        failed = 0
+        cancelled = 0
+        interrupted = 0
+        latest = @()
+        root = $JobsRoot
+    }
+    if ([string]::IsNullOrWhiteSpace($JobsRoot) -or -not (Test-Path -LiteralPath $JobsRoot -PathType Container)) {
+        return $empty
+    }
+
+    $jobs = @()
+    foreach ($path in Get-ChildItem -LiteralPath $JobsRoot -Filter "*.json" -File -ErrorAction SilentlyContinue) {
+        if ($path.Name -like "*.config.json") { continue }
+        try {
+            $job = Get-Content -LiteralPath $path.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ([string]::IsNullOrWhiteSpace([string]$job.command)) { continue }
+            $jobs += [pscustomobject]@{
+                id = [string]$job.jobId
+                command = [string]$job.command
+                status = [string]$job.status
+                startedAt = [string]$job.startedAt
+                finishedAt = [string]$job.finishedAt
+                manifest = $path.FullName
+                stdout = [string]$job.stdoutPath
+                stderr = [string]$job.stderrPath
+            }
+        }
+        catch {
+            continue
+        }
+    }
+    $jobs = @($jobs | Sort-Object startedAt -Descending)
+    return [pscustomobject]@{
+        exists = $true
+        total = $jobs.Count
+        running = @($jobs | Where-Object { $_.status -eq "RUNNING" }).Count
+        succeeded = @($jobs | Where-Object { $_.status -eq "SUCCEEDED" }).Count
+        failed = @($jobs | Where-Object { $_.status -eq "FAILED" }).Count
+        cancelled = @($jobs | Where-Object { $_.status -eq "CANCELLED" }).Count
+        interrupted = @($jobs | Where-Object { $_.status -eq "INTERRUPTED" }).Count
+        latest = @($jobs | Select-Object -First 10)
+        root = $JobsRoot
+    }
+}
+
 function Get-LatestRun {
     param([string]$RunsRoot, [string]$Prefix = "")
     if (-not (Test-Path -LiteralPath $RunsRoot -PathType Container)) { return $null }
@@ -100,6 +152,7 @@ $knowledgeBrief = Join-Path $workspaceRoot "knowledge\packs\latest\knowledge-bri
 $knowledgePack = Join-Path $workspaceRoot "knowledge\packs\latest\knowledge-pack.json"
 $capabilityMap = Join-Path $workspaceRoot "workbench\capabilities\latest\capability-map.md"
 $capabilityJson = Join-Path $workspaceRoot "workbench\capabilities\latest\capability-map.json"
+$consoleJobsRoot = Join-Path $workspaceRoot "console-jobs"
 $readinessPath = Join-Path $workspaceRoot "review-packages\latest\import-readiness.json"
 $approvalPath = Join-Path $workspaceRoot "review-packages\latest\approval.json"
 $reviewSummary = Join-Path $workspaceRoot "review-packages\latest\review-summary.md"
@@ -109,6 +162,7 @@ $latestWriteRun = Get-LatestRun -RunsRoot $runsRoot -Prefix "write-cycle"
 $latestWinccImplementationRun = Get-LatestRun -RunsRoot $winccImplementationRunsRoot -Prefix "wincc-implementation-"
 
 $queueSummary = Get-QueueSummary -QueuePath $queueJson
+$consoleJobSummary = Get-ConsoleJobSummary -JobsRoot $consoleJobsRoot
 $gitStatus = Invoke-GitText -Root $root -Arguments @("status", "--short")
 $gitDiffStat = Invoke-GitText -Root $root -Arguments @("diff", "--stat")
 $gitDiff = Invoke-GitText -Root $root -Arguments @("diff", "--", "PLC_Code")
@@ -165,6 +219,7 @@ $validationBuilder = New-Object System.Text.StringBuilder
 [void]$validationBuilder.AppendLine("- Latest write-cycle run: ``$latestWriteDisplay``")
 [void]$validationBuilder.AppendLine("- Import readiness: ``$readinessPath``")
 [void]$validationBuilder.AppendLine("- Queue: ``$queueJson``")
+[void]$validationBuilder.AppendLine("- Native workbench jobs: ``$consoleJobsRoot``")
 [void]$validationBuilder.AppendLine("- Project model: ``$projectModel``")
 [void]$validationBuilder.AppendLine("- Agent context: ``$agentContext``")
 [void]$validationBuilder.AppendLine("- Knowledge brief: ``$knowledgeBrief``")
@@ -187,6 +242,16 @@ $validationBuilder = New-Object System.Text.StringBuilder
 [void]$validationBuilder.AppendLine("- Failed: ``$($queueSummary.failed)``")
 [void]$validationBuilder.AppendLine("- Blocked: ``$($queueSummary.blocked)``")
 [void]$validationBuilder.AppendLine("- Current stage: ``$($queueSummary.currentStage)``")
+[void]$validationBuilder.AppendLine()
+[void]$validationBuilder.AppendLine("## Native Workbench Jobs")
+[void]$validationBuilder.AppendLine()
+[void]$validationBuilder.AppendLine("- Total: ``$($consoleJobSummary.total)``")
+[void]$validationBuilder.AppendLine("- Running: ``$($consoleJobSummary.running)``")
+[void]$validationBuilder.AppendLine("- Succeeded: ``$($consoleJobSummary.succeeded)``")
+[void]$validationBuilder.AppendLine("- Failed: ``$($consoleJobSummary.failed)``")
+[void]$validationBuilder.AppendLine("- Cancelled: ``$($consoleJobSummary.cancelled)``")
+[void]$validationBuilder.AppendLine("- Interrupted: ``$($consoleJobSummary.interrupted)``")
+[void]$validationBuilder.AppendLine("- Root: ``$consoleJobsRoot``")
 [void]$validationBuilder.AppendLine()
 [void]$validationBuilder.AppendLine("## Agent Development Pipeline")
 [void]$validationBuilder.AppendLine()
@@ -331,6 +396,7 @@ $dashboardBuilder = New-Object System.Text.StringBuilder
 [void]$dashboardBuilder.AppendLine()
 [void]$dashboardBuilder.AppendLine("- Plan: ``$planDisplay``")
 [void]$dashboardBuilder.AppendLine("- Queue: ``$queueDisplay``")
+[void]$dashboardBuilder.AppendLine("- Native workbench jobs: ``$consoleJobsRoot``")
 [void]$dashboardBuilder.AppendLine("- Validation panel: ``$validationMd``")
 [void]$dashboardBuilder.AppendLine("- Diff panel: ``$diffPath``")
 [void]$dashboardBuilder.AppendLine("- PLC instruction route: ``$instructionDisplay``")
@@ -361,6 +427,15 @@ $dashboardBuilder = New-Object System.Text.StringBuilder
 [void]$dashboardBuilder.AppendLine("- Failed: ``$($queueSummary.failed)``")
 [void]$dashboardBuilder.AppendLine("- Blocked: ``$($queueSummary.blocked)``")
 [void]$dashboardBuilder.AppendLine("- Current stage: ``$($queueSummary.currentStage)``")
+[void]$dashboardBuilder.AppendLine()
+[void]$dashboardBuilder.AppendLine("## Native Workbench Jobs")
+[void]$dashboardBuilder.AppendLine()
+[void]$dashboardBuilder.AppendLine("- Total: ``$($consoleJobSummary.total)``")
+[void]$dashboardBuilder.AppendLine("- Running: ``$($consoleJobSummary.running)``")
+[void]$dashboardBuilder.AppendLine("- Succeeded: ``$($consoleJobSummary.succeeded)``")
+[void]$dashboardBuilder.AppendLine("- Failed: ``$($consoleJobSummary.failed)``")
+[void]$dashboardBuilder.AppendLine("- Cancelled: ``$($consoleJobSummary.cancelled)``")
+[void]$dashboardBuilder.AppendLine("- Interrupted: ``$($consoleJobSummary.interrupted)``")
 [void]$dashboardBuilder.AppendLine()
 [void]$dashboardBuilder.AppendLine("## Git Status")
 [void]$dashboardBuilder.AppendLine()
@@ -447,6 +522,7 @@ $json = [pscustomobject]@{
     capabilityMap = $capabilityMapValue
     capabilityJson = $capabilityJsonValue
     queueSummary = $queueSummary
+    consoleJobs = $consoleJobSummary
 }
 $jsonPath = Join-Path $OutputDirectory "dashboard.json"
 $json | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $jsonPath -Encoding UTF8

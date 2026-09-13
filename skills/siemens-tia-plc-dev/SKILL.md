@@ -49,6 +49,7 @@ Use the local visual console when the user wants a better interaction surface th
 - switchable center pages for AI chat, command logs, file preview, runs, and reference-image preview
 - a bottom AI task box focused on the user request, with settings moved into the Tools menu to avoid crowding
 - direct built-in Agent conversations through Codex, Claude Code, Trae Agent, or Qoder, with automatic task routing, manual platform/model overrides, compatible session handling, stop/new-session controls, and no separate AI window
+- Agent conversations are persisted as `agent-chat` workbench jobs with prompt/attachment manifests, configuration snapshots, selected platform/model/Agent/session metadata, stdout/stderr evidence, timeout handling, interruption detection, and task-page retry/continue actions
 - project-local file uploads for images, PDFs, documents, source files, exported XML, and logs
 - a responsive two-row quick-configuration grid in the AI area for routing mode, platform, Agent, model, workflow, language preference, TIA session mode, safety mode, and step timeout, without horizontal control overlap
 - a scrollable Tools settings panel for platform command overrides, model/workflow selection, API provider/base/key-env settings, image workflow/model/quality/size, WinCC component strategy, Windows font settings, and uploaded reference image path
@@ -77,12 +78,24 @@ Use the local visual console when the user wants a better interaction surface th
 - editable file preview with backup-on-save to `PLC_Code\file-backups`, plus `lad-preview` for readable LAD XML summaries
 - PLC change packages through `plc-change-package`, creating a structured editing workspace for DB contracts, LAD JSON, SCL sources, import manifests, verification plans, and safety risk notes
 - run and log preview panels for `PLC_Code\runs` and `PLC_Code\console-jobs`
+- executable command palette with persisted job manifests under `PLC_Code\console-jobs`, including original arguments, workflow-config snapshots, stdout/stderr, process id, exit code, timestamps, retry/continue lineage, and stop state
+- restart-safe job recovery: interrupted commands are surfaced in the native workbench and can be retried or replayed with the original arguments; replay is explicitly labeled as replay rather than fake process-level resume
+- controlled `--run-command <command>` startup entry that invokes the same command mapping as the native command palette for deployment scripts and integration tests
+- `test-workbench-job-persistence.ps1` smoke test that launches the native console and verifies a real persisted `doctor` job, configuration snapshot, stdout and stderr evidence
+- `test-agent-routing-and-replay.ps1` offline regression test that verifies clean new sessions, compatible-session continuation, retry session clearing and the task-level replay contract
 - an AI-platform-ready prompt file writer under `PLC_Code\ai-prompts`, plus auditable Agent requests, selected-platform events, and JSONL logs under `PLC_Code\agent-sessions`
 
 Start it with:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" console -ProjectPath "D:\path\to\project"
+```
+
+For a controlled command execution or smoke test:
+
+```powershell
+& "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\app\bin\PLCDevConsole.exe" --project "D:\path\to\project" --invoke "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\invoke-siemens-plc-dev.ps1" --run-command doctor
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\siemens-tia-plc-dev\scripts\test-workbench-job-persistence.ps1" -ProjectPath "D:\path\to\project"
 ```
 
 Use `console-exe` explicitly when you want the native executable route, or `console-web` only as a fallback browser-based console. The native console uses `agents/ai-platforms.json`, `agents/siemens-workflow-routes.json`, and `scripts/invoke-ai-platform-agent.ps1` to route each task to an installed platform. Automatic mode skips unavailable platforms; manual mode fails clearly instead of falling back. Read `references/agent-console.md` for platform adapters, Agent profiles, attachments, sessions, and safety boundaries.
@@ -362,6 +375,10 @@ Use `review-approval` as the executable release gate behind the native `发布�
 - `wincc-apply-clone` also requires an approved clone or production record; no approval means no clone is opened.
 
 Use `workbench-dashboard` to refresh the native validation and diff panels after any read, write, queue, WinCC or review action. It writes `PLC_Code\workbench\latest\dashboard.md`, `validation-summary.md`, `diff-summary.patch`, and `dashboard.json`.
+
+The native command palette is an execution surface, not a decorative menu. Each selected command must call `invoke-siemens-plc-dev.ps1`, create a JSON job manifest before launching PowerShell, stream stdout/stderr into the manifest paths, update the manifest on exit, and refresh the project tree, Runs, task state and relevant preview panel. The task-state page must expose refresh, retry, replay/continue, output-log and error-log actions. A stopped or interrupted command remains inspectable and must never be silently discarded.
+
+Agent chat follows the same audit contract as native commands. Each turn creates a `PLC_Code\console-jobs\*-agent-chat-*.json` record before the Agent process starts and retains the original `PLC_Code\agent-sessions` files as the detailed conversation record. The manifest records the routed platform, model, Agent profile, compatible session ID, prompt, attachments, configuration snapshot, exit state and timeout/failure note. Retry creates a new input-evidence copy and starts without a session; continue creates the same input-evidence copy and replays it with the latest compatible session ID only when the platform matches. This is process-level replay, not a false claim of checkpoint resume.
 
 ## Guardrails
 

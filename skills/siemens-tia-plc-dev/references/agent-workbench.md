@@ -61,6 +61,8 @@ The workbench should gradually absorb these common coding-agent features:
 - readable LAD XML preview inside the workbench
 - generated prompt files for audit
 - run history and reports
+- executable command palette with JSON job manifests under `PLC_Code\console-jobs`
+- restart-safe task state with original command arguments, config snapshots, stdout/stderr, exit codes, process ids, retry/replay lineage and explicit cancelled/interrupted states
 - source diffs and release-package review
 - stop/new-session controls
 
@@ -87,6 +89,7 @@ Do not claim full parity until the workbench also has explicit approval checkpoi
 17. Use `review-package` before release to collect artifact hashes, diff evidence, readiness flags and safety gates.
 18. Keep production project writes behind the existing backup, clone compile and explicit release gates.
 19. If a remote page, CLI or TIA session stalls, capture the partial log and switch route instead of blocking the whole workbench.
+20. Treat every native command as a recoverable job: persist the manifest before launch, stream both output channels, update terminal state on exit, refresh local evidence panels, and expose retry/replay and log-open actions after restart.
 
 ## One-Click Development Pipeline
 
@@ -187,6 +190,8 @@ The mature loop is:
 4. run clone compile or runtime smoke test
 5. re-export and compare
 6. prepare release, then wait for explicit production-apply intent
+
+The command palette is the concrete execution bridge for this loop. It reuses `BuildCommandArgs` and the same `invoke-siemens-plc-dev.ps1` entry point as the menu actions, so a command selected from the workbench and the equivalent terminal command produce the same artifacts. “Continue” means a new auditable replay using the saved arguments; it does not claim to restore a killed TIA or PowerShell process at an instruction-level checkpoint.
 
 ## Useful External Patterns
 

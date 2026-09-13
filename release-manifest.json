@@ -1,8 +1,8 @@
 {
   "packageName": "siemens-tia-skill-suite_v1.0.0_20260810",
-  "version": "1.0.5",
-  "releaseDate": "2026-09-10",
-  "builtAt": "2026-09-10T17:09:35+08:00",
+  "version": "1.0.6",
+  "releaseDate": "2026-09-13",
+  "builtAt": "2026-09-13T15:44:28+08:00",
   "installTarget": "%USERPROFILE%\\.codex\\skills",
   "packagedSkills": [
     {
@@ -66,9 +66,9 @@
     "payloadIntegrity": "HMAC-SHA256",
     "temporaryRuntime": "%USERPROFILE%\\.codex\\siemens-tia-agent-runtime\\sessions",
     "sourceFilesDistributedBesideExe": false,
-    "lastBuiltAt": "2026-09-10T17:09:35+08:00",
-    "lastBuildSha256": "5F8F7DE0A651796C132850B4757A17189C4B7A6DB53424D0EEFD7DAB6828BF6F",
-    "lastBuildPayloadFiles": 228,
+    "lastBuiltAt": "2026-09-13T15:44:28+08:00",
+    "lastBuildSha256": "6644F74D2B851284C3637C9DE7B59B72988ADC1600994096DA44C738735E464D",
+    "lastBuildPayloadFiles": 230,
     "lastBuildSelfTest": "Passed"
   },
   "excludedDirectories": [
@@ -215,6 +215,7 @@
     "The native workbench command channel decodes Windows PowerShell 5.1 Chinese output with GB18030 while keeping Agent JSONL output on UTF-8.",
     "The browser-based console remains available only as the explicit console-web fallback.",
     "The protected EXE runtime is placed under the user's .codex directory so built-in Agent child processes can consume bundled skills without falling back to an external source tree.",
-    "The native WinCC design editor now validates and backs up JSON, compiles user-defined screen/component/tag/alarm structures, preserves component geometry, and feeds the clone-only implementation manifest."
+    "The native WinCC design editor now validates and backs up JSON, compiles user-defined screen/component/tag/alarm structures, preserves component geometry, and feeds the clone-only implementation manifest.",
+    "Agent retry and continue now create isolated input-evidence copies; retry clears stale sessions, continue restores only platform-compatible sessions, and task-level stop/timeout flags prevent late process events from corrupting job status."
   ]
 }

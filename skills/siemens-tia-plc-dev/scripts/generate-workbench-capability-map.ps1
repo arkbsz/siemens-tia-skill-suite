@@ -74,6 +74,7 @@ $simulationPackage = Join-Path $workspaceRoot "simulation\latest\simulation-pack
 $simulationReplay = Join-Path $workspaceRoot "simulation\replays\latest\replay-report.md"
 $pluginRouting = Join-Path $workspaceRoot "wincc\plugin-routing.json"
 $queueJson = Join-Path $workspaceRoot "agent-queues\latest\queue.json"
+$consoleJobsRoot = Join-Path $workspaceRoot "console-jobs"
 $dashboard = Join-Path $workspaceRoot "workbench\latest\dashboard.md"
 $reviewPackage = Join-Path $workspaceRoot "review-packages\latest\review-summary.md"
 $readCycleRun = Get-ChildItem -LiteralPath (Join-Path $workspaceRoot "runs") -Directory -ErrorAction SilentlyContinue |
@@ -86,6 +87,13 @@ $writeCycleRun = Get-ChildItem -LiteralPath (Join-Path $workspaceRoot "runs") -D
     Select-Object -First 1
 
 $items = New-Object System.Collections.Generic.List[object]
+$agentChatJob = Get-ChildItem -LiteralPath $consoleJobsRoot -Filter "*-agent-chat-*.json" -File -ErrorAction SilentlyContinue |
+    Sort-Object LastWriteTime -Descending |
+    Select-Object -First 1
+$agentParityStatus = Test-PathState $queueJson "PARTIAL_READY" "PARTIAL"
+if ($agentChatJob -and $agentParityStatus -eq "PARTIAL_READY") {
+    $agentParityStatus = "PARTIAL_READY"
+}
 
 Add-Capability $items "project-open-read" "当前 TIA 工程识别与只读遍历" (Test-PathState $projectModel "READY" "PARTIAL") "读取当前TIA / 浏览打开 / 项目树 / 项目模型 Tab" "doctor, read-cycle, list-plcs, list-blocks, project-model" "PLC_Code\runs, PLC_Code\workbench\context\latest" "Openness readiness, block list, project-model JSON" "首次信任握手、在线状态切换、复杂硬件组态仍可能需要 TIA UI" "把硬件、网络、HMI 设备树加入 object-model。"
 Add-Capability $items "lad-read" "LAD/FBD XML 读取、摘要与模板库" (Test-PathState (Join-Path $workspaceRoot "lad-previews") "READY" "READY_NO_LATEST_PREVIEW") "项目树 / LAD预览 / 文件预览" "export-blocks, inspect-lad, summarize-lad, build-lad-catalog" "导出 XML、lad-previews、模板目录" "XML 结构检查和人可读网络摘要" "图形化梯形图编辑的视觉摆放仍以 TIA 为权威" "增加更多 box/network 形态的摘要和差异渲染。"
@@ -97,7 +105,7 @@ Add-Capability $items "wincc-visual" "WinCC 参考图/文字到可编辑画面�
 Add-Capability $items "wincc-component-blueprints" "WinCC 组件蓝图_ComponentBlueprints" (Test-PathState $winccComponentBlueprints "READY" "PARTIAL") "组件蓝图 / WinCC方案 / 自动流水线" "wincc-component-blueprints" "component-blueprints.md/json, screen-layout-grid.json, sivarc-rule-blueprints.md, cwc-package-manifest.json" "component-to-tag contract review and HMI safety checklist" "实际导入屏幕对象仍取决于 WinCC 类型、SiVArc/Openness API 和本机许可" "继续补 Openness/SiVArc/CWC 生成器，把蓝图转为可导入对象。"
 Add-Capability $items "wincc-engineering-scaffold" "WinCC 工程生成脚手架_WinccEngineeringScaffold" (Test-PathState $winccEngineeringScaffold "PARTIAL_READY" "PARTIAL") "WinCC工程 / 自动流水线 / 验证面板" "wincc-engineering-scaffold" "wincc-engineering-scaffold.md/json, engineering-task-list.csv, tag/alarm maps, SiVArc/CWC checklists" "preflight checklist, tag/alarm mapping, clone validation plan" "工程脚手架仍需针对实际 HMI 类型选择 XML 导入或 Unified 对象创建" "由 `wincc-read-cycle` 读取真实对象，再把任务映射到对应实现路径。"
 Add-Capability $items "wincc-openness-implementation" "WinCC Openness 实现包_WinccOpennessImplementation" (Test-PathState $winccOpennessImplementation "PARTIAL_READY" "PARTIAL") "WinCC读取 / WinCC实现 / 自动流水线 / 验证面板" "wincc-read-cycle, wincc-apply-clone, read-hmi, import-hmi, apply-hmi-manifest" "wincc-readback.json, implementation-run.json, packaged CSV, clone readback" "Openness target preflight, clone apply, object readback, XML import or Unified create/update" "当前项目无 HMI 时会阻断；Classic 创建依赖已验证 XML，Unified 仍需项目级对象属性回读" "增加带实际 HMI 目标的 V17/V16/V20/V21 克隆验证案例。"
-Add-Capability $items "agent-client-parity" "本地窗口内置 Agent 对话与执行队列" (Test-PathState $queueJson "PARTIAL_READY" "PARTIAL") "AI 对话 / 任务编排 / 执行队列 / 运行阶段" "agent-chat, agent-plan, agent-queue, queue-stage, queue-run-current" "agent-sessions、agent-queues、logs、evidence" "stage evidence, stdout/stderr capture, review gates" "模型账号、CLI 能力和联网检索仍由外部平台提供" "增加更细的命令面板、文件多选上下文、内置 diff 审批按钮。"
+Add-Capability $items "agent-client-parity" "本地窗口内置 Agent 对话与执行队列" $agentParityStatus "AI 对话 / 任务编排 / 执行队列 / 运行阶段 / 任务状态" "agent-chat, agent-plan, agent-queue, queue-stage, queue-run-current" "agent-sessions、console-jobs、agent-queues、logs、evidence" "Agent manifest, prompt/attachment/config snapshot, platform/session metadata, stdout/stderr capture, retry/continue, review gates" "模型账号、CLI 能力和联网检索仍由外部平台提供；原生 TIA 图形编辑和厂商运行时仍有边界" "继续补充多轮对话导出、统一 diff 审批和更多平台适配器。"
 Add-Capability $items "knowledge-retrieval" "官方优先知识检索与社区插件审查" (Test-PathState $knowledgeBrief "READY" "PARTIAL") "知识检索 / 知识库 Tab / 自动流水线" "knowledge-pack -RefreshOnline" "knowledge-brief.md, knowledge-pack.json, agent-retrieval-prompt.md" "source priority, task query list, online metadata timeout fallback" "社区二进制不会自动运行；网页/API 卡顿时必须切换来源" "把成功案例回灌到 cookbook 和 route defaults。"
 $approvalPath = Join-Path $workspaceRoot "review-packages\latest\approval.json"
 $reviewStatus = if ((Test-Path -LiteralPath $reviewPackage) -and (Test-Path -LiteralPath $approvalPath)) { "READY" } elseif (Test-Path -LiteralPath $reviewPackage) { "PARTIAL_READY" } else { "PARTIAL" }
